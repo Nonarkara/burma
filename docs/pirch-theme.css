@@ -1,0 +1,333 @@
+/*
+ * Burma — The Lounge theme (PIRCH98 DNA, 2026 house style)
+ *
+ * Drop into The Lounge at: public/themes/burma.css
+ * Enable with: /msg Theme Burma  (or set in config: theme: burma)
+ *
+ * Pair reference: ../docs/PIRCH-AESTHETIC.md
+ * Pair tokens:    ../src/styles/tokens.css (same house)
+ *
+ * Hard rules (from AGENTS.md §3 + this theme):
+ *   - Sharp edges. border-radius: 0 always.
+ *   - No drop shadows. box-shadow: none always.
+ *   - Single accent (saffron #d4a017).
+ *   - Monospace for messages, with Noto Sans Myanmar fallback for Burmese.
+ *   - System messages semantic-colored (join/part/mode/topic/error).
+ *   - High information density — no collapsed panes.
+ */
+
+/* ---------- 1. Tokens (mirror tokens.css for self-containment) ---------- */
+
+:root {
+  --paper:        #faf9f7;
+  --ink:          #102a43;
+  --ink-muted:    #486581;
+  --rule:         #cfd8dc;
+
+  --accent:       #d4a017;
+  --accent-soft:  #f6e9c4;
+
+  --positive:     #2e7d32;
+  --negative:     #a51931;
+  --notice:       #b45309;
+  --server:       #1d4e89;
+
+  --burma-font:   'Noto Sans Myanmar', 'Pyidaungsu', 'Myanmar Text', sans-serif;
+  --mono:         'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  --radius:       0;
+  --border-hair:  1px solid var(--rule);
+  --border-strong: 2px solid var(--ink);
+
+  --line-message: 1.55;
+  --font-message: 13px;
+}
+
+/* ---------- 2. Reset (anti-slop enforcement) ---------- */
+
+*, *::before, *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ---------- 3. Body + chrome ---------- */
+
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: var(--font-message);
+  line-height: var(--line-message);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#main, #sidebar, #footer {
+  background: var(--paper);
+  border-color: var(--rule);
+}
+
+#header, #footer {
+  border-bottom: var(--border-hair);
+  border-top: var(--border-hair);
+}
+
+/* ---------- 4. Channel sidebar ---------- */
+
+#sidebar {
+  width: 180px;
+  border-right: var(--border-hair);
+}
+
+#channel-list .channel {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px dotted var(--rule);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+#channel-list .channel.active {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 700;
+  border-left: 2px solid var(--accent);
+  padding-left: calc(0.75rem - 2px);
+}
+
+#channel-list .channel .unread {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ---------- 5. Member list (per channel) ---------- */
+
+.users {
+  width: 140px;
+  border-left: var(--border-hair);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-muted);
+  padding: 0.5rem 0.5rem;
+}
+
+.users .user {
+  padding: 0.15rem 0.4rem;
+  display: block;
+}
+
+.users .user.op,
+.users .user.owner { color: var(--accent); font-weight: 700; }
+.users .user.voiced { color: var(--notice); }
+.users .user.away { opacity: 0.55; font-style: normal; }
+
+/* ---------- 6. Topic banner ---------- */
+
+.topic {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-muted);
+  padding: 0.4rem 0.75rem;
+  border-bottom: var(--border-hair);
+  background: var(--paper);
+}
+
+/* ---------- 7. Messages ---------- */
+
+#messages, #chat, .messages {
+  background: var(--paper);
+  padding: 0.75rem;
+}
+
+#messages .msg,
+.message {
+  font-family: var(--mono);
+  font-size: var(--font-message);
+  line-height: var(--line-message);
+  color: var(--ink);
+  margin-bottom: 0.15rem;
+  padding: 0.05rem 0.25rem;
+  word-break: break-word;
+}
+
+/* Burmese fallback for Myanmar Unicode ranges.
+   Keeps monospace alignment for Latin/numerals, but lets Burmese breathe. */
+.message:lang(my),
+.msg:lang(my),
+[lang="my"] {
+  font-family: var(--burma-font);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Inline Burmese inside Latin-only messages — handled by font fallback chain. */
+@font-face {
+  font-family: 'BurmaMono';
+  src: local('IBM Plex Mono'), local('Noto Sans Myanmar');
+  unicode-range:
+    U+1000-109F,    /* Myanmar */
+    U+AA60-AA7F,    /* Myanmar Extended-A */
+    U+A9E0-A9FF,    /* Myanmar Extended-B */
+    U+200B-200D,    /* zero-width */
+    U+FE00-FE0F;    /* variation selectors */
+}
+
+.message time,
+.message .timestamp {
+  color: var(--ink-muted);
+  font-size: 11px;
+  margin-right: 0.4rem;
+}
+
+.message .from {
+  font-weight: 500;
+  margin-right: 0.4rem;
+}
+
+/* ---------- 8. System messages (semantic colors) ---------- */
+
+.message.join,
+.message--join { color: var(--positive); }
+.message.part,
+.message--part { color: var(--negative); }
+.message.kick,
+.message--kick { color: var(--negative); font-weight: 700; }
+.message.mode,
+.message--mode { color: var(--notice); }
+.message.topic,
+.message--topic { color: var(--notice); }
+.message.server,
+.message--server { color: var(--server); }
+.message.error,
+.message--error {
+  color: var(--negative);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+/* ---------- 9. Tab strip ---------- */
+
+#tabs, .tabs {
+  background: var(--paper);
+  border-bottom: var(--border-hair);
+  height: 36px;
+}
+
+.tab, .channel-tab {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 0.4rem 0.75rem;
+  border-right: var(--border-hair);
+  color: var(--ink-muted);
+  background: var(--paper);
+}
+
+.tab.active, .channel-tab.active {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom: 2px solid var(--accent);
+}
+
+/* ---------- 10. Input box ---------- */
+
+#form, #input, form.input-form {
+  background: var(--paper);
+  border-top: var(--border-hair);
+  padding: 0.5rem 0.75rem;
+  height: 64px;
+}
+
+#form input[type="text"], textarea {
+  font-family: var(--mono);
+  font-size: 13px;
+  border: var(--border-hair);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0.5rem 0.6rem;
+  resize: none;
+}
+
+#form input[type="text"]:focus, textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* ---------- 11. Status bar (always visible at bottom) ---------- */
+
+#status, #footer .status, .status {
+  background: var(--paper);
+  border-top: var(--border-hair);
+  height: 24px;
+  padding: 0 0.75rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#status .connect-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--positive);
+  border-radius: 0;
+}
+
+#status .connect-indicator.disconnected {
+  background: var(--negative);
+}
+
+/* ---------- 12. Mobile PWA ---------- */
+
+@media (max-width: 768px) {
+  #sidebar {
+    width: 120px;
+    border-right: var(--border-hair);
+  }
+  .users {
+    display: none; /* collapse member list on mobile — saves vertical space */
+  }
+  .message {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  #sidebar {
+    width: 100px;
+    font-size: 11px;
+  }
+  .tab {
+    padding: 0.3rem 0.5rem;
+    font-size: 11px;
+  }
+}
+
+/* ---------- 13. Burmese rendering — known renderer issues ---------- */
+
+/*
+ * iOS Safari + Android Chrome: Noto Sans Myanmar is reliable from Chrome 90+ / Safari 14+.
+ * For older devices, fall back to Pyidaungsu (system Myanmar font on Android).
+ * Line-height 1.7 minimum for Burmese — Latin 1.55 produces overlapping diacritics.
+ */
+[lang="my"], .burmese { line-height: 1.7; }
+
+/* ---------- 14. Anti-slop enforcement (re-asserted) ---------- */
+
+button, input, select, textarea {
+  border-radius: 0 !important;
+  background-image: none !important;
+}
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover { color: var(--accent); }

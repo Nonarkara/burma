@@ -1,0 +1,60 @@
+{
+  "site": {
+    "name": "A-Lin-Ein",
+    "subtitle": "The Lighthouse for Burmese Youth",
+    "tagline": "Discover what you can build. Find real paths forward.",
+    "intro": "Bilingual scenario quests and a calm Burmese-language mentor, for Burmese youth exploring careers, training, and scholarships.",
+    "cta_quest": "Try a quest",
+    "cta_atlas": "Browse verified paths",
+    "language_toggle": "မြန်မာ / EN"
+  },
+  "quest": {
+    "start_title": "Start a Quest",
+    "constraint_label": "Constraints",
+    "choose_label": "What would you do?",
+    "submit": "Choose this path",
+    "result_title": "What this signals",
+    "result_intro": "This is not a test score. It is a reflection of how you approached a single situation.",
+    "result_follow": "Talk to your mentor about this"
+  },
+  "mentor": {
+    "title": "A-Lin-Ein",
+    "subtitle": "Your calm companion for thinking through what's next.",
+    "placeholder": "Say what is on your mind (Burmese or English)",
+    "send": "Send",
+    "disclaimer": "A-Lin-Ein reflects with you. It is not a doctor, lawyer, or job agency. If something feels urgent, talk to a real person — see the help lines in your language."
+  },
+  "atlas": {
+    "title": "Verified paths",
+    "filter_type": "Type",
+    "filter_country": "Country",
+    "filter_language": "Language",
+    "filter_trait": "Strength",
+    "type_course": "Course",
+    "type_scholarship": "Scholarship",
+    "type_job": "Job",
+    "type_apprenticeship": "Apprenticeship",
+    "verified_label": "Last verified",
+    "apply_cta": "Apply"
+  },
+  "privacy": {
+    "title": "Privacy",
+    "summary": "We collect the minimum needed to show you relevant paths. We do not sell your data. We do not share with advertising networks.",
+    "data_collected": "Data we collect",
+    "data_collected_list": [
+      "Quest choices and timestamps",
+      "Mentor conversation text (used only during your session, then deleted after 30 days)",
+      "Atlas entries you have already seen"
+    ],
+    "data_not_collected": "Data we do NOT collect",
+    "data_not_collected_list": [
+      "Your real name (you choose a display name)",
+      "Your phone number or email (unless you give it for an application)",
+      "Your precise location"
+    ]
+  },
+  "footer": {
+    "boundaries": "Axiom Decision Systems — Thai-side data only. No Myanmar-state partnerships.",
+    "license": "Quest library © Axiom Decision Systems. Burmese-language adaptations licensed for GovTech Youth Initiative non-commercial pilot use."
+  }
+}

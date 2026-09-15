@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="my">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pirchchat — A-Lin-Ein</title>
+<meta name="description" content="A Burmese-language community platform. Old-school public rooms. 16-bit Chicago aesthetic.">
+<meta name="theme-color" content="#faf9f7">
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="window" id="home">
+
+<header class="titlebar">
+  <span class="dot" aria-hidden="true"></span>
+  <span class="titlebar__title">Pirchchat — A-Lin-Ein</span>
+  <span class="titlebar__spacer"></span>
+  <span class="titlebar__build">build 0.1 · alpha</span>
+</header>
+
+<nav class="menubar" aria-label="Menu">
+  <a href="#home">Home</a>
+  <a href="#surfaces">Surfaces</a>
+  <a href="#status">Status</a>
+  <a href="#docs">Docs</a>
+  <a href="#contact">Contact</a>
+  <span class="menubar__lang"><button type="button" id="toggle-my" class="langbtn langbtn--active" aria-pressed="true">မြန်မာ</button><button type="button" id="toggle-en" class="langbtn" aria-pressed="false">EN</button></span>
+</nav>
+
+<main class="workarea">
+
+  <section class="hero" id="home" data-lang="all">
+
+    <div lang="my" class="lang lang--my">
+      <p class="kicker">ပရောဂျက်</p>
+      <h1 class="title">ပျော်ရွှင်စရာ</h1>
+      <p class="subtitle">မြန်မာဘာသာ အသိုက်အဝန်း</p>
+      <p class="lede">ထာဝရ အခန်းများ၊ သတင်း အကျဉ်းချုပ်၊ လူမှုအသိုက်အဝန်း နားထောင်ခြင်း၊ ကမ္ဘာ့မြေပုံ၊ အသက်မွေးဝမ်းကြောင်း လမ်းညွှန်။ ပါတ်ချက်ချတ်သည့် ဟောင်းစတိုင် အခန်းများ၊ ယနေ့ ဒီဂျစ်တယ် ပုံစံဖြင့်။</p>
+      <p class="brand">Pirchchat · A-Lin-Ein အလင်းအိမ်</p>
+    </div>
+
+    <div lang="en" class="lang lang--en">
+      <p class="kicker">Project</p>
+      <h1 class="title">Pirchchat</h1>
+      <p class="subtitle">A Burmese-language community platform</p>
+      <p class="lede">Persistent rooms, a daily news digest, social listening, a world atlas, and a career navigator. Old-school public rooms in a 2026 form.</p>
+      <p class="brand">Pirchchat · A-Lin-Ein (အလင်းအိမ်) — The Lighthouse</p>
+    </div>
+
+  </section>
+
+  <section class="row" id="surfaces">
+
+    <h2 class="sectiontitle">Surfaces <span class="sectiontitle--my">မျက်နှာပြင်များ</span></h2>
+
+    <div class="grid">
+
+      <article class="card card--my">
+        <header class="card__bar">
+          <span class="dot dot--my" aria-hidden="true"></span>
+          <span class="card__name">Rooms</span>
+          <span class="card__name-my">အခန်းများ</span>
+          <span class="card__status card__status--plan">Plan</span>
+        </header>
+        <p class="card__desc">Persistent IRC-style public rooms. Always-on. Member lists visible. Status line at the bottom. The old-school Pirchchat feel, on a 2026 mobile PWA.</p>
+        <p class="card__desc-my">ထာဝရ အခန်းများ။ အမြဲတမ်း အသက်ဝင်။ အသင်းဝင်များ စာရင်း ပြသ်သည်။ ဟောင်းစတိုင် ခံစားချက်၊ ၂၀၂၆ ပုံစံဖြင့်။</p>
+      </article>
+
+      <article class="card card--my">
+        <header class="card__bar">
+          <span class="dot dot--my" aria-hidden="true"></span>
+          <span class="card__name">Digest</span>
+          <span class="card__name-my">သတင်း အကျဉ်းချုပ်</span>
+          <span class="card__status card__status--plan">Plan</span>
+        </header>
+        <p class="card__desc">Daily Burmese-language news summary, posted in <code>#digest-today</code> at 06:00 ICT. Sources: Burmese-language independent media, diaspora outlets, regional press.</p>
+        <p class="card__desc-my">မြန်မာဘာသာ သတင်း နေ့စဉ် အကျဉ်းချုပ်။ ICT ၀၆:၀၀ တွင် <code>#digest-today</code> တွင် တင်သည်။</p>
+      </article>
+
+      <article class="card card--my">
+        <header class="card__bar">
+          <span class="dot dot--my" aria-hidden="true"></span>
+          <span class="card__name">Listening</span>
+          <span class="card__name-my">နားထောင်ခြင်း</span>
+          <span class="card__status card__status--plan">Plan</span>
+        </header>
+        <p class="card__desc">Aggregated Burmese-language social trends. No PII. No individual posts. Topic clusters surfaced in <code>#listening-club</code> and as a dashboard.</p>
+        <p class="card__desc-my">မြန်မာဘာသာ လူမှုမီဒီယာ အခြေအနေများ စုစည်းမှု။ PII မရှိ။ တစ်ဦးချင်း မဟုတ်။</p>
+      </article>
+
+      <article class="card card--my">
+        <header class="card__bar">
+          <span class="dot dot--my" aria-hidden="true"></span>
+          <span class="card__name">Atlas</span>
+          <span class="card__name-my">ကမ္ဘာ့မြေပုံ</span>
+          <span class="card__status card__status--plan">Plan</span>
+        </header>
+        <p class="card__desc">World map of where Burmese people are talking from. Diaspora density. Migration corridors. Source map. MapLibre + PMTiles + Esri imagery, no Mapbox bills.</p>
+        <p class="card__desc-my">မြန်မာ လူမျိုး ဘာသာစကား ပြောဆိုရာ နေရာ မြေပုံ။</p>
+      </article>
+
+      <article class="card card--my">
+        <header class="card__bar">
+          <span class="dot dot--my" aria-hidden="true"></span>
+          <span class="card__name">Career Navigator</span>
+          <span class="card__name-my">အသက်မွေးဝမ်းကြောင်း</span>
+          <span class="card__status card__status--plan">Plan</span>
+        </header>
+        <p class="card__desc">TKCX-Youth quest scenarios, AI mentor, training and scholarship atlas. Embedded as a <code>#career-navigator</code> room and as a guided web flow.</p>
+        <p class="card__desc-my">TKCX-Youth အခြေအနေ စစ်ဆေးချက်၊ AI သင်ခန်းစား၊ လေ့ကျင့်ရေး နှင့် ပညာသင်ဆု မြေပုံ။</p>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="status" id="status">
+    <h2 class="sectiontitle">Status <span class="sectiontitle--my">အခြေအနေ</span></h2>
+    <table class="statustable">
+      <tbody>
+        <tr><th>Repo</th><td><a href="https://github.com/Nonarkara/burma" rel="noopener">github.com/Nonarkara/burma</a></td><td class="statustable__ok">live</td></tr>
+        <tr><th>Domain</th><td><a href="https://burma.nonarkara.org">burma.nonarkara.org</a></td><td class="statustable__ok">live</td></tr>
+        <tr><th>Deployment</th><td>Cloudflare Pages (static)</td><td class="statustable__ok">live</td></tr>
+        <tr><th>Rooms (Surface 1)</th><td>Hetzner CX22, Singapore</td><td class="statustable__plan">not yet provisioned</td></tr>
+        <tr><th>Counter-proposal to Si Thu Maung</th><td><a href="/docs/COUNTER-PROPOSAL.md">docs/COUNTER-PROPOSAL.md</a></td><td class="statustable__ok">drafted</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="docs" id="docs">
+    <h2 class="sectiontitle">Docs <span class="sectiontitle--my">စာရွက်စာတမ်း</span></h2>
+    <ul class="doclist">
+      <li><a href="/docs/PIRCHCHAT-PLATFORM.md">PIRCHCHAT-PLATFORM.md</a> — five-surface architecture</li>
+      <li><a href="/docs/16BIT-AESTHETIC.md">16BIT-AESTHETIC.md</a> — visual register, house tokens</li>
+      <li><a href="/docs/PIRCH-AESTHETIC.md">PIRCH-AESTHETIC.md</a> — PIRCH98 DNA translated</li>
+      <li><a href="/docs/PIRCH-SPIKE.md">PIRCH-SPIKE.md</a> — The Lounge deploy plan</li>
+      <li><a href="/docs/SABAI-AUDIT.md">SABAI-AUDIT.md</a> — Sabai Job audit and three integration shapes</li>
+      <li><a href="/docs/COUNTER-PROPOSAL.md">COUNTER-PROPOSAL.md</a> — reply to Si Thu Maung's proposal</li>
+      <li><a href="/AGENTS.md">AGENTS.md</a> — project governance</li>
+    </ul>
+  </section>
+
+  <section class="contact" id="contact">
+    <h2 class="sectiontitle">Contact <span class="sectiontitle--my">ဆက်သွယ်ရန်</span></h2>
+    <p>Project lead: Dr Non Arkaraprasertkul, Axiom Decision Systems.</p>
+    <p>Co-proposer: Si Thu Maung, GovTech Youth Initiative. Sabai Job co-founder.</p>
+    <p>Closed alpha for verified Burmese speakers, by invitation. Telegram-bot interest list available after Surface 1 ships.</p>
+  </section>
+
+  <hr class="rule">
+
+  <footer class="footer">
+    <p>Pirchchat is a community platform project of Axiom Decision Systems. Burmese-context adaptations licensed for GovTech Youth Initiative non-commercial pilot. Internal codename A-Lin-Ein (အလင်းအိမ်). Pilot launch: February 2027.</p>
+    <p>Boundaries: Thai-side data and Burmese diaspora only. No Myanmar-state partnerships. Burmese-script-first. Discovery, not diagnosis. Real-human escalation for crisis.</p>
+  </footer>
+
+</main>
+
+<footer class="statusbar" aria-label="Status bar">
+  <span class="statusbar__item"><span class="led led--on" aria-hidden="true"></span>burma.nonarkara.org</span>
+  <span class="statusbar__item">build 0.1 · alpha</span>
+  <span class="statusbar__item">Burmese · English</span>
+  <span class="statusbar__spacer"></span>
+  <span class="statusbar__item">Cloudflare Pages · Cloudflare DNS · GitHub</span>
+</footer>
+
+</div>
+
+<script src="lang.js"></script>
+</body>
+</html>

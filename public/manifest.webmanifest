@@ -1,0 +1,26 @@
+{
+  "name": "A-Lin-Ein — The Lighthouse",
+  "short_name": "A-Lin-Ein",
+  "description": "AI Career & Skills Discovery Navigator for Burmese youth.",
+  "start_url": "/my",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf9f7",
+  "theme_color": "#d4a017",
+  "lang": "my",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

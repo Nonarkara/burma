@@ -1,0 +1,237 @@
+@import 'tailwindcss';
+
+/*
+ * Pirchchat house tokens — mirrors docs/16BIT-AESTHETIC.md
+ * 16-bit / Chicago design language, anti-slop rules applied.
+ */
+
+@theme {
+  /* Surfaces */
+  --color-paper: #faf9f7;
+  --color-chrome: #e8e3d8;
+  --color-chrome-dark: #d4ccba;
+  --color-ink: #102a43;
+  --color-ink-muted: #486581;
+  --color-rule: #8b7d5e;
+
+  /* Accent — saffron (Chicago yellow + Burmese monk robe) */
+  --color-accent: #d4a017;
+  --color-accent-soft: #f6e9c4;
+
+  /* Semantic */
+  --color-positive: #2e7d32;
+  --color-negative: #a51931;
+  --color-notice: #b45309;
+  --color-server: #1d4e89;
+
+  /* Reserved */
+  --color-highlight: #f0c800;
+
+  /* Typography */
+  --font-display: 'IBM Plex Sans', ui-sans-serif, sans-serif;
+  --font-body: 'IBM Plex Sans', ui-sans-serif, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-burma: 'Noto Sans Myanmar', 'Pyidaungsu', 'Myanmar Text', sans-serif;
+
+  /* Geometry — sharp edges, 8px grid */
+  --radius-none: 0;
+  --radius-default: 0;
+  --border-hair: 1px solid var(--color-rule);
+  --border-strong: 2px solid var(--color-ink);
+  --grid-unit: 8px;
+
+  /* Type scale */
+  --text-step--2: 0.6875rem;   /* 11px — statusbar */
+  --text-step--1: 0.75rem;     /* 12px — menubar / labels */
+  --text-step-0: 0.875rem;     /* 14px — body */
+  --text-step-1: 1rem;         /* 16px — headings */
+  --text-step-2: 1.125rem;     /* 18px */
+  --text-step-3: 1.5rem;       /* 24px */
+  --text-step-4: 2rem;         /* 32px */
+  --text-step-5: 3rem;         /* 48px */
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-step-0);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  /* Burmese fallback */
+  [lang="my"], .burmese {
+    font-family: var(--font-burma);
+    line-height: 1.7;
+  }
+
+  a {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  a:hover { color: var(--color-accent); }
+
+  /* Anti-slop enforcement — project-wide. */
+  *, *::before, *::after {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-image: none !important;
+  }
+
+  button, input, select, textarea {
+    border-radius: 0 !important;
+    background-image: none !important;
+    font-family: inherit;
+  }
+
+  ::selection {
+    background: var(--color-highlight);
+    color: var(--color-ink);
+  }
+}
+
+@layer components {
+  /* Window chrome — the "Chicago" desktop pattern.
+     Used by every surface as the framing container. */
+
+  .window {
+    background: var(--color-paper);
+    border: var(--border-strong);
+  }
+
+  .window__titlebar {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 8px;
+    background: var(--color-chrome);
+    border-bottom: var(--border-hair);
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 700;
+  }
+
+  .window__titlebar .traffic-light {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    background: var(--color-accent);
+    border-radius: 0;
+  }
+
+  .window__menubar {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    background: var(--color-paper);
+    border-bottom: var(--border-hair);
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 500;
+    gap: 1rem;
+  }
+
+  .window__workarea {
+    padding: var(--grid-unit);
+    background: var(--color-paper);
+    min-height: 320px;
+  }
+
+  .window__statusbar {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    background: var(--color-paper);
+    border-top: var(--border-hair);
+    font-family: var(--font-mono);
+    font-size: var(--text-step--2);
+    color: var(--color-ink-muted);
+    gap: 1rem;
+  }
+
+  /* Buttons — flat, hairline borders. */
+
+  .btn {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border: var(--border-hair);
+    font-family: var(--font-display);
+    font-size: var(--text-step--1);
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn:hover {
+    background: var(--color-accent-soft);
+    border-color: var(--color-accent);
+  }
+
+  .btn:focus-visible {
+    border-color: var(--color-accent);
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
+  .btn--primary {
+    background: var(--color-ink);
+    color: var(--color-paper);
+    border-color: var(--color-ink);
+  }
+
+  .btn--primary:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-ink);
+  }
+
+  /* Input */
+
+  .input {
+    display: block;
+    width: 100%;
+    padding: 4px 8px;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border: var(--border-hair);
+    font-family: var(--font-mono);
+    font-size: var(--text-step-0);
+  }
+
+  .input:focus {
+    border-color: var(--color-accent);
+    outline: none;
+  }
+
+  /* Semantic message classes (chat surface) */
+
+  .msg--join    { color: var(--color-positive); }
+  .msg--part    { color: var(--color-negative); }
+  .msg--kick    { color: var(--color-negative); font-weight: 700; }
+  .msg--mode    { color: var(--color-notice); }
+  .msg--topic   { color: var(--color-notice); }
+  .msg--server  { color: var(--color-server); }
+  .msg--error   {
+    color: var(--color-negative);
+    background: var(--color-accent-soft);
+    font-weight: 700;
+  }
+}
