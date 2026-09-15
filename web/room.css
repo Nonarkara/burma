@@ -1,0 +1,534 @@
+/* Pirchchat — chat room interior.
+   Mimics Windows 95 / PIRCH98 chrome: 2-tone raised/sunken borders,
+   neutral gray chrome, monospace messages, member list on the right.
+   Anti-slop: no rounded corners, no drop shadows, no gradients. */
+
+:root {
+  /* Win95 chrome, warm-tinted to match our house. */
+  --chrome-light:  #f5f1e8;   /* raised surface */
+  --chrome:        #e8e3d8;   /* standard surface */
+  --chrome-dark:   #c9c1ad;   /* sunken / 3D bevel dark */
+  --chrome-edge:   #faf9f7;   /* near-white highlight on raised */
+  --ink:           #102a43;
+  --ink-muted:     #486581;
+  --rule:          #8b7d5e;
+
+  --accent:        #d4a017;
+
+  /* System message semantics (Burmese-friendly) */
+  --positive:      #2e7d32;
+  --negative:      #a51931;
+  --notice:        #b45309;
+  --server:        #1d4e89;
+
+  --paper:         #ffffff;
+
+  --font-system:   'IBM Plex Sans', 'MS Sans Serif', Tahoma, sans-serif;
+  --font-mono:     'IBM Plex Mono', 'Courier New', monospace;
+  --font-burma:    'Noto Sans Myanmar', 'Pyidaungsu', sans-serif;
+
+  /* The signatures of Win95 chrome: 2-pixel bevel pairs. */
+  --bevel-raised:  2px solid var(--ink-muted)   2px solid var(--chrome-edge);
+  --bevel-sunken:  2px solid var(--chrome-edge) 2px solid var(--ink-muted);
+}
+
+*, *::before, *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #6f7e80;   /* the Win95 teal desktop */
+  color: var(--ink);
+  font-family: var(--font-system);
+  font-size: 13px;
+  line-height: 1.45;
+  min-height: 100vh;
+}
+
+/* The window sits on the desktop, slightly inset. */
+.win95 {
+  background: #6f7e80;
+}
+
+.window {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1180px;
+  height: 100vh;
+  max-height: 100vh;
+  margin: 8px auto;
+  background: var(--chrome);
+  border: 2px solid var(--ink);
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* ===== Titlebar (Win95) ===== */
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 2px 0 4px;
+  background: var(--chrome-dark);
+  font-family: var(--font-system);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.titlebar__dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  background: var(--accent);
+}
+
+.titlebar__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar__spacer { flex: 0 0 8px; }
+
+.titlebar__btn {
+  width: 22px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.titlebar__btn:active {
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+}
+
+.titlebar__btn--close {
+  color: var(--negative);
+}
+
+/* ===== Menubar (Win95) ===== */
+
+.menubar {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 2px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.menubar__item {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-family: var(--font-system);
+  font-size: 12px;
+  color: var(--ink);
+  padding: 2px 10px;
+  cursor: pointer;
+  letter-spacing: 0;
+}
+
+.menubar__item:hover {
+  background: var(--ink);
+  color: var(--chrome-light);
+}
+
+.menubar__item:active {
+  background: var(--ink);
+  color: var(--chrome-light);
+  border-top: 1px solid var(--ink-muted);
+  border-left: 1px solid var(--ink-muted);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+}
+
+/* ===== Toolbar (icon strip with monochrome glyphs) ===== */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 4px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 11px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.toolbar__btn:active {
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+}
+
+.tb-icon {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  width: 14px;
+  text-align: center;
+  display: inline-block;
+}
+
+/* ===== Linkbar (server connection line) ===== */
+
+.linkbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.linkbar__label { font-weight: 700; }
+.linkbar__sep { color: var(--ink-muted); }
+.linkbar__lat { color: var(--ink-muted); }
+
+/* ===== Panes ===== */
+
+.panes {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  padding: 4px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-top: 2px solid var(--chrome-edge);
+  border-left: 2px solid var(--chrome-edge);
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  min-height: 0;
+}
+
+.pane__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.pane__title {
+  font-family: var(--font-system);
+  font-weight: 700;
+  margin: 0;
+  font-size: 13px;
+}
+
+.pane__hash { color: var(--ink-muted); }
+
+.pane__topic {
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pane__topic em { color: var(--ink); }
+
+.pane__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  min-height: 0;
+}
+
+/* ===== Messages ===== */
+
+.messages {
+  background: var(--paper);
+  padding: 8px 12px;
+  overflow-y: auto;
+  border-right: 1px solid var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.msg {
+  display: grid;
+  grid-template-columns: 36px max-content 1fr;
+  column-gap: 8px;
+  padding: 1px 0;
+  color: var(--ink);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.msg .ts {
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.msg .nick {
+  font-weight: 700;
+}
+
+.nick--op { color: var(--accent); }
+.nick--away { opacity: 0.55; font-style: italic; }
+.nick--voice { color: var(--notice); }
+
+.msg .body {
+  word-break: break-word;
+}
+
+.msg .body[lang="my"],
+.msg [lang="my"] {
+  font-family: var(--font-burma);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* System messages render full-width and centered. */
+.msg--server,
+.msg--topic,
+.msg--mode {
+  display: block;
+  font-size: 11.5px;
+  font-style: italic;
+  padding: 4px 0;
+  color: var(--server);
+  grid-template-columns: none;
+}
+
+.msg--server { color: var(--ink-muted); }
+.msg--topic { color: var(--ink); border-top: 1px dotted var(--ink-muted); border-bottom: 1px dotted var(--ink-muted); margin: 4px 0; padding: 6px 0; }
+.msg--topic em { color: var(--accent); font-weight: 700; font-style: italic; }
+.msg--mode { color: var(--notice); }
+.msg--join { color: var(--positive); }
+.msg--part { color: var(--negative); }
+
+/* ===== Members ===== */
+
+.members {
+  background: var(--chrome);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  font-family: var(--font-system);
+}
+
+.members__head {
+  padding: 4px 8px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+}
+
+.members__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.members__list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1px 8px;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.members__list li:hover { background: var(--ink); color: var(--chrome-light); }
+
+.members__nick { font-weight: 700; }
+.members__nick--op { color: var(--accent); }
+.members__nick--away { opacity: 0.55; font-style: italic; }
+
+.members__tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
+/* ===== Composer (sunken input) ===== */
+
+.composer {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--chrome);
+  border-top: 1px solid var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.composer__input {
+  flex: 1;
+  height: 24px;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--paper);
+  color: var(--ink);
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+}
+
+.composer__input::placeholder { color: var(--ink-muted); font-style: italic; }
+.composer__input:focus { outline: 0; }
+
+.composer__send {
+  appearance: none;
+  height: 24px;
+  padding: 0 16px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.composer__send:active {
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+}
+
+/* ===== Statusbar ===== */
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 11px;
+  color: var(--ink);
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.statusbar__spacer { flex: 1; }
+.statusbar__item { display: inline-flex; align-items: center; gap: 4px; }
+
+.led {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--negative);
+  flex-shrink: 0;
+}
+
+.led--on { background: var(--positive); }
+
+/* ===== Scrollbars (Win95 chunky) ===== */
+
+.messages::-webkit-scrollbar, .members__list::-webkit-scrollbar { width: 16px; height: 16px; }
+.messages::-webkit-scrollbar-track, .members__list::-webkit-scrollbar-track { background: var(--chrome); }
+.messages::-webkit-scrollbar-thumb, .members__list::-webkit-scrollbar-thumb {
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+.messages::-webkit-scrollbar-button, .members__list::-webkit-scrollbar-button {
+  display: block;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  height: 16px;
+  width: 16px;
+}
+
+.messages, .members__list { scrollbar-color: var(--chrome) var(--chrome); scrollbar-width: auto; }
+
+/* ===== Burmese rendering — explicit handling ===== */
+
+[lang="my"], .burmese {
+  font-family: var(--font-burma);
+  line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+  .pane__body { grid-template-columns: 1fr; }
+  .members { display: none; }
+  .pane__topic { white-space: normal; }
+}
