@@ -1313,13 +1313,13 @@ html, body {
     display: none;
   }
 
-  /* show only the selected surface — fill remaining height after tabs */
-  .dash { height: calc(100vh - 44px); }
-  body[data-tab="map"]  .dash__left { display: flex; flex: 1 1 auto; min-height: 0; }
-  body[data-tab="news"] .dash__right { display: flex; flex: 1 1 auto; min-height: 0; height: 100%; }
+  /* show only the selected surface — absolute positioning, no flex collapse */
+  .dash { position: relative; height: calc(100vh - 44px); }
+  body[data-tab="map"]  .dash__left  { display: flex; position: absolute; inset: 0; min-height: 0; }
+  body[data-tab="news"] .dash__right { display: flex; position: absolute; inset: 0; min-height: 0; flex-direction: column; }
   body[data-tab="news"] .dash__right .chat { display: none; }
   body[data-tab="news"] .dash__right .news { display: flex; flex: 1 1 auto; min-height: 0; }
-  body[data-tab="chat"] .dash__right { display: flex; flex: 1 1 auto; min-height: 0; height: 100%; }
+  body[data-tab="chat"] .dash__right { display: flex; position: absolute; inset: 0; min-height: 0; flex-direction: column; }
   body[data-tab="chat"] .dash__right .news { display: none; }
   body[data-tab="chat"] .dash__right .chat { display: flex; flex: 1 1 auto; min-height: 0; }
 
