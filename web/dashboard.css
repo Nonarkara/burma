@@ -1,5 +1,5 @@
-/* Pirchchat — split-screen dashboard.
-   Layout: full viewport, no max-width. Left = map. Right = news + chat.
+/* Pirchchat — split-screen dashboard, mobile-first.
+   Layout: full viewport. Desktop 16:9 split (map | news/chat). Mobile stacked with tabs.
    Win95 chrome throughout. Anti-slop: no rounded, no shadow, no gradient. */
 
 :root {
@@ -20,9 +20,6 @@
   --font-system:   'IBM Plex Sans', 'MS Sans Serif', Tahoma, sans-serif;
   --font-mono:     'IBM Plex Mono', 'Courier New', monospace;
   --font-burma:    'Noto Sans Myanmar', 'Pyidaungsu', sans-serif;
-
-  --bevel-raised:  2px solid var(--ink-muted)   2px solid var(--chrome-edge);
-  --bevel-sunken:  2px solid var(--chrome-edge) 2px solid var(--ink-muted);
 }
 
 *, *::before, *::after {
@@ -40,11 +37,57 @@ html, body {
   line-height: 1.45;
   height: 100%;
   overflow: hidden;
+  -webkit-tap-highlight-color: rgba(212, 160, 23, 0.3);
 }
 
 .full-bleed { height: 100vh; }
-
 .win95 { background: #6f7e80; }
+
+/* ===== Mobile top tabs (hidden on desktop) ===== */
+
+.tabs-top {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  align-items: stretch;
+  height: 44px;
+  background: var(--chrome);
+  border-bottom: 2px solid var(--ink);
+}
+
+.tabs-top__btn {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: var(--chrome);
+  border-right: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.tabs-top__btn:last-of-type { border-right: none; }
+
+.tabs-top__btn--active {
+  background: var(--ink);
+  color: var(--chrome-light);
+}
+
+.tabs-top__brand {
+  display: none;
+  font-family: var(--font-display, var(--font-mono));
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  padding: 0 12px;
+  align-self: center;
+  background: var(--chrome-dark);
+  color: var(--ink);
+}
 
 /* ===== Layout ===== */
 
@@ -60,8 +103,7 @@ html, body {
   box-sizing: border-box;
 }
 
-.dash__left,
-.dash__right {
+.dash__left {
   display: flex;
   flex-direction: column;
   background: var(--chrome);
@@ -76,12 +118,17 @@ html, body {
 
 .dash__right {
   display: grid;
-  grid-template-rows: 1fr 1.6fr;
+  grid-template-rows: 1.2fr 1.8fr;
   gap: 4px;
   padding: 4px;
   background: var(--chrome);
   border: none;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
+
+.dash__left, .dash__right { min-height: 0; }
 
 /* ===== Titlebar (Win95) ===== */
 
@@ -151,7 +198,7 @@ html, body {
   border-bottom: 1px solid var(--chrome-edge);
 }
 
-.titlebar__btn:focus-visible { outline: 1px dotted var(--ink); outline-offset: -3px; }
+.titlebar__btn--close { color: var(--negative); }
 
 /* ===== Menubar ===== */
 
@@ -178,10 +225,10 @@ html, body {
   padding: 2px 10px;
   cursor: pointer;
   white-space: nowrap;
+  min-height: 22px;
 }
 
-.menubar__item:hover { background: var(--ink); color: var(--chrome-light); }
-.menubar__item:active { background: var(--ink); color: var(--chrome-light); }
+.menubar__item:hover, .menubar__item:active { background: var(--ink); color: var(--chrome-light); }
 .menubar__item--active { background: var(--ink); color: var(--chrome-light); }
 
 /* ===== Toolbar ===== */
@@ -201,7 +248,8 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 4px 10px;
+  min-height: 28px;
   background: var(--chrome);
   border-top: 1px solid var(--chrome-edge);
   border-left: 1px solid var(--chrome-edge);
@@ -215,15 +263,16 @@ html, body {
 }
 
 .toolbar__btn:hover { background: var(--accent-soft); }
+
 .toolbar__btn:active,
 .toolbar__btn.is-pressed {
   border-top: 1px solid var(--ink);
   border-left: 1px solid var(--ink);
   border-right: 1px solid var(--chrome-edge);
   border-bottom: 1px solid var(--chrome-edge);
+  /* "small shadow tint" — a 1px inner border gives the pressed feel without using box-shadow */
+  background: var(--chrome-dark);
 }
-
-.toolbar__btn:focus-visible { outline: 1px dotted var(--ink); outline-offset: -3px; }
 
 .toolbar__sep { width: 6px; }
 
@@ -241,9 +290,50 @@ html, body {
   color: var(--ink);
   flex-shrink: 0;
 }
+
 .linkbar__label { font-weight: 700; }
 .linkbar__sep { color: var(--ink-muted); }
 .linkbar__lat { color: var(--ink-muted); }
+
+/* ===== Chipbar (source / topic filters) ===== */
+
+.chipbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 6px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.chip {
+  appearance: none;
+  padding: 2px 8px;
+  min-height: 22px;
+  background: var(--paper);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 11px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.chip:active,
+.chip--active {
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+  background: var(--ink);
+  color: var(--chrome-light);
+}
+
+.chip:hover:not(.chip--active) { background: var(--accent-soft); }
 
 /* ===== Map ===== */
 
@@ -268,7 +358,8 @@ html, body {
   left: 8px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 4px 10px;
   background: var(--chrome);
   border-top: 1px solid var(--chrome-edge);
@@ -276,7 +367,7 @@ html, body {
   border-right: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--ink);
   z-index: 5;
 }
@@ -288,20 +379,26 @@ html, body {
   margin-right: 4px;
   vertical-align: middle;
 }
-.legend__dot--news { background: var(--negative); }
-.legend__dot--chat { background: var(--accent); }
-.legend__dot--you { background: var(--positive); }
 
-/* Custom MapLibre marker dot via CSS — sharp edges, no rounded. */
+.legend__dot--news  { background: var(--negative); }
+.legend__dot--chat  { background: var(--accent); }
+.legend__dot--city  { background: var(--paper); border: 2px solid var(--ink); box-sizing: border-box; }
+.legend__dot--you   { background: var(--positive); }
+
 .pirch-marker {
   width: 14px;
   height: 14px;
   border: 2px solid var(--paper);
   cursor: pointer;
 }
+
 .pirch-marker--news { background: var(--negative); }
 .pirch-marker--chat { background: var(--accent); }
-.pirch-marker--you { background: var(--positive); }
+.pirch-marker--city {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+.pirch-marker--you  { background: var(--positive); }
 
 /* ===== Statusbar ===== */
 
@@ -318,6 +415,7 @@ html, body {
   gap: 16px;
   flex-shrink: 0;
 }
+
 .statusbar__spacer { flex: 1; }
 .statusbar__item { display: inline-flex; align-items: center; gap: 4px; }
 
@@ -359,13 +457,19 @@ html, body {
 }
 
 .news-item:hover { background: var(--accent-soft); }
-.news-item.is-selected { background: var(--accent-soft); border-left: 4px solid var(--accent); padding-left: 10px; }
+
+.news-item.is-selected {
+  background: var(--accent-soft);
+  border-left: 4px solid var(--accent);
+  padding-left: 10px;
+}
 
 .news-item__head {
   display: flex;
   align-items: baseline;
   gap: 8px;
   margin-bottom: 2px;
+  flex-wrap: wrap;
 }
 
 .news-item__ts {
@@ -425,6 +529,39 @@ html, body {
   line-height: 1.7;
 }
 
+.news-item__digest {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--chrome);
+  border-top: 2px solid var(--accent);
+  border-bottom: 1px solid var(--ink-muted);
+  font-family: var(--font-burma);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  cursor: default;
+}
+
+.news-item__digest-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.news-item__digest-en {
+  font-family: var(--font-system);
+  font-style: italic;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
 .news-item__meta {
   display: flex;
   gap: 12px;
@@ -434,7 +571,10 @@ html, body {
   color: var(--ink-muted);
 }
 
-.news-item__meta a { color: var(--accent); text-decoration: none; }
+.news-item__meta a {
+  color: var(--accent);
+  text-decoration: none;
+}
 .news-item__meta a:hover { text-decoration: underline; }
 
 /* ===== Chat ===== */
@@ -456,6 +596,11 @@ html, body {
   display: grid;
   grid-template-columns: 1fr 180px;
   min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .chat__body { grid-template-columns: 1fr; }
+  .members { display: none; }
 }
 
 .messages {
@@ -511,7 +656,27 @@ html, body {
 .msg--join { color: var(--positive); }
 .msg--part { color: var(--negative); }
 
-/* Link preview card in chat */
+.msg__topic-tag {
+  display: inline-block;
+  padding: 1px 4px;
+  margin-right: 4px;
+  background: var(--chrome);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  vertical-align: middle;
+}
+
+.msg__img {
+  margin-top: 6px;
+  max-width: 320px;
+  max-height: 240px;
+  display: block;
+  border: 2px solid var(--ink);
+}
+
 .preview {
   margin-top: 4px;
   display: block;
@@ -590,6 +755,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 1px 8px;
   font-size: 12px;
   color: var(--ink);
@@ -600,7 +766,6 @@ html, body {
 .members__nick { font-weight: 700; }
 .members__nick--op { color: var(--accent); }
 .members__nick--away { opacity: 0.55; font-style: italic; }
-
 .members__tag {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -609,10 +774,11 @@ html, body {
   color: var(--ink-muted);
 }
 
-/* ===== Composer ===== */
+/* ===== Composer (sunken input + paperclip) ===== */
 
 .composer {
   display: flex;
+  align-items: stretch;
   gap: 4px;
   padding: 4px;
   background: var(--chrome);
@@ -620,9 +786,32 @@ html, body {
   flex-shrink: 0;
 }
 
+.composer__attach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  cursor: pointer;
+  font-size: 14px;
+  user-select: none;
+}
+
+.composer__attach:active {
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+}
+
 .composer__input {
   flex: 1;
-  height: 24px;
+  height: 28px;
   padding: 2px 4px;
   font-family: var(--font-mono);
   font-size: 13px;
@@ -638,7 +827,7 @@ html, body {
 
 .composer__send {
   appearance: none;
-  height: 24px;
+  height: 28px;
   padding: 0 16px;
   background: var(--chrome);
   border-top: 1px solid var(--chrome-edge);
@@ -651,6 +840,7 @@ html, body {
   color: var(--ink);
   cursor: pointer;
 }
+
 .composer__send:active {
   border-top: 1px solid var(--ink);
   border-left: 1px solid var(--ink);
@@ -658,7 +848,7 @@ html, body {
   border-bottom: 1px solid var(--chrome-edge);
 }
 
-/* ===== Modal (incident popup) ===== */
+/* ===== Modal ===== */
 
 .modal {
   position: fixed;
@@ -675,7 +865,7 @@ html, body {
 
 .modal__panel {
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
   background: var(--chrome);
   border-top: 2px solid var(--chrome-edge);
   border-left: 2px solid var(--chrome-edge);
@@ -688,6 +878,8 @@ html, body {
   overflow: hidden;
 }
 
+.modal__panel--tall { max-width: 640px; }
+
 .modal__body {
   padding: 12px;
   background: var(--paper);
@@ -695,6 +887,90 @@ html, body {
   font-size: 13px;
   line-height: 1.5;
   color: var(--ink);
+}
+
+.modal__intro {
+  font-size: 13px;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.modal__field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.modal__field > span {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-bottom: 4px;
+}
+
+.modal__field input {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  font-family: var(--font-system);
+  font-size: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+  box-sizing: border-box;
+}
+
+.modal__hint {
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.modal__rules {
+  background: var(--chrome);
+  padding: 10px 12px;
+  border-top: 2px solid var(--accent);
+  font-size: 12px;
+  margin: 12px 0;
+}
+
+.modal__rules ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn {
+  appearance: none;
+  padding: 6px 16px;
+  min-height: 28px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.btn:active {
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
 }
 
 .modal__body h3 {
@@ -711,12 +987,37 @@ html, body {
 }
 
 .modal__body p { margin: 6px 0; }
-.modal__body .modal__meta { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+.modal__body .modal__meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin-top: 12px;
+}
+
+.modal__digest-block {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--chrome);
+  border-top: 2px solid var(--accent);
+}
+
+.modal__digest-block .modal__digest-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
 
 /* ===== Scrollbars (Win95 chunky) ===== */
 
 .messages::-webkit-scrollbar, .members__list::-webkit-scrollbar, .news__list::-webkit-scrollbar { width: 16px; height: 16px; }
+
 .messages::-webkit-scrollbar-track, .members__list::-webkit-scrollbar-track, .news__list::-webkit-scrollbar-track { background: var(--chrome); }
+
 .messages::-webkit-scrollbar-thumb, .members__list::-webkit-scrollbar-thumb, .news__list::-webkit-scrollbar-thumb {
   background: var(--chrome);
   border-top: 1px solid var(--chrome-edge);
@@ -732,7 +1033,43 @@ html, body {
   line-height: 1.7;
 }
 
+/* ===== Mobile breakpoint — tabbed surface switcher ===== */
+
 @media (max-width: 920px) {
-  .dash { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-  .dash__right { grid-template-rows: 1fr 1fr; }
+  .dash {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    gap: 0;
+    padding: 0;
+  }
+
+  .tabs-top { display: flex; }
+  .tabs-top__brand { display: inline-block; }
+
+  /* hide all by default on mobile */
+  .dash__left, .dash__right, .dash__right .news, .dash__right .chat {
+    display: none;
+  }
+
+  /* show only the selected surface */
+  body[data-tab="map"]  .dash__left { display: flex; }
+  body[data-tab="news"] .dash__right { display: grid; grid-template-rows: 1fr; }
+  body[data-tab="news"] .dash__right .chat { display: none; }
+  body[data-tab="news"] .dash__right .news { display: flex; }
+  body[data-tab="chat"] .dash__right { display: grid; grid-template-rows: 1fr; }
+  body[data-tab="chat"] .dash__right .news { display: none; }
+  body[data-tab="chat"] .dash__right .chat { display: flex; }
+
+  /* hide tab from index if URL is /chat or /news */
+  body[data-tab="map"]  .tabs-top__btn[data-tab="map"] { background: var(--ink); color: var(--chrome-light); }
+  body[data-tab="news"] .tabs-top__btn[data-tab="news"] { background: var(--ink); color: var(--chrome-light); }
+  body[data-tab="chat"] .tabs-top__btn[data-tab="chat"] { background: var(--ink); color: var(--chrome-light); }
+}
+
+@media (max-width: 920px) {
+  .dash__left, .dash__right {
+    border-left: none;
+    border-right: none;
+    border-top: none;
+  }
 }

@@ -1,33 +1,31 @@
 // Pirchchat — dashboard.js
-// Orchestrates: MapLibre map (Esri imagery + Esri streets + Esri dark + Esri light),
-// news ticker (live from /api/news, geocoded), chat rooms (5 rooms, Win95 chrome),
-// link preview card fetching from /api/preview, modal popup.
+// Modules: identity, mobile tabs, map (Esri + RainViewer + city markers),
+// news (with Dr Non digest + source chips + topic tags), chat rooms (with
+// topic sub-tabs + image attachments + URL preview cards), modal,
+// clock. Persists identity + recent image to localStorage.
 
 (function () {
 'use strict';
 
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+const $ = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
 
-function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+const escapeHtml = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function timeNowHHMM() {
+const timeNow = () => {
   const d = new Date();
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-}
+};
 
-function timeNowICT() {
+const timeNowICT = () => {
   const d = new Date();
-  return d.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Yangon' }) + ' ICT';
-}
+  return d.toLocaleString('en-GB', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Yangon',
+  }) + ' ICT';
+};
 
-function ago(iso) {
+const ago = (iso) => {
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return '';
   const diff = Math.max(0, Math.round((Date.now() - t) / 60000));
@@ -35,348 +33,68 @@ function ago(iso) {
   if (diff < 60) return diff + ' min ago';
   const h = Math.floor(diff / 60);
   if (h < 24) return h + ' h ago';
-  const d = Math.floor(h / 24);
-  return d + ' d ago';
-}
+  return Math.floor(h / 24) + ' d ago';
+};
 
-function debounce(fn, ms) {
+const debounce = (fn, ms) => {
   let t = null;
   return function (...args) {
     clearTimeout(t);
     t = setTimeout(() => fn.apply(null, args), ms);
   };
-}
-
-// ============ MAP ============
-
-const MAP_STYLES = {
-  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  streets:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-  dark:      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/Dark_Gray/MapServer/tile/{z}/{y}/{x}',
-  light:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
 };
 
-let map;
-let markers = [];
-let mapStyleKey = 'satellite';
-let activeFilter = 'all';
-let newsState = [];
+// =====================================================
+// IDENTITY
+// =====================================================
 
-function initMap() {
-  map = new maplibregl.Map({
-    container: 'map',
-    style: {
-      version: 8,
-      sources: {
-        basemap: {
-          type: 'raster',
-          tiles: [MAP_STYLES[mapStyleKey]],
-          tileSize: 256,
-          attribution: 'Esri',
-        },
-      },
-      layers: [
-        { id: 'basemap', type: 'raster', source: 'basemap' },
-      ],
-    },
-    center: [96.16, 21.0],
-    zoom: 5,
-    minZoom: 3,
-    maxZoom: 12,
-    attributionControl: false,
-  });
-  map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: false }), 'top-right');
-  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
-  map.on('move', syncMapStatus);
-  map.on('zoom', syncMapStatus);
-}
+const IDENTITY_KEY = 'pirchchat.identity';
 
-function setMapStyle(key) {
-  if (!MAP_STYLES[key]) return;
-  mapStyleKey = key;
-  const src = map.getSource('basemap');
-  if (src) src.setTiles([MAP_STYLES[key]]);
-  $$('.toolbar__btn[data-layer]').forEach((b) => {
-    b.classList.toggle('is-pressed', b.dataset.layer === key);
-  });
-  const labels = { satellite: 'Esri imagery', streets: 'Esri streets', dark: 'Esri dark', light: 'Esri topo' };
-  const statusEl = document.getElementById('mapStatus');
-  if (statusEl) statusEl.textContent = 'Map: ' + (labels[key] || key);
-  syncMapStatus();
-}
-
-function syncMapStatus() {
-  if (!map) return;
-  const c = map.getCenter();
-  const z = map.getZoom().toFixed(1);
-  const coordEl = document.getElementById('mapCoord');
-  if (coordEl) coordEl.textContent = 'lng ' + c.lng.toFixed(3) + ' · lat ' + c.lat.toFixed(3) + ' · zoom ' + z;
-}
-
-function clearMarkers() {
-  markers.forEach((m) => {
-    try { m.remove(); } catch (e) {}
-  });
-  markers = [];
-}
-
-function addMarkers(items) {
-  if (!map) return;
-  clearMarkers();
-  items.forEach((it) => {
-    if (!it.location || typeof it.location.lat !== 'number' || typeof it.location.lng !== 'number') return;
-    const el = document.createElement('div');
-    el.className = 'pirch-marker pirch-marker--' + (it.source === 'chat' ? 'chat' : (it.region === 'mm' || it.region === 'diaspora' ? 'news' : 'news'));
-    if (it.kind === 'user-pin') el.className = 'pirch-marker pirch-marker--you';
-    if (it.region === 'mm') el.className = 'pirch-marker pirch-marker--news';
-    if (it.region === 'diaspora') el.className = 'pirch-marker pirch-marker--news';
-    if (it.region === 'asean') el.className = 'pirch-marker pirch-marker--news';
-    if (it.region === 'world') el.className = 'pirch-marker pirch-marker--news';
-    el.title = it.title_en || it.title_my || it.location.place || 'Incident';
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openIncidentModal(it);
-    });
-    const m = new maplibregl.Marker({ element: el })
-      .setLngLat([it.location.lng, it.location.lat])
-      .addTo(map);
-    markers.push(m);
-  });
-  const countEl = document.getElementById('mapIncCount');
-  if (countEl) countEl.textContent = markers.length + ' incidents';
-}
-
-function fitAllMarkers() {
-  if (!markers.length || !map) return;
-  const bounds = new maplibregl.LngLatBounds();
-  markers.forEach((m) => bounds.extend(m.getLngLat()));
-  if (bounds.isEmpty()) return;
-  map.fitBounds(bounds, { padding: 40, duration: 600, maxZoom: 9 });
-}
-
-function focusItem(item) {
-  if (!item.location || !map) return;
-  map.flyTo({ center: [item.location.lng, item.location.lat], zoom: Math.max(map.getZoom(), 10), essential: true });
-  $$('.news-item').forEach((el) => el.classList.toggle('is-selected', el.dataset.id === item.id));
-}
-
-window.addEventListener('DOMContentLoaded', initMap);
-
-// ============ NEWS ============
-
-async function loadNews() {
-  try {
-    const res = await fetch('/api/news?region=' + encodeURIComponent(activeFilter), { cache: 'no-store' });
-    if (!res.ok) throw new Error('news http ' + res.status);
-    const data = await res.json();
-    newsState = (data.items || []).map((it, i) => ({
-      ...it,
-      kind: 'news',
-      _marker: !!it.location,
-    }));
-    renderNews();
-    addMarkers(newsState);
-  } catch (e) {
-    newsState = [];
-    renderNews();
-    const listEl = document.getElementById('newsList');
-    if (listEl) listEl.innerHTML = '<div class="news-item" style="color:var(--negative)">Failed to load news — check /api/news Function is deployed. ' + escapeHtml(String(e.message || e)) + '</div>';
-  }
-}
-
-function renderNews() {
-  const listEl = document.getElementById('newsList');
-  if (!listEl) return;
-  const items = newsState.filter((it) => activeFilter === 'all' || it.region === activeFilter);
-  if (!items.length) {
-    listEl.innerHTML = '<div class="news-item"><em>No items in this filter.</em></div>';
-    return;
-  }
-  listEl.innerHTML = items.map((it) => {
-    const titleHtml = (it.title_my && it.title_my.trim())
-      ? '<div class="news-item__title news-item__title--my" lang="my">' + escapeHtml(it.title_my) + '</div>'
-      : '';
-    const titleEn = '<div class="news-item__title">' + escapeHtml(it.title_en || '') + '</div>';
-    const bodyMy = (it.body_my && it.body_my.trim())
-      ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.body_my) + '</div>'
-      : '';
-    const bodyEn = '<div class="news-item__body">' + escapeHtml(it.body_en || '') + '</div>';
-    return (
-      '<article class="news-item" data-id="' + escapeHtml(it.id) + '">' +
-        '<div class="news-item__head">' +
-          '<span class="news-item__ts">' + escapeHtml(ago(it.ts)) + '</span>' +
-          '<span class="news-item__src">' + escapeHtml(it.sourceLabel || it.source || '') + '</span>' +
-          '<span class="news-item__loc">' + escapeHtml((it.location && it.location.place) || '') + '</span>' +
-        '</div>' +
-        titleHtml + titleEn +
-        bodyMy + bodyEn +
-        '<div class="news-item__meta">' +
-          '<a href="' + escapeHtml(it.url || '#') + '" target="_blank" rel="noopener">Open source ↗</a>' +
-          (it.location ? '<span>lat ' + it.location.lat.toFixed(2) + ' lng ' + it.location.lng.toFixed(2) + '</span>' : '<span>No geo</span>') +
-        '</div>' +
-      '</article>'
-    );
-  }).join('');
-
-  $$('.news-item').forEach((el) => {
-    el.addEventListener('click', () => {
-      const id = el.dataset.id;
-      const item = newsState.find((x) => x.id === id);
-      if (item) focusItem(item);
-    });
-  });
-
-  const countEl = document.getElementById('newsCount');
-  if (countEl) countEl.textContent = items.length + (items.length === 1 ? ' item' : ' items');
-  const agoEl = document.getElementById('newsAgo');
-  if (agoEl) agoEl.textContent = 'just now';
-}
-
-// Initial news load + periodic refresh every 90s
-document.addEventListener('DOMContentLoaded', () => {
-  loadNews();
-  setInterval(loadNews, 90000);
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  $$('button[data-news-filter]').forEach((b) => {
-    b.addEventListener('click', () => {
-      $$('button[data-news-filter]').forEach((x) => x.classList.remove('menubar__item--active'));
-      b.classList.add('menubar__item--active');
-      activeFilter = b.dataset.newsFilter;
-      renderNews();
-      addMarkers(newsState.filter((it) => activeFilter === 'all' || it.region === activeFilter));
-    });
-  });
-});
-
-// ============ MODAL ============
-
-function openIncidentModal(item) {
-  const modal = document.getElementById('modal');
-  const titleEl = document.getElementById('modalTitle');
-  const bodyEl = document.getElementById('modalBody');
-  if (!modal || !titleEl || !bodyEl) return;
-  titleEl.textContent = (item.title_en || item.title_my || item.location && item.location.place || 'Incident').slice(0, 80);
-  const titleMy = (item.title_my && item.title_my.trim())
-    ? '<h3 lang="my">' + escapeHtml(item.title_my) + '</h3>' : '';
-  const titleEn = '<h3>' + escapeHtml(item.title_en || '') + '</h3>';
-  const bodyMy = (item.body_my && item.body_my.trim())
-    ? '<p lang="my">' + escapeHtml(item.body_my) + '</p>' : '';
-  const bodyEn = '<p>' + escapeHtml(item.body_en || '') + '</p>';
-  const meta = (
-    '<div class="modal__meta">' +
-      '<div>' + escapeHtml(item.sourceLabel || item.source || '') + '</div>' +
-      '<div>' + escapeHtml(item.ts) + '</div>' +
-      (item.location ? '<div>' + escapeHtml(item.location.place) + ' (' + item.location.lat.toFixed(3) + ', ' + item.location.lng.toFixed(3) + ')</div>' : '') +
-      (item.url ? '<div><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">Open source ↗</a></div>' : '') +
-    '</div>'
-  );
-  bodyEl.innerHTML = titleMy + titleEn + bodyMy + bodyEn + meta;
-  modal.hidden = false;
-}
-
-function closeIncidentModal() {
-  const modal = document.getElementById('modal');
-  if (modal) modal.hidden = true;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  $('#modalClose').addEventListener('click', closeIncidentModal);
-  $('#modal').addEventListener('click', (e) => {
-    if (e.target.id === 'modal') closeIncidentModal();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeIncidentModal();
-  });
-});
-
-// ============ MAP TOOLBAR ============
-
-document.addEventListener('DOMContentLoaded', () => {
-  $$('.toolbar__btn[data-layer]').forEach((b) => {
-    b.addEventListener('click', () => setMapStyle(b.dataset.layer));
-  });
-  $$('.toolbar__btn[data-action]').forEach((b) => {
-    b.addEventListener('click', () => {
-      const a = b.dataset.action;
-      if (a === 'fit') fitAllMarkers();
-      if (a === 'news-only') addMarkers(newsState.filter((it) => it.kind === 'news'));
-      if (a === 'chat-only') {
-        // Future: chat-derived pins
-        addMarkers(newsState.filter((it) => it.kind === 'chat'));
-      }
-      if (a === 'all') addMarkers(newsState);
-      if (a === 'add') enableAddPin();
-    });
-  });
-  setMapStyle('satellite');
-});
-
-// "Add a pin manually" mode: click on map to drop a user-pin
-let addPinMode = false;
-let userPins = [];
-function enableAddPin() {
-  addPinMode = true;
-  map.getCanvas().style.cursor = 'crosshair';
-  flashStatus('Click on the map to drop a pin.');
-}
-map && map.on && map.on('click', (e) => {
-  if (!addPinMode) return;
-  addPinMode = false;
-  map.getCanvas().style.cursor = '';
-  const pin = {
-    id: 'pin-' + Date.now(),
-    kind: 'user-pin',
-    title_en: 'Manual pin',
-    body_en: 'Dropped at ' + e.lngLat.lat.toFixed(4) + ', ' + e.lngLat.lng.toFixed(4),
-    location: { lat: e.lngLat.lat, lng: e.lngLat.lng, place: 'manual' },
-    region: 'manual',
-    ts: new Date().toISOString(),
-    source: 'manual',
-    sourceLabel: 'You',
-  };
-  userPins.push(pin);
-  addMarkers(newsState.concat(userPins));
-});
-
-function flashStatus(text) {
-  const sb = document.querySelector('.dash__left .statusbar .statusbar__item');
-  if (!sb) return;
-  const orig = sb.textContent;
-  sb.textContent = text;
-  setTimeout(() => { sb.textContent = orig; }, 2400);
-}
-
-// ============ CHAT ============
+const CITIES = [
+  { name: 'Yangon',     lat: 16.8409, lng: 96.1735, country: 'MM', pop: '5.3M', note: 'Commercial capital' },
+  { name: 'Mandalay',   lat: 21.9747, lng: 96.0839, country: 'MM', pop: '1.7M', note: 'Cultural capital' },
+  { name: 'Naypyidaw',  lat: 19.7633, lng: 96.0785, country: 'MM', pop: '0.9M', note: 'Administrative capital' },
+  { name: 'Monywa',     lat: 22.1083, lng: 95.1354, country: 'MM', pop: '0.4M', note: 'Sagaing Region' },
+  { name: 'Pathein',    lat: 16.7833, lng: 94.7333, country: 'MM', pop: '0.3M', note: 'Delta capital' },
+  { name: 'Bagan',      lat: 21.1717, lng: 94.8583, country: 'MM', pop: '—',    note: 'Heritage zone' },
+  { name: 'Myitkyina',  lat: 25.3867, lng: 97.395,  country: 'MM', pop: '0.3M', note: 'Kachin State' },
+  { name: 'Taunggyi',   lat: 20.7825, lng: 97.0367, country: 'MM', pop: '0.3M', note: 'Shan State' },
+  { name: 'Tachileik',  lat: 20.4531, lng: 99.879,  country: 'MM', pop: '0.05M', note: 'Thai border' },
+  { name: 'Myanaung',   lat: 21.3,    lng: 96.5,   country: 'MM', pop: '—',    note: 'Ayeyarwaddy Region' },
+  { name: 'Meikhtila',  lat: 20.8667, lng: 95.8667, country: 'MM', pop: '0.2M', note: 'Mandalay Region' },
+  { name: 'Mae Sot',    lat: 16.7456, lng: 98.5473, country: 'TH', pop: '0.05M', note: 'Myanmar border · west' },
+  { name: 'Mae Sai',    lat: 20.4267, lng: 99.8817, country: 'TH', pop: '0.02M', note: 'Myanmar border · north' },
+  { name: 'Chiang Mai', lat: 18.7883, lng: 98.9853, country: 'TH', pop: '0.13M', note: 'Northern diaspora hub' },
+  { name: 'Chiang Rai', lat: 19.9105, lng: 99.8406, country: 'TH', pop: '0.07M', note: 'Northern trade gateway' },
+  { name: 'Bangkok',    lat: 13.7563, lng: 100.5018, country: 'TH', pop: '10.5M', note: 'Diaspora capital' },
+];
 
 const ROOMS = {
   'monastic-youth': {
     title: '#monastic-youth',
     topic: 'Monastic education, novice monks, transitioning out, Burmese diaspora in Mae Sot and Chiang Mai. Open to anyone passing through.',
     members: [
-      { nick: 'aung_myo', op: true, status: '' },
+      { nick: 'aung_myo', op: true },
       { nick: 'nilar' },
       { nick: 'kyaw_zin' },
       { nick: 'thazin', voice: true },
       { nick: 'min_thu' },
       { nick: 'phyo', away: true },
       { nick: 'htun', away: true },
-      { nick: 'guest' },
     ],
     seed: [
-      { ts: '14:18', nick: 'aung_myo', body_html: '<span lang="my">မင်္ဂလာပါ</span> — wellcome for new here.' },
-      { ts: '14:19', nick: 'nilar', body_html: '<span lang="my">ကျေးဇူးတင်ပါတယ်</span>. ma nyunt paw lar?' },
-      { ts: '14:20', nick: 'aung_myo', op: true, body_html: '<span lang="my">မြန်မာပြည်က လာတာလား။ စာရေးတတ်လား</span>? literacy level?' },
-      { ts: '14:21', nick: 'nilar', body_html: '<span lang="my">မန္တလေးကပါ။ ရွှေတောင်ကြား</span> — Mandalay side. reading ok.' },
-      { ts: '14:22', nick: 'kyaw_zin', body_html: 'does anyone know if the Mae Sot monastery accepts people without thamanya yet?' },
-      { ts: '14:24', nick: 'aung_myo', op: true, body_html: '<span lang="my">သာမဏယာ မလိုအပ်ဘူး</span> — but you do need thadowint. Mae Sot abbot says yes with phone reference.' },
-      { ts: '14:31', nick: 'thazin', body_html: 'hi brothers. <span lang="my">ပျော်ရွှင်စရာ</span> — looking for roommate in Chiang Mai area, can split ฿3500/month.' },
-      { ts: '14:40', nick: 'aung_myo', op: true, body_html: 'reminder: please use Bur-Myan where you can. English only if you really must.' },
+      { ts: '14:18', nick: 'aung_myo', op: true, topic: 'learning', body_html: '<span lang="my">မင်္ဂလာပါ</span> — wellcome for new here.' },
+      { ts: '14:19', nick: 'nilar', topic: 'sharing', body_html: '<span lang="my">ကျေးဇူးတင်ပါတယ်</span>. ma nyunt paw lar?' },
+      { ts: '14:20', nick: 'aung_myo', op: true, topic: 'learning', body_html: '<span lang="my">မြန်မာပြည်က လာတာလား။ စာရေးတတ်လား</span>?' },
+      { ts: '14:21', nick: 'nilar', topic: 'sharing', body_html: '<span lang="my">မန္တလေးကပါ။ ရွှေတောင်ကြား</span>.' },
+      { ts: '14:22', nick: 'kyaw_zin', topic: 'ideas', body_html: 'does the Mae Sot monastery accept people without thamanya yet?' },
+      { ts: '14:24', nick: 'aung_myo', op: true, topic: 'learning', body_html: '<span lang="my">သာမဏယာ မလိုအပ်ဘူး</span> — but you do need thadowint.' },
+      { ts: '14:31', nick: 'thazin', voice: true, topic: 'housing', body_html: 'hi brothers. <span lang="my">ပျော်ရွှင်စရာ</span> — looking for roommate in Chiang Mai, can split ฿3500/month.' },
+      { ts: '14:33', nick: 'kyaw_zin', topic: 'housing', body_html: 'PM sent. <span lang="my">နေရပါတယ်</span>.' },
+      { ts: '14:40', nick: 'aung_myo', op: true, topic: 'sharing', body_html: 'reminder: please use Bur-Myan where you can.' },
       { type: 'mode', body_html: 'aung_myo sets +m (moderated)' },
-      { type: 'topic', body_html: '<em>topic:</em> Monastic education, novice monks, transitioning out. Burmese diaspora in Mae Sot and Chiang Mai.' },
-      { ts: '14:55', nick: 'min_thu', body_html: '<span lang="my">မင်္ဂလာပါ</span> everyone. today bkk immigration patrol at 11. anyone got paperwork to renew?' },
-      { ts: '14:58', nick: 'aung_myo', op: true, body_html: '🚨 if your visa is expiring in the next 30 days — DO NOT leave the channel. message me directly. no broker. no money.' },
+      { ts: '14:55', nick: 'min_thu', topic: 'ideas', body_html: '<span lang="my">မင်္ဂလာပါ</span>. today bkk immigration patrol at 11. ok?' },
+      { ts: '14:58', nick: 'aung_myo', op: true, topic: 'sharing', body_html: '🚨 if your visa is expiring in 30 days — DO NOT leave the channel.' },
     ],
   },
   'bkk-burmese': {
@@ -390,10 +108,10 @@ const ROOMS = {
       { nick: 'su_myat' },
     ],
     seed: [
-      { ts: '09:12', nick: 'admin', op: true, body_html: '<span lang="my">မင်္ဂလာပါ</span> — channel for BKK. no buy/sell here. please use #cm-burmese.' },
-      { ts: '09:14', nick: 'yamin', body_html: 'anyone know a clinic near Khlong Toei open late?' },
-      { ts: '09:15', nick: 'thiri', body_html: 'KMUTT Bang Na clinic — open until 21:00. walk-in ok.' },
-      { ts: '09:20', nick: 'aung_khant', body_html: '<span lang="my">ကျေးဇူးပါ</span>. — saved.' },
+      { ts: '09:12', nick: 'admin', op: true, topic: 'sharing', body_html: '<span lang="my">မင်္ဂလာပါ</span> — channel for BKK.' },
+      { ts: '09:14', nick: 'yamin', topic: 'housing', body_html: 'clinic near Khlong Toei open late?' },
+      { ts: '09:15', nick: 'thiri', topic: 'housing', body_html: 'KMUTT Bang Na — open until 21:00. walk-in ok.' },
+      { ts: '09:20', nick: 'aung_khant', topic: 'sharing', body_html: '<span lang="my">ကျေးဇူးပါ</span>.' },
     ],
   },
   'cm-burmese': {
@@ -406,9 +124,9 @@ const ROOMS = {
       { nick: 'may' },
     ],
     seed: [
-      { ts: '11:02', nick: 'thazin', voice: true, body_html: 'Saturday meetup at Tha Pae Gate 16:00. noodle walk. <span lang="my">လာခဲ့နော်</span>.' },
-      { ts: '11:04', nick: 'htun', body_html: 'bringing my sister, she is new to CM. english beginner.' },
-      { ts: '11:05', nick: 'may', body_html: 'see you there.' },
+      { ts: '11:02', nick: 'thazin', voice: true, topic: 'activities', body_html: 'Saturday meetup at Tha Pae Gate 16:00. noodle walk.' },
+      { ts: '11:04', nick: 'htun', topic: 'learning', body_html: 'bringing my sister, she is new to CM.' },
+      { ts: '11:05', nick: 'may', topic: 'activities', body_html: 'see you there.' },
     ],
   },
   'digest-today': {
@@ -421,8 +139,8 @@ const ROOMS = {
       { nick: 'min_thu' },
     ],
     seed: [
-      { ts: '06:00', type: 'topic', body_html: 'Today digest: 14 items. Yangon fuel queues · Mandalay monastic schools reopening · Chiang Mai bakery collective · 9 more.' },
-      { ts: '06:00', nick: 'digest-bot', op: true, body_html: '<span lang="my">ယနေ့ သတင်းအကျဉ်းချုပ်</span> — 14 items across MM / diaspora / ASEAN / world. Discussion open.' },
+      { ts: '06:00', type: 'topic', body_html: 'Today digest: 28 items across MM / diaspora / ASEAN / world. <span lang="my">ယနေ့ သတင်းအကျဉ်းချုပ်</span>.' },
+      { ts: '06:00', nick: 'digest-bot', op: true, topic: 'sharing', body_html: 'Open the news pane on the right or click any item to fly on the map.' },
     ],
   },
   'listening-club': {
@@ -432,53 +150,484 @@ const ROOMS = {
       { nick: 'listening-bot', op: true, status: '@bot' },
       { nick: 'thiri' },
       { nick: 'kyaw_zin' },
-      { nick: 'su_myat' },
     ],
     seed: [
       { ts: '08:00', type: 'topic', body_html: 'Surface 3 not yet shipping. Today is a placeholder.' },
-      { ts: '08:00', nick: 'listening-bot', op: true, body_html: 'No live listener yet. The map on the left is the prototype. — listening-club' },
+      { ts: '08:00', nick: 'listening-bot', op: true, topic: 'sharing', body_html: 'The map on the left is the prototype. — listening-club' },
     ],
   },
 };
 
+// =====================================================
+// STATE
+// =====================================================
+
+const state = {
+  identity: null,
+  news: [],
+  newsFilterRegion: 'all',
+  newsSourceFilter: null,
+  newsLayerOn: true,
+  citiesLayerOn: false,
+  rainLayerOn: true,
+  rooms: ROOMS,
+  currentRoom: 'monastic-youth',
+  chatTopic: 'all',
+  userPins: [],
+  addPinMode: false,
+  activeTab: 'map',
+  citiesMarkers: [],
+  citySourceId: null,
+  rainSourceId: null,
+  mapStyleKey: 'satellite',
+  rainTileUrl: null,
+  sourceChipsBuilt: false,
+};
+
+// =====================================================
+// IDENTITY
+// =====================================================
+
+function getStoredIdentity() {
+  try {
+    const v = localStorage.getItem(IDENTITY_KEY);
+    return v ? JSON.parse(v) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveIdentity(identity) {
+  try { localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity)); }
+  catch (e) { /* ignore */ }
+}
+
+function fakeIp() {
+  // Demo only. A real deployment would record the network ID at the
+  // /functions/api/identity.js endpoint and bind it to the email.
+  const a = 10 + Math.floor(Math.random() * 240);
+  const b = Math.floor(Math.random() * 256);
+  const c = Math.floor(Math.random() * 256);
+  return a + '.' + b + '.' + c + '.xx';
+}
+
+function networkId() {
+  // Persistent per-browser ID. Used for the "we remember the network ID"
+  // rule from the identity modal. Demo-grade.
+  let id = null;
+  try { id = localStorage.getItem('pirchchat.net'); } catch (e) { /* ignore */ }
+  if (!id) {
+    id = 'user_' + Math.random().toString(36).slice(2, 10);
+    try { localStorage.setItem('pirchchat.net', id); } catch (e) { /* ignore */ }
+  }
+  return id;
+}
+
+function showIdentityModal() {
+  const modal = $('#identityModal');
+  if (modal) modal.hidden = false;
+  const nameInput = $('#identityName');
+  if (nameInput) setTimeout(() => nameInput.focus(), 50);
+}
+
+function hideIdentityModal() {
+  const modal = $('#identityModal');
+  if (modal) modal.hidden = true;
+}
+
+function applyIdentity(identity) {
+  state.identity = identity;
+  const label = $('#chatUserLabel');
+  if (label) label.textContent = identity.name + '@pirchchat · ' + identity.network;
+}
+
+// =====================================================
+// MOBILE TABS
+// =====================================================
+
+function setActiveTab(name) {
+  state.activeTab = name;
+  document.body.setAttribute('data-tab', name);
+  $$('.tabs-top__btn').forEach((b) => b.classList.toggle('tabs-top__btn--active', b.dataset.tab === name));
+}
+
+// =====================================================
+// MAP
+// =====================================================
+
+const MAP_STYLES = {
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  streets:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+  dark:      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/Dark_Gray/MapServer/tile/{z}/{y}/{x}',
+  light:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+};
+
+let map;
+let newsMarkers = [];
+
+function initMap() {
+  map = new maplibregl.Map({
+    container: 'map',
+    style: { version: 8, sources: { basemap: { type: 'raster', tiles: [MAP_STYLES.satellite], tileSize: 256, attribution: 'Esri' } }, layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }] },
+    center: [96.16, 21.0],
+    zoom: 5,
+    minZoom: 3,
+    maxZoom: 14,
+    attributionControl: false,
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
+  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
+  map.on('move', syncMapStatus);
+  map.on('zoom', syncMapStatus);
+  map.on('click', (e) => {
+    if (!state.addPinMode) return;
+    state.addPinMode = false;
+    map.getCanvas().style.cursor = '';
+    const pin = {
+      id: 'pin-' + Date.now(),
+      kind: 'user-pin',
+      title_en: 'Manual pin',
+      body_en: 'Dropped at ' + e.lngLat.lat.toFixed(4) + ', ' + e.lngLat.lng.toFixed(4),
+      location: { lat: e.lngLat.lat, lng: e.lngLat.lng, place: 'manual' },
+      region: 'manual', ts: new Date().toISOString(), source: 'manual', sourceLabel: 'You',
+    };
+    state.userPins.push(pin);
+    refreshMarkers();
+  });
+}
+
+async function loadRainTiles() {
+  try {
+    const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    if (!r.ok) throw new Error('rainviewer http ' + r.status);
+    const j = await r.json();
+    // Use the latest precipitation tile path
+    const host = j.host;
+    const path = j && j.rain && j.rain.nowcast && j.rain.nowcast[0] && j.rain.nowcast[0].path;
+    if (!host || !path) throw new Error('no rain tiles');
+    state.rainTileUrl = host + path + '/256/{z}/{x}/{y}/2/1_1.png';
+  } catch (e) {
+    state.rainTileUrl = null;
+  }
+}
+
+function setMapStyle(key) {
+  if (!MAP_STYLES[key]) return;
+  state.mapStyleKey = key;
+  const src = map.getSource('basemap');
+  if (src) src.setTiles([MAP_STYLES[key]]);
+  $$('.toolbar__btn[data-layer]').forEach((b) => b.classList.toggle('is-pressed', b.dataset.layer === key));
+  const labels = { satellite: 'Esri imagery', streets: 'Esri streets', dark: 'Esri dark', light: 'Esri topo' };
+  const statusEl = $('#mapStatus');
+  if (statusEl) statusEl.textContent = (labels[key] || key) + ' · Asia';
+}
+
+function toggleRain() {
+  state.rainLayerOn = !state.rainLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="rain"]').forEach((b) => b.classList.toggle('is-pressed', state.rainLayerOn));
+  refreshRain();
+}
+
+function refreshRain() {
+  if (!map) return;
+  if (state.rainLayerOn && state.rainTileUrl) {
+    if (!map.getSource('rain')) {
+      map.addSource('rain', { type: 'raster', tiles: [state.rainTileUrl], tileSize: 256, attribution: 'RainViewer' });
+      map.addLayer({ id: 'rain', type: 'raster', source: 'rain', paint: { 'raster-opacity': 0.65 } });
+    } else {
+      map.setLayoutProperty('rain', 'visibility', 'visible');
+    }
+  } else {
+    if (map.getLayer('rain')) map.setLayoutProperty('rain', 'visibility', 'none');
+  }
+}
+
+function toggleCities() {
+  state.citiesLayerOn = !state.citiesLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.classList.toggle('is-pressed', state.citiesLayerOn));
+  renderCities();
+}
+
+function renderCities() {
+  if (!map) return;
+  state.citiesMarkers.forEach((m) => { try { m.remove(); } catch (e) {} });
+  state.citiesMarkers = [];
+  if (!state.citiesLayerOn) return;
+  CITIES.forEach((c) => {
+    const el = document.createElement('div');
+    el.className = 'pirch-marker pirch-marker--city';
+    el.title = c.name + ' · ' + c.pop;
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      map.flyTo({ center: [c.lng, c.lat], zoom: 10, essential: true });
+      openCityModal(c);
+    });
+    const m = new maplibregl.Marker({ element: el }).setLngLat([c.lng, c.lat]).addTo(map);
+    state.citiesMarkers.push(m);
+  });
+}
+
+function openCityModal(c) {
+  const modal = $('#incidentModal');
+  const titleEl = $('#incidentTitle');
+  const bodyEl = $('#incidentBody');
+  if (!modal || !titleEl || !bodyEl) return;
+  titleEl.textContent = c.name;
+  bodyEl.innerHTML =
+    '<h3>' + escapeHtml(c.name) + '</h3>' +
+    '<p><em>' + escapeHtml(c.note) + '</em></p>' +
+    '<p>Population (metro): <strong>' + escapeHtml(c.pop) + '</strong></p>' +
+    '<p>Country: ' + escapeHtml(c.country) + '</p>' +
+    '<div class="modal__meta">' +
+      '<div>Coordinates: ' + c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) + '</div>' +
+    '</div>';
+  modal.hidden = false;
+}
+
+function syncMapStatus() {
+  if (!map) return;
+  const c = map.getCenter();
+  const z = map.getZoom().toFixed(1);
+  const coordEl = $('#mapCoord');
+  if (coordEl) coordEl.textContent = 'lng ' + c.lng.toFixed(3) + ' · lat ' + c.lat.toFixed(3) + ' · zoom ' + z;
+}
+
+function clearNewsMarkers() {
+  newsMarkers.forEach((m) => { try { m.remove(); } catch (e) {} });
+  newsMarkers = [];
+}
+
+function renderNewsMarkers(items) {
+  if (!map) return;
+  clearNewsMarkers();
+  items.forEach((it) => {
+    if (!it.location || typeof it.location.lat !== 'number' || typeof it.location.lng !== 'number') return;
+    const el = document.createElement('div');
+    el.className = 'pirch-marker pirch-marker--news';
+    el.title = it.title_en || it.title_my || it.location.place || 'Incident';
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openIncidentModal(it);
+    });
+    const m = new maplibregl.Marker({ element: el }).setLngLat([it.location.lng, it.location.lat]).addTo(map);
+    newsMarkers.push(m);
+  });
+}
+
+function refreshMarkers() {
+  let items = state.news;
+  if (state.newsFilterRegion !== 'all') items = items.filter((x) => x.region === state.newsFilterRegion);
+  if (state.newsSourceFilter) items = items.filter((x) => (x.sourceShort || x.source) === state.newsSourceFilter);
+  if (state.newsLayerOn) renderNewsMarkers(items.concat(state.userPins));
+  else clearNewsMarkers();
+  const inc = document.getElementById('mapIncCount');
+  if (inc) inc.textContent = newsMarkers.length + ' markers';
+}
+
+function fitAllMarkers() {
+  if (!map) return;
+  const items = state.news.filter((x) => x.location && (state.newsFilterRegion === 'all' || x.region === state.newsFilterRegion));
+  const bounds = new maplibregl.LngLatBounds();
+  items.forEach((it) => bounds.extend([it.location.lng, it.location.lat]));
+  if (bounds.isEmpty()) return;
+  map.fitBounds(bounds, { padding: 40, duration: 600, maxZoom: 9 });
+}
+
+function enableAddPin() {
+  state.addPinMode = true;
+  if (map) map.getCanvas().style.cursor = 'crosshair';
+  flashStatusbar('Click on the map to drop a pin. ESC to cancel.');
+  const esc = (e) => { if (e.key === 'Escape') { state.addPinMode = false; if (map) map.getCanvas().style.cursor = ''; document.removeEventListener('keydown', esc); } };
+  document.addEventListener('keydown', esc);
+}
+
+function flashStatusbar(text) {
+  const sb = $('.dash__left .statusbar .statusbar__item');
+  if (!sb) return;
+  const orig = sb.textContent;
+  sb.textContent = text;
+  setTimeout(() => { sb.textContent = orig; }, 2500);
+}
+
+// =====================================================
+// NEWS
+// =====================================================
+
+async function loadNews() {
+  try {
+    const res = await fetch('/api/news?region=' + encodeURIComponent(state.newsFilterRegion), { cache: 'no-store' });
+    if (!res.ok) throw new Error('news http ' + res.status);
+    const data = await res.json();
+    state.news = (data.items || []).map((it) => ({ ...it, kind: 'news' }));
+    buildSourceChips();
+    renderNews();
+    refreshMarkers();
+    const agoEl = $('#newsAgo');
+    if (agoEl) agoEl.textContent = 'just now';
+    const lr = $('#mapLastRefresh');
+    if (lr) lr.textContent = 'refreshed ' + timeNow();
+  } catch (e) {
+    const listEl = $('#newsList');
+    if (listEl) listEl.innerHTML = '<div class="news-item" style="color:var(--negative)">news failed: ' + escapeHtml(String(e.message || e)) + '</div>';
+  }
+}
+
+function buildSourceChips() {
+  if (state.sourceChipsBuilt) return;
+  const sources = new Map();
+  state.news.forEach((it) => {
+    const key = it.sourceShort || it.source || it.sourceLabel;
+    if (!key) return;
+    if (!sources.has(key)) sources.set(key, 0);
+    sources.set(key, sources.get(key) + 1);
+  });
+  const wrap = $('#sourceChips');
+  if (!wrap) return;
+  const chips = ['<button type="button" class="chip chip--active" data-source="">All sources</button>'];
+  Array.from(sources.entries()).sort((a, b) => b[1] - a[1]).forEach(([name, n]) => {
+    chips.push('<button type="button" class="chip" data-source="' + escapeHtml(name) + '">' + escapeHtml(name) + ' ' + n + '</button>');
+  });
+  wrap.innerHTML = chips.join('');
+  state.sourceChipsBuilt = true;
+  $$('#sourceChips .chip').forEach((b) => {
+    b.addEventListener('click', () => {
+      $$('#sourceChips .chip').forEach((x) => x.classList.remove('chip--active'));
+      b.classList.add('chip--active');
+      state.newsSourceFilter = b.dataset.source || null;
+      renderNews();
+      refreshMarkers();
+    });
+  });
+}
+
+function renderNews() {
+  const listEl = $('#newsList');
+  if (!listEl) return;
+  let items = state.news;
+  if (state.newsFilterRegion !== 'all') items = items.filter((x) => x.region === state.newsFilterRegion);
+  if (state.newsSourceFilter) items = items.filter((x) => (x.sourceShort || x.source) === state.newsSourceFilter);
+  if (!items.length) {
+    listEl.innerHTML = '<div class="news-item"><em>No items in this filter.</em></div>';
+    const c = $('#newsCount'); if (c) c.textContent = '0 items';
+    return;
+  }
+  listEl.innerHTML = items.map((it) => {
+    const titleMy = (it.title_my && it.title_my.trim())
+      ? '<div class="news-item__title news-item__title--my" lang="my">' + escapeHtml(it.title_my) + '</div>' : '';
+    const titleEn = '<div class="news-item__title">' + escapeHtml(it.title_en || '') + '</div>';
+    const bodyMy = (it.body_my && it.body_my.trim())
+      ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.body_my) + '</div>' : '';
+    const bodyEn = '<div class="news-item__body">' + escapeHtml(it.body_en || '') + '</div>';
+    const digestEn = (it.digest_en && it.digest_en.trim())
+      ? '<div class="news-item__digest"><span class="news-item__digest-label">Dr Non digest</span><div class="news-item__digest-en">' + escapeHtml(it.digest_en) + '</div>' +
+        ((it.digest_my && it.digest_my.trim()) ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.digest_my) + '</div>' : '') +
+        '</div>' : '';
+    return (
+      '<article class="news-item" data-id="' + escapeHtml(it.id) + '">' +
+        '<div class="news-item__head">' +
+          '<span class="news-item__ts">' + escapeHtml(ago(it.ts)) + '</span>' +
+          '<span class="news-item__src">' + escapeHtml(it.sourceLabel || it.source || '') + '</span>' +
+          '<span class="news-item__loc">' + escapeHtml((it.location && it.location.place) || '') + '</span>' +
+        '</div>' +
+        titleMy + titleEn +
+        bodyMy + bodyEn +
+        digestEn +
+        '<div class="news-item__meta">' +
+          '<a href="' + escapeHtml(it.url || '#') + '" target="_blank" rel="noopener">Open source ↗</a>' +
+          (it.location ? '<span>lat ' + it.location.lat.toFixed(2) + ' lng ' + it.location.lng.toFixed(2) + '</span>' : '<span>No geo</span>') +
+        '</div>' +
+      '</article>'
+    );
+  }).join('');
+
+  $$('.news-item').forEach((el) => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.id;
+      const item = state.news.find((x) => x.id === id);
+      if (item) focusOnItem(item);
+    });
+  });
+
+  const c = $('#newsCount');
+  if (c) c.textContent = items.length + (items.length === 1 ? ' item' : ' items');
+}
+
+function focusOnItem(item) {
+  if (!map || !item.location) return;
+  $$('.news-item').forEach((el) => el.classList.toggle('is-selected', el.dataset.id === item.id));
+  map.flyTo({ center: [item.location.lng, item.location.lat], zoom: Math.max(map.getZoom(), 9), essential: true });
+  openIncidentModal(item);
+}
+
+function openIncidentModal(item) {
+  const modal = $('#incidentModal');
+  const titleEl = $('#incidentTitle');
+  const bodyEl = $('#incidentBody');
+  if (!modal || !titleEl || !bodyEl) return;
+  titleEl.textContent = (item.title_en || item.title_my || (item.location && item.location.place) || 'Incident').slice(0, 80);
+  const titleMy = (item.title_my && item.title_my.trim())
+    ? '<h3 lang="my">' + escapeHtml(item.title_my) + '</h3>' : '';
+  const titleEn = '<h3>' + escapeHtml(item.title_en || '') + '</h3>';
+  const bodyMy = (item.body_my && item.body_my.trim())
+    ? '<p lang="my">' + escapeHtml(item.body_my) + '</p>' : '';
+  const bodyEn = '<p>' + escapeHtml(item.body_en || '') + '</p>';
+  const digestBlock = ((item.digest_en && item.digest_en.trim()) || (item.digest_my && item.digest_my.trim()))
+    ? '<div class="modal__digest-block">' +
+        '<span class="modal__digest-label">Dr Non digest</span>' +
+        ((item.digest_en && item.digest_en.trim()) ? '<p style="margin:0 0 6px;font-style:italic;">' + escapeHtml(item.digest_en) + '</p>' : '') +
+        ((item.digest_my && item.digest_my.trim()) ? '<p style="margin:0;font-family:var(--font-burma);font-size:14px;line-height:1.7" lang="my">' + escapeHtml(item.digest_my) + '</p>' : '') +
+      '</div>' : '';
+  const meta = (
+    '<div class="modal__meta">' +
+      '<div>' + escapeHtml(item.sourceLabel || item.source || '') + '</div>' +
+      '<div>' + escapeHtml(item.ts) + '</div>' +
+      (item.location ? '<div>' + escapeHtml(item.location.place) + ' (' + item.location.lat.toFixed(3) + ', ' + item.location.lng.toFixed(3) + ')</div>' : '') +
+      (item.url ? '<div><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">Open source ↗</a></div>' : '') +
+    '</div>'
+  );
+  bodyEl.innerHTML = titleMy + titleEn + bodyMy + bodyEn + digestBlock + meta;
+  modal.hidden = false;
+}
+
+// =====================================================
+// CHAT
+// =====================================================
+
 let currentRoom = 'monastic-youth';
-let roomMessageCount = {};
 
 function renderRoom(roomId) {
-  const room = ROOMS[roomId];
-  if (!room) return;
   currentRoom = roomId;
   $$('button[data-room]').forEach((b) => b.classList.toggle('menubar__item--active', b.dataset.room === roomId));
-  const titleEl = document.getElementById('chatRoomTitle');
-  if (titleEl) titleEl.textContent = room.title;
+  $('#chatRoomTitle').textContent = ROOMS[roomId].title;
   renderMessages();
   renderMembers();
 }
 
 function renderMessages() {
   const room = ROOMS[currentRoom];
-  const wrap = document.getElementById('messages');
+  const wrap = $('#messages');
   if (!wrap || !room) return;
-  const html = room.seed.map((m) => {
-    if (m.type === 'topic') {
-      return '<div class="msg msg--topic">' + (m.body_html || '') + '</div>';
-    }
-    if (m.type === 'mode') {
-      return '<div class="msg msg--mode">— ' + (m.body_html || '') + '</div>';
-    }
-    if (m.type === 'server') {
-      return '<div class="msg msg--server">— ' + escapeHtml(m.body_text || '') + '</div>';
-    }
+  let msgs = room.seed;
+  if (state.chatTopic !== 'all') msgs = msgs.filter((m) => (m.topic || '') === state.chatTopic);
+  if (!msgs.length) {
+    wrap.innerHTML = '<div class="msg msg--topic"><em>No messages with topic "' + escapeHtml(state.chatTopic) + '" in this room.</em></div>';
+    wrap.scrollTop = wrap.scrollHeight;
+    return;
+  }
+  wrap.innerHTML = msgs.map((m) => {
+    if (m.type === 'topic') return '<div class="msg msg--topic">' + (m.body_html || '') + '</div>';
+    if (m.type === 'mode') return '<div class="msg msg--mode">— ' + (m.body_html || '') + '</div>';
+    if (m.type === 'server') return '<div class="msg msg--server">— ' + escapeHtml(m.body_text || '') + '</div>';
     const nickClass = m.op ? 'nick nick--op' : 'nick';
-    return '<div class="msg"><span class="ts">' + escapeHtml(m.ts || timeNowHHMM()) + '</span> <span class="' + nickClass + '">' + escapeHtml(m.nick || '') + '</span> <span class="body">' + (m.body_html || escapeHtml(m.body_text || '')) + '</span></div>';
+    const topicTag = m.topic ? '<span class="msg__topic-tag">' + escapeHtml(m.topic) + '</span>' : '';
+    return '<div class="msg"><span class="ts">' + escapeHtml(m.ts || timeNow()) + '</span> <span class="' + nickClass + '">' + topicTag + escapeHtml(m.nick || '') + '</span> <span class="body">' + (m.body_html || escapeHtml(m.body_text || '')) + '</span></div>';
   }).join('');
-  wrap.innerHTML = html;
   wrap.scrollTop = wrap.scrollHeight;
 }
 
 function renderMembers() {
   const room = ROOMS[currentRoom];
-  const ul = document.getElementById('memberList');
+  const ul = $('#memberList');
   if (!ul || !room) return;
   ul.innerHTML = room.members.map((m) => {
     const cls = m.op ? 'members__nick members__nick--op' : (m.away ? 'members__nick members__nick--away' : 'members__nick');
@@ -487,20 +636,27 @@ function renderMembers() {
   }).join('');
 }
 
-function appendUserMessage(text, preview) {
-  const wrap = document.getElementById('messages');
+function appendUserMessage(text, opts) {
+  opts = opts || {};
+  const wrap = $('#messages');
   if (!wrap) return;
+  const net = state.identity ? state.identity.network : 'guest';
+  const nick = state.identity ? state.identity.name : 'guest';
   const html =
-    '<div class="msg"><span class="ts">' + escapeHtml(timeNowHHMM()) + '</span> <span class="nick nick--op">guest</span> <span class="body">' + escapeHtml(text) + '</span></div>';
+    '<div class="msg"><span class="ts">' + escapeHtml(timeNow()) + '</span> <span class="nick nick--op">' + escapeHtml(nick) + ' <span style="opacity:0.5;font-size:9px">@' + escapeHtml(net) + '</span></span> <span class="body">' + escapeHtml(text) + '</span></div>';
   wrap.insertAdjacentHTML('beforeend', html);
-  if (preview && preview.url) {
-    const pHtml =
-      '<a class="preview" href="' + escapeHtml(preview.url) + '" target="_blank" rel="noopener">' +
-        '<span class="preview__title" data-preview-title>' + escapeHtml(preview.title || preview.url) + '</span>' +
-        '<span class="preview__desc" data-preview-desc>' + escapeHtml(preview.description || '') + '</span>' +
-        '<span class="preview__host">' + escapeHtml(preview.host || '') + '</span>' +
-      '</a>';
-    wrap.insertAdjacentHTML('beforeend', pHtml);
+  if (opts.imageDataUrl) {
+    wrap.insertAdjacentHTML('beforeend', '<img class="msg__img" src="' + escapeHtml(opts.imageDataUrl) + '" alt="attachment">');
+  }
+  if (opts.preview) {
+    const p = opts.preview;
+    wrap.insertAdjacentHTML('beforeend',
+      '<a class="preview" href="' + escapeHtml(p.url) + '" target="_blank" rel="noopener">' +
+        '<span class="preview__title" data-preview-title>' + escapeHtml(p.title || p.url) + '</span>' +
+        '<span class="preview__desc" data-preview-desc>' + escapeHtml(p.description || '') + '</span>' +
+        '<span class="preview__host">' + escapeHtml(p.host || '') + '</span>' +
+      '</a>'
+    );
   }
   wrap.scrollTop = wrap.scrollHeight;
 }
@@ -510,19 +666,86 @@ function detectFirstUrl(text) {
   return m ? m[0] : null;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  $$('button[data-room]').forEach((b) => {
-    b.addEventListener('click', () => renderRoom(b.dataset.room));
+// =====================================================
+// CLOCK
+// =====================================================
+
+function tickClock() {
+  const c = $('#newsClock'); if (c) c.textContent = timeNowICT();
+}
+
+// =====================================================
+// INIT
+// =====================================================
+
+document.addEventListener('DOMContentLoaded', function () {
+  // Identity
+  state.identity = getStoredIdentity();
+  if (!state.identity || !state.identity.name) {
+    showIdentityModal();
+  } else {
+    applyIdentity(state.identity);
+  }
+  $('#identitySubmit').addEventListener('click', () => {
+    const nameEl = $('#identityName');
+    const emailEl = $('#identityEmail');
+    const name = (nameEl && nameEl.value || '').trim() || 'guest';
+    const email = (emailEl && emailEl.value || '').trim();
+    const id = { name: name.slice(0, 32), email: email, ip: fakeIp(), network: networkId(), since: new Date().toISOString() };
+    saveIdentity(id);
+    state.identity = id;
+    applyIdentity(id);
+    hideIdentityModal();
   });
+
+  // Mobile tabs
+  $$('.tabs-top__btn').forEach((b) => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
+
+  // Map
+  initMap();
+  loadRainTiles().then(() => refreshRain());
+  setMapStyle('satellite');
+  $$('.toolbar__btn[data-layer]').forEach((b) => b.addEventListener('click', () => setMapStyle(b.dataset.layer)));
+  $$('.toolbar__btn[data-action]').forEach((b) => b.addEventListener('click', () => {
+    const a = b.dataset.action;
+    if (a === 'fit') fitAllMarkers();
+    if (a === 'add') enableAddPin();
+  }));
+  $$('.toolbar__btn[data-layer-toggle="news"]').forEach((b) => b.addEventListener('click', () => { state.newsLayerOn = !state.newsLayerOn; b.classList.toggle('is-pressed', state.newsLayerOn); refreshMarkers(); }));
+  $$('.toolbar__btn[data-layer-toggle="rain"]').forEach((b) => b.addEventListener('click', toggleRain));
+  $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.addEventListener('click', toggleCities));
+
+  // News filter region
+  $$('button[data-news-filter]').forEach((b) => b.addEventListener('click', () => {
+    $$('button[data-news-filter]').forEach((x) => x.classList.remove('menubar__item--active'));
+    b.classList.add('menubar__item--active');
+    state.newsFilterRegion = b.dataset.newsFilter;
+    loadNews();
+  }));
+
+  // News load + periodic refresh
+  loadNews();
+  setInterval(loadNews, 120000);
+
+  // Chat room tabs
+  $$('button[data-room]').forEach((b) => b.addEventListener('click', () => renderRoom(b.dataset.room)));
   renderRoom('monastic-youth');
 
-  const form = document.getElementById('composer');
-  const input = document.getElementById('input');
-  if (!form || !input) return;
-  form.addEventListener('submit', async (event) => {
+  // Topic chips in chat
+  $$('#topicChips .chip').forEach((b) => {
+    b.addEventListener('click', () => {
+      $$('#topicChips .chip').forEach((x) => x.classList.remove('chip--active'));
+      b.classList.add('chip--active');
+      state.chatTopic = b.dataset.topic;
+      renderMessages();
+    });
+  });
+
+  // Composer — submit
+  $('#composer').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const raw = input.value.trim();
-    if (!raw) return;
+    const raw = $('#input').value.trim();
+    if (!raw && !window.__pendingAttachment) return;
     const url = detectFirstUrl(raw);
     let preview = null;
     if (url) {
@@ -532,31 +755,46 @@ document.addEventListener('DOMContentLoaded', () => {
           const j = await r.json();
           if (j.ok) preview = j;
         }
-      } catch (e) {
-        // ignore — card will show URL as title
-      }
+      } catch (e) { /* ignore */ }
       if (!preview) preview = { url: url, host: url.replace(/^https?:\/\//, '').split('/')[0], title: url };
     }
-    appendUserMessage(raw, preview);
-    input.value = '';
+    const attachment = window.__pendingAttachment;
+    appendUserMessage(raw || '(attachment)', { imageDataUrl: attachment, preview: preview });
+    $('#input').value = '';
+    window.__pendingAttachment = null;
+    $('#input').placeholder = 'Type a Burmese or English message…  URLs become preview cards';
   });
-});
 
-// ============ CLOCK ============
+  // Composer — file attach
+  $('#fileInput').addEventListener('change', (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (file.size > 1024 * 600) {
+      alert('Image is over 600KB. Resize and try again.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      window.__pendingAttachment = reader.result;
+      $('#input').placeholder = 'Image attached (' + Math.round(file.size / 1024) + 'KB). Type a caption or send.';
+    };
+    reader.readAsDataURL(file);
+  });
 
-document.addEventListener('DOMContentLoaded', () => {
-  function tickClock() {
-    const c = document.getElementById('newsClock');
-    if (c) c.textContent = timeNowICT();
-  }
+  // Modal close
+  $('#incidentClose').addEventListener('click', () => { $('#incidentModal').hidden = true; });
+  $('#incidentModal').addEventListener('click', (e) => { if (e.target.id === 'incidentModal') $('#incidentModal').hidden = true; });
+  $('#identityModal').addEventListener('click', (e) => { if (e.target.id === 'identityModal') { /* do not close by click */ } });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const im = $('#incidentModal'); if (im && !im.hidden) im.hidden = true;
+    }
+  });
+
+  // Clock
   tickClock();
   setInterval(tickClock, 1000);
-});
-
-// ============ INITIAL RENDER ============
-
-document.addEventListener('DOMContentLoaded', () => {
-  // No-op; modules attached above.
 });
 
 })();
