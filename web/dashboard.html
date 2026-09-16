@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pirchchat — Dashboard</title>
 <meta name="description" content="A Burmese-language community dashboard. Real-time news, geocoded incidents on a map, persistent rooms. Win95 chrome.">
-<link rel="stylesheet" href="dashboard.css?v=5">
+<link rel="stylesheet" href="dashboard.css?v=20260916-audit">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
@@ -17,9 +17,9 @@
 
 <!-- ===== TOP TAB BAR — mobile only, hidden on desktop ===== -->
 <nav class="tabs-top" role="tablist" aria-label="Switch surface (mobile)">
-  <button type="button" class="tabs-top__btn tabs-top__btn--active" data-tab="map" role="tab">Map</button>
-  <button type="button" class="tabs-top__btn" data-tab="news" role="tab">News</button>
-  <button type="button" class="tabs-top__btn" data-tab="chat" role="tab">Chat</button>
+  <button type="button" class="tabs-top__btn tabs-top__btn--active" data-tab="map" role="tab">မြေပုံ · Map</button>
+  <button type="button" class="tabs-top__btn" data-tab="news" role="tab">သတင်း · News</button>
+  <button type="button" class="tabs-top__btn" data-tab="chat" role="tab">စကားဝိုင်း · Chat</button>
   <span class="tabs-top__brand">Pirchchat</span>
 </nav>
 
@@ -114,7 +114,6 @@
         </div>
       </section>
     </div>
-    </div>
 
     <div class="statusbar" aria-label="Map status bar">
       <span class="statusbar__item"><span class="led led--on" aria-hidden="true"></span><span id="mapStatus">Esri imagery · Asia</span></span>
@@ -130,7 +129,7 @@
     <section class="news" aria-labelledby="news-h">
       <div class="titlebar">
         <span class="titlebar__dot" aria-hidden="true"></span>
-        <span class="titlebar__title">News — Myanmar &amp; diaspora</span>
+        <span class="titlebar__title" id="news-h">သတင်း နမူနာ — News preview</span>
         <span class="titlebar__spacer"></span>
         <span class="titlebar__meta" id="newsClock">00:00 ICT</span>
       </div>
@@ -146,11 +145,12 @@
         <button type="button" class="menubar__item" data-news-action="export" title="Download these news items as text">Export</button>
       </nav>
       <div class="chipbar" id="sourceChips" role="toolbar" aria-label="Filter by source"></div>
-      <div class="news__list" id="newsList" aria-live="polite" aria-label="Live news list"></div>
+      <p class="news-provenance">နမူနာ အကြောင်းအရာ · Unverified static examples, not a live news feed. Do not use for travel, health or work decisions.</p>
+      <div class="news__list" id="newsList" aria-live="polite" aria-label="News examples"></div>
       <div class="statusbar">
         <span class="statusbar__item"><span class="led led--on" aria-hidden="true"></span><span id="newsCount">0 items</span></span>
         <span class="statusbar__spacer"></span>
-        <span class="statusbar__item">Refreshed <span id="newsAgo">just now</span></span>
+        <span class="statusbar__item">Corpus <span id="newsAgo">September 2026</span></span>
       </div>
     </section>
 
@@ -158,7 +158,7 @@
     <section class="chat" aria-labelledby="chat-h">
       <div class="titlebar">
         <span class="titlebar__dot" aria-hidden="true"></span>
-        <span class="titlebar__title">Chat — <span id="chatRoomTitle">#monastic-youth</span></span>
+        <span class="titlebar__title" id="chat-h">Chat — <span id="chatRoomTitle">#monastic-youth</span></span>
         <span class="titlebar__spacer"></span>
         <span class="titlebar__meta" id="chatUserLabel">guest@pirchchat</span>
       </div>
@@ -191,15 +191,16 @@
 
       <div class="crisis" id="crisisBanner" hidden>
         <strong>Someone here may need a real human.</strong>
-        <span>Thailand social emergency <strong>1300</strong> (24h, free) · Burmese health hotline (24h, Bangkok) · Mae Tao Clinic Mae Sot (walk in, morning).</span>
+        <span>လူမှုကူညီရေး · Thailand social assistance <a href="tel:1300">1300</a> (24h). Ask for Burmese-language support; availability is unconfirmed.</span>
         <button type="button" id="crisisHotlines">Hotlines</button>
         <button type="button" id="crisisDismiss" aria-label="Dismiss">×</button>
       </div>
 
+      <p class="chat-notice">အများမြင် စကားဝိုင်း · Public chat is saved. Use a nickname; do not share personal details.</p>
       <form class="composer" id="composer" autocomplete="off">
         <label class="composer__attach" title="Attach image">
           <input type="file" id="fileInput" accept="image/*" hidden>
-          <span aria-hidden="true">📎</span>
+          <span aria-hidden="true">＋</span>
         </label>
         <input type="text" name="msg" id="input" class="composer__input" placeholder="Type a Burmese or English message…  URLs become preview cards" aria-label="Message">
         <button type="submit" class="composer__send">Send</button>
@@ -226,22 +227,18 @@
         <input type="text" id="identityName" maxlength="32" placeholder="How should others see you?" autocomplete="off">
       </label>
 
-      <label class="modal__field">
-        <span>Email <em class="modal__hint">(optional · for account recovery later)</em></span>
-        <input type="email" id="identityEmail" placeholder="you@example.com" autocomplete="off">
-      </label>
-
-      <p class="modal__rules">
+      <div class="modal__rules">
         <strong>Ground rules:</strong>
         <ul>
           <li>Be useful to the room. No spam. No politics of personal grievance.</li>
-          <li>Burmese first, English second. Real names or persistent handles — not throwaways.</li>
-          <li>We remember the network ID, not the literal IP. Switching identities will be detected.</li>
+          <li>Burmese first, English second. Use a nickname. Do not share names, contact details or precise locations.</li>
+          <li>Your nickname is saved on this browser. It is not a verified identity or an account; recovery is not available.</li>
         </ul>
-      </p>
+      </div>
 
       <div class="modal__actions">
-        <button type="button" class="btn" id="identitySubmit">Enter the room</button>
+        <button type="button" class="btn" id="identitySubmit">ဝင်မည် · Use nickname</button>
+        <button type="button" class="btn" id="identitySkip">ဆက်ကြည့်မည် · Browse without a name</button>
       </div>
     </div>
   </div>
@@ -284,9 +281,9 @@
   </div>
 </div>
 
-<script src="survival.js"></script>
-<script src="dashboard.js"></script>
-<script src="chat-client.js"></script>
-<script src="chrome.js"></script>
+<script src="survival.js?v=20260916-audit"></script>
+<script src="dashboard.js?v=20260916-audit"></script>
+<script src="chat-client.js?v=20260916-audit"></script>
+<script src="chrome.js?v=20260916-audit"></script>
 </body>
 </html>

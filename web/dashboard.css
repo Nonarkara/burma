@@ -17,7 +17,7 @@
   --notice:        #b45309;
   --server:        #1d4e89;
   --paper:         #ffffff;
-  --font-system:   'IBM Plex Sans', 'MS Sans Serif', Tahoma, sans-serif;
+  --font-system:   'Noto Sans Myanmar', 'Pyidaungsu', 'Myanmar Text', sans-serif;
   --font-mono:     'IBM Plex Mono', 'Courier New', monospace;
   --font-burma:    'Noto Sans Myanmar', 'Pyidaungsu', sans-serif;
 }
@@ -40,7 +40,7 @@ html, body {
   -webkit-tap-highlight-color: rgba(212, 160, 23, 0.3);
 }
 
-.full-bleed { height: 100vh; }
+.full-bleed { height: 100vh; height: 100dvh; }
 .win95 { background: #6f7e80; }
 
 /* ===== Mobile top tabs (hidden on desktop) ===== */
@@ -52,6 +52,7 @@ html, body {
   z-index: 100;
   align-items: stretch;
   height: 44px;
+  box-sizing: border-box;
   background: var(--chrome);
   border-bottom: 2px solid var(--ink);
 }
@@ -94,7 +95,8 @@ html, body {
 .dash {
   position: relative;
   height: 100vh;
-  width: 100vw;
+  height: 100dvh;
+  width: 100%;
   background: var(--chrome);
   box-sizing: border-box;
   min-height: 0;
@@ -113,7 +115,7 @@ html, body {
   border-left: 2px solid var(--chrome-edge);
   border-right: 2px solid var(--ink);
   border-bottom: 2px solid var(--ink);
-  min-width: 320px;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -129,7 +131,7 @@ html, body {
   padding: 4px;
   background: var(--chrome);
   border: none;
-  min-width: 320px;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -1579,7 +1581,7 @@ html, body {
 
 /* ===== Mobile breakpoint — tabbed surface switcher ===== */
 
-@media (max-width: 1500px) {
+@media (max-width: 920px) {
   /* Mobile + tablet: stack the panes vertically. The active one fills the area below
      the 44px mobile tab bar. The other panes are hidden via body[data-tab]. */
   .dash {
@@ -1589,6 +1591,7 @@ html, body {
     padding: 0;
     position: relative;
     height: calc(100vh - 44px);
+    height: calc(100dvh - 44px);
   }
 
   .tabs-top { display: flex; }
@@ -1600,14 +1603,14 @@ html, body {
   }
 
   /* show only the selected surface — grid cell that fills the row */
-  .dash__left  { grid-column: 1; grid-row: 1; }
-  .dash__right { grid-column: 1; grid-row: 1; }
+  .dash__left  { inset: 0; }
+  .dash__right { inset: 0; }
 
   body[data-tab="map"]  .dash__left  { display: flex; }
-  body[data-tab="news"] .dash__right { display: grid; }
+  body[data-tab="news"] .dash__right { display: flex; }
   body[data-tab="news"] .dash__right .chat { display: none; }
   body[data-tab="news"] .dash__right .news { display: flex; }
-  body[data-tab="chat"] .dash__right { display: grid; }
+  body[data-tab="chat"] .dash__right { display: flex; }
   body[data-tab="chat"] .dash__right .news { display: none; }
   body[data-tab="chat"] .dash__right .chat { display: flex; }
 
@@ -1617,10 +1620,29 @@ html, body {
   body[data-tab="chat"] .tabs-top__btn[data-tab="chat"] { background: var(--ink); color: var(--chrome-light); }
 }
 
-@media (max-width: 1500px) {
+@media (max-width: 920px) {
   .dash__left, .dash__right {
     border-left: none;
     border-right: none;
     border-top: none;
   }
+}
+
+/* Readable provenance and stable flex sizing at every viewport. */
+.news-provenance, .chat-notice { margin: 0; padding: 4px 8px; font-size: 11px; background: var(--accent-soft); border-bottom: 1px solid var(--rule); flex-shrink: 0; }
+.titlebar, .menubar, .toolbar, .chipbar, .linkbar, .statusbar, .composer { flex-shrink: 0; }
+.dash__left, .dash__right, .news, .chat { box-sizing: border-box; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.dash__left:fullscreen { width: 100%; height: 100%; right: 0; }
+@media (max-width: 920px) {
+  .dash__right .news, .dash__right .chat { flex: 1 1 0; min-height: 0; }
+  .tabs-top__brand { display: none; }
+  .tabs-top__btn { font-size: 11px; }
+}
+@media (max-width: 720px) {
+  .chat__body { grid-template-rows: minmax(0, 1fr) auto; }
+  .members { display: flex; max-height: 80px; border-top: 1px solid var(--rule); }
+  .members__list { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .messages { min-width: 0; border-right: none; }
+  .chat .titlebar__meta { max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }

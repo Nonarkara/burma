@@ -1,6 +1,17 @@
 // Cloudflare Pages Function — link preview (OpenGraph) fetcher.
 // Best-effort, 4-second timeout. Returns minimal metadata for chat link cards.
 
+function publicHttpUrl(value) {
+  const u = new URL(value);
+  const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  if (!/^https?:$/.test(u.protocol) || u.username || u.password ||
+      !host.includes('.') || host.endsWith('.localhost') || host.endsWith('.local') ||
+      host.startsWith('[') || /^(0|10|127|169\.254|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(host)) {
+    throw new Error('URL must be a public HTTP(S) website');
+  }
+  return u;
+}
+
 export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const target = url.searchParams.get('url');
@@ -13,7 +24,7 @@ export async function onRequestGet(context) {
 
   let parsed;
   try {
-    parsed = new URL(target);
+    parsed = publicHttpUrl(target);
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: 'invalid url' }), {
       status: 400,
@@ -29,11 +40,19 @@ export async function onRequestGet(context) {
 
   const abort = AbortSignal.timeout(4000);
   try {
-    const res = await fetch(parsed.toString(), {
-      redirect: 'follow',
-      signal: abort,
-      headers: { 'user-agent': 'Pirchchat/0.1 (+link-preview)' },
-    });
+    let res;
+    for (let redirects = 0; redirects <= 3; redirects++) {
+      res = await fetch(parsed.toString(), {
+        redirect: 'manual', signal: abort,
+        headers: { 'user-agent': 'Pirchchat/0.1 (+link-preview)' },
+      });
+      if (![301, 302, 303, 307, 308].includes(res.status)) break;
+      if (redirects === 3) throw new Error('too_many_redirects');
+      const next = res.headers.get('location');
+      if (!next) throw new Error('missing_redirect');
+      await res.body?.cancel();
+      parsed = publicHttpUrl(new URL(next, parsed).href);
+    }
     if (!res.ok) {
       return new Response(JSON.stringify({ ok: false, error: 'fetch_failed', status: res.status }), {
         status: 502,
@@ -47,7 +66,20 @@ export async function onRequestGet(context) {
         headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' },
       });
     }
-    const html = await res.text();
+    const reader = res.body.getReader();
+    const chunks = []; let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 512 * 1024) throw new Error('page_too_large');
+        chunks.push(value);
+      }
+    } finally { await reader.cancel(); }
+    const bytes = new Uint8Array(size); let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    const html = new TextDecoder().decode(bytes);
     const pick = (re) => { const m = html.match(re); return m ? m[1] : null; };
     const ogTitle = pick(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
     const ogDesc = pick(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);

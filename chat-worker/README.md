@@ -46,7 +46,7 @@ R2 bucket: `pirchchat-uploads` — image attachments, served publicly via `/cdn/
 Phase 1 (now):
 - Every browser generates a per-browser random `network_id` (e.g. `user_a7d3c1f0...`).
 - Network ID is the "we remember you" identifier.
-- Per-IP rate limit: 12 messages/minute/room.
+- Per-IP rate limit: 12 messages/minute/room (ephemeral memory; falls back to browser ID locally).
 - Names are chosen freely (collision is cosmetic — same nick across two browsers looks identical).
 
 Phase 2 (next):
@@ -63,7 +63,7 @@ wrangler d1 execute pirchchat --file=schema.sql --remote   # one-time
 wrangler deploy                                       # every commit
 ```
 
-The Worker is bound to the `pirchchat` D1 database and the `pirchchat-uploads` R2 bucket. Credentials are in `wrangler.toml`.
+The Worker is bound to the `pirchchat` D1 database and the `pirchchat-uploads` R2 bucket. Resource IDs are in `wrangler.toml`; credentials remain in Wrangler authentication storage or environment variables.
 
 ## M3 Mac mirror
 
@@ -89,3 +89,7 @@ The dashboard (`web/chat-client.js`) connects to this Worker via:
 - Multipart upload for images
 
 Switching back to "seeded" mode (no backend) is a one-line swap of the script src in `dashboard.html`.
+
+## Repair notes (16 September 2026)
+
+POST success now includes the saved message and only follows a successful D1 insert. Storage failures return an error without broadcasting. Live member lists reflect current socket connections; old seeded database rows are retained but are not presented as online members. Uploads accept PNG/JPEG/GIF/WebP up to 700KB and return an absolute CDN URL. Existing D1 room keys are preserved, avoiding a destructive migration. `/api/health` checks D1 access; local integration tests exercise writes and fan-out.

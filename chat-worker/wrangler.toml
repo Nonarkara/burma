@@ -1,6 +1,7 @@
 name = "pirchchat-chat"
 main = "src/index.js"
 compatibility_date = "2025-09-01"
+compatibility_flags = ["web_socket_auto_reply_to_close"]
 
 [observability.logs]
 enabled = true
@@ -24,10 +25,3 @@ class_name = "ChatRoomDO"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ChatRoomDO"]
-
-# Public bucket access for serving attachments
-[[r2_buckets.lifecycle]]
-type = "lifecycle"
-[[r2_buckets.lifecycle.rules]]
-name = "expire-empty-prefix"
-enabled = false

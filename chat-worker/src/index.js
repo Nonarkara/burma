@@ -98,13 +98,12 @@ export default {
       return new Response(null, { status: 204, headers: ch });
     }
 
-    // Warm up — seed rooms/members if empty
-    await seedMembersIfEmpty(env);
+    // Do not fabricate online members. Presence comes from connected sockets.
 
     if (path === '/api/rooms' || path === '/api/rooms/') {
-      const rooms = await readRooms(env);
+      const rooms = ROOMS.map((id) => ({ id, title: '#' + id }));
       const result = await Promise.all(rooms.map(async (r) => {
-        const members = await readRoomMembers(env, r.id);
+        const members = []; // Actual presence arrives via the room socket.
         return { id: r.id, title: r.title || ('#' + r.id), topic: r.topic || '', members };
       }));
       return json({ ok: true, rooms: result }, 200, ch);
@@ -123,7 +122,7 @@ export default {
       // Forward with empty Origin so DO doesn't get confused
       const fwdHeaders = new Headers(request.headers);
       fwdHeaders.delete('Origin');
-      const fwd = new Request(new URL(roomMatch[2] ? '/' + roomMatch[2] : '/', request.url), {
+      const fwd = new Request(new URL((roomMatch[2] ? '/' + roomMatch[2] : '/') + url.search, request.url), {
         method: request.method,
         headers: fwdHeaders,
         body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
@@ -142,7 +141,9 @@ export default {
         const form = await request.formData();
         const file = form.get('file');
         const pubkey = String(form.get('pubkey') || 'anon');
-        if (!file) return json({ ok: false, error: 'missing_file' }, 400, ch);
+        if (!file || typeof file.stream !== 'function') return json({ ok: false, error: 'missing_file' }, 400, ch);
+        if (file.size > 700 * 1024) return json({ ok: false, error: 'image_too_large' }, 413, ch);
+        if (!/^image\/(png|jpeg|gif|webp)$/.test(file.type)) return json({ ok: false, error: 'unsupported_image_type' }, 415, ch);
         const id = crypto.randomUUID();
         const safeName = (file.name || 'image.bin').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
         const key = `uploads/${id}/${safeName}`;
@@ -154,7 +155,8 @@ export default {
         await env.DB.prepare('INSERT INTO uploads (id, r2_key, uploaded_by_pubkey, uploaded_at, size_bytes, content_type, url) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(
           id, key, pubkey, ts, file.size || 0, file.type || '', key,
         ).run();
-        const url = '/cdn/' + key;
+        const origin = new URL(request.url).origin;
+        const url = origin + '/cdn/' + key;
         return json({ ok: true, id, key, url }, 200, ch);
       } catch (e) {
         return json({ ok: false, error: String(e && e.message || e) }, 500, ch);
@@ -170,13 +172,20 @@ export default {
       const headers = new Headers();
       if (obj.httpMetadata && obj.httpMetadata.contentType) headers.set('content-type', obj.httpMetadata.contentType);
       headers.set('cache-control', 'public, max-age=86400');
+      headers.set('X-Content-Type-Options', 'nosniff');
+      headers.set('Content-Security-Policy', "default-src 'none'; sandbox");
       headers.set('Access-Control-Allow-Origin', '*');
       return new Response(obj.body, { status: 200, headers });
     }
 
     // /api/health
     if (path === '/api/health') {
-      return json({ ok: true, ts: Date.now(), rooms: ROOMS }, 200, ch);
+      try {
+        await env.DB.prepare('SELECT id FROM messages LIMIT 1').all();
+        return json({ ok: true, storage: 'reachable', ts: Date.now(), rooms: ROOMS }, 200, ch);
+      } catch (e) {
+        return json({ ok: false, error: 'storage_unavailable' }, 503, ch);
+      }
     }
 
     return json({ ok: false, error: 'not_found', path }, 404, ch);

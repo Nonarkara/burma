@@ -21,13 +21,14 @@ export class ChatRoomDO {
     this.env = env;
     this.sessions = [];
     this.history = [];           // rolling in-memory cache
-    this.messageTimes = [];      // for rate-limit (ms timestamps in last 60s)
+    this.messageTimes = new Map(); // pubkey -> ms timestamps in last 60s (per-user rate limit)
     this.started = false;
   }
 
   async ensureStarted() {
     if (this.started) return;
-    this.started = true;
+    if (this.starting) return this.starting;
+    this.starting = (async () => {
     try {
       // Preload recent messages from D1.
       const roomId = this.state.id.toString();
@@ -35,13 +36,15 @@ export class ChatRoomDO {
         'SELECT id, author_name, author_pubkey, body_html, image_url, link_preview_json, topics, ts FROM messages WHERE room_id = ? ORDER BY ts DESC LIMIT ?'
       ).bind(roomId, HISTORY_LIMIT).all();
       this.history = (rows.results || []).reverse();
-    } catch (e) {
-      this.history = [];
-    }
+      this.started = true;
+    } finally { this.starting = null; }
+    })();
+    return this.starting;
   }
 
   async fetch(request) {
-    await this.ensureStarted();
+    try { await this.ensureStarted(); }
+    catch (e) { return jsonResponse({ ok: false, error: 'storage_unavailable' }, 503); }
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -50,7 +53,7 @@ export class ChatRoomDO {
     }
 
     if (path.endsWith('/history')) {
-      const limit = Math.min(parseInt(url.searchParams.get('limit') || String(HISTORY_LIMIT), 10), HISTORY_LIMIT);
+      const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit')) || HISTORY_LIMIT, HISTORY_LIMIT));
       // Always read fresh from D1 for the GET endpoint, so a fresh tab on another device sees the latest.
       try {
         const roomId = this.state.id.toString();
@@ -67,11 +70,11 @@ export class ChatRoomDO {
     if (path.endsWith('/message') && request.method === 'POST') {
       try {
         const body = await request.json();
-        const msg = await this.handlePost(body);
+        const msg = await this.handlePost(body, request.headers.get('CF-Connecting-IP') || request.headers.get('x-pirchchat-identity') || 'anonymous');
         if (!msg) return jsonResponse({ ok: false, error: 'rate_limited' }, 429);
-        return jsonResponse({ ok: true, id: msg.id, ts: msg.ts });
+        return jsonResponse({ ok: true, id: msg.id, ts: msg.ts, message: msg });
       } catch (e) {
-        return jsonResponse({ ok: false, error: String(e && e.message || e) }, 400);
+        return jsonResponse({ ok: false, error: e.status ? e.message : 'storage_unavailable' }, e.status || 503);
       }
     }
 
@@ -112,17 +115,19 @@ export class ChatRoomDO {
     const client = pair[0];
     const server = pair[1];
     const sessionId = crypto.randomUUID();
-    const identity = request.headers.get('x-pirchchat-identity') || 'anon-' + sessionId.slice(0, 6);
+    const identity = (new URL(request.url).searchParams.get('nick') || 'guest').slice(0, 32);
+    const rateKey = request.headers.get('CF-Connecting-IP') || 'anonymous';
     const roomId = this.state.id.toString();
 
-    // The DO accepts the socket via the Response-side object.
-    const response = { status: 101, webSocket: client, headers: { 'sec-websocket-protocol': 'pirchchat-v1' } };
-    const accept = (server.accept ? server : { accept: () => {} });
-    // Use the standard pattern in Workers/DOs.
+    // Standard Workers/DO WebSocket pattern: accept, then return a real
+    // 101 Response carrying the client end. No subprotocol header — the
+    // browser never negotiates one, and sending it breaks the handshake.
     server.accept();
+    const response = new Response(null, { status: 101, webSocket: client });
 
-    const session = { sessionId, identity, ws: server, joinedAt: Date.now() };
+    const session = { sessionId, identity, rateKey, ws: server, joinedAt: Date.now() };
     this.sessions.push(session);
+    this.broadcastPresence();
 
     // Send initial history (newest last) + a join event
     try {
@@ -138,10 +143,14 @@ export class ChatRoomDO {
     } catch (e) {}
 
     server.addEventListener('message', (event) => {
-      this.handleWsMessage(session, event.data || event);
+      this.handleWsMessage(session, event.data || event).catch(() => {
+        try { server.send(JSON.stringify({ type: 'error', error: 'message_not_saved' })); } catch (e) {}
+      });
     });
     server.addEventListener('close', () => {
+      try { server.close(1000, 'Closed'); } catch (e) {}
       this.sessions = this.sessions.filter((s) => s.sessionId !== sessionId);
+      this.broadcastPresence();
       try {
         this.broadcast({
           type: 'event',
@@ -163,19 +172,29 @@ export class ChatRoomDO {
     try { data = JSON.parse(raw); } catch (e) { return; }
     if (!data || typeof data !== 'object') return;
     if (data.type !== 'message') return;
-    await this.handlePost(data);
+    const message = await this.handlePost({ ...data, author_name: session.identity }, session.rateKey);
+    if (!message) session.ws.send(JSON.stringify({ type: 'error', error: 'rate_limited' }));
   }
 
-  async handlePost(body) {
+  async handlePost(body, rateKey) {
+    if (!body || typeof body !== 'object') throw Object.assign(new Error('invalid_message'), {status:400});
     const roomId = this.state.id.toString();
     const now = Date.now();
-    // Rate limit
-    this.messageTimes = this.messageTimes.filter((t) => now - t < 60000);
-    if (this.messageTimes.length >= RATE_LIMIT_PER_MIN) return null;
-    this.messageTimes.push(now);
 
     const author = (body.author_name || '').toString().slice(0, 32) || 'guest';
     const pubkey = (body.author_pubkey || '').toString().slice(0, 128) || 'anon';
+
+    rateKey = rateKey || pubkey;
+    for (const [key, entries] of this.messageTimes) {
+      if (!entries.some((t) => now - t < 60000)) this.messageTimes.delete(key);
+    }
+    // Per-user rate limit (12/min per network ID — one spammer no longer
+    // throttles the whole room).
+    let times = this.messageTimes.get(rateKey) || [];
+    times = times.filter((t) => now - t < 60000);
+    if (times.length >= RATE_LIMIT_PER_MIN) return null;
+    times.push(now);
+    this.messageTimes.set(rateKey, times);
     const bodyHtml = (body.body_html || body.body_text || '').toString().slice(0, 4000);
     const imageUrl = body.image_url ? String(body.image_url).slice(0, 600) : '';
     const linkPreview = body.link_preview ? JSON.stringify(body.link_preview).slice(0, 4000) : '';
@@ -183,7 +202,10 @@ export class ChatRoomDO {
     const id = crypto.randomUUID();
     const ts = now;
 
-    if (!bodyHtml && !imageUrl) return null;
+    if (!bodyHtml && !imageUrl) throw Object.assign(new Error('empty_message'), {status:400});
+    if (imageUrl && !/^https?:\/\/[^/]+\/cdn\/uploads\//.test(imageUrl) && !imageUrl.startsWith('/cdn/uploads/')) {
+      throw Object.assign(new Error('invalid_image'), {status:400});
+    }
 
     // Persist
     try {
@@ -191,7 +213,8 @@ export class ChatRoomDO {
         'INSERT INTO messages (id, room_id, author_name, author_pubkey, body_html, image_url, link_preview_json, topics, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ).bind(id, roomId, author, pubkey, bodyHtml, imageUrl, linkPreview, topics, ts).run();
     } catch (e) {
-      // Soft-fail persistence; still push to live subscribers
+      // An acknowledgement promises durable storage. Never fan out an unsaved post.
+      throw e;
     }
 
     const msg = { id, room: roomId, author_name: author, author_pubkey: pubkey, body_html: bodyHtml, image_url: imageUrl, link_preview_json: linkPreview, topics, ts };
@@ -199,6 +222,10 @@ export class ChatRoomDO {
     if (this.history.length > HISTORY_LIMIT) this.history.shift();
     this.broadcast({ type: 'message', message: msg });
     return msg;
+  }
+
+  broadcastPresence() {
+    this.broadcast({ type: 'presence', members: this.sessions.map((s) => ({ nick: s.identity, role: '' })) });
   }
 
   broadcast(payload) {

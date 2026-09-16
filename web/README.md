@@ -1,6 +1,6 @@
 # `web/` — Static site (deployed)
 
-This is the only deployable surface today, at `burma.nonarkara.org`.
+This is the only deployable surface today, at `https://burma-a3k.pages.dev`. The custom hostname is awaiting its DNS CNAME.
 
 ## Files
 
@@ -18,7 +18,7 @@ This is the only deployable surface today, at `burma.nonarkara.org`.
 ## Floors
 
 - No build step, no JS framework, no dependencies.
-- Cloudflare Pages serves the directory directly. `web/README.md` is not deployed (Pages serves files listed in `_headers` + matching MIME types).
+- Cloudflare Pages serves the directory directly. `web/README.md` is not deployed (the audited deployment staging excludes README files; `_headers` controls response headers, not file inclusion).
 
 ## Why no build step
 
@@ -38,3 +38,7 @@ Refreshing house tokens? Update three places simultaneously:
 3. `web/style.css` and `web/room.css` — the deployed site
 
 Drift between any two is a bug.
+
+## Audit repair (16 September 2026)
+
+The dashboard uses `chat-client.js` and the real chat Worker. `room.html` remains a historical local demo; the landing page now links directly to live dashboard chat. Desktop shows map + news/chat, while widths up to 920px use full-width tabs. News is a static, unverified preview. Presence comes from sockets, and nicknames are unverified. See `../docs/AUDIT-2026-09-16.md`.

@@ -141,10 +141,10 @@ const PHRASES = [
 ];
 
 const HOTLINES = [
-  { name: 'Prachabun 1300 (Thailand)', num: '1300', lang: 'Thai · social emergency, 24h', note: 'National social assistance hotline. Free from any Thai phone.' },
-  { name: 'Burmese health hotline (Bangkok)', num: 'see clinic card', lang: 'Burmese · 24h', note: '24-hour Burmese-language health line. Free for Burmese nationals with documentation issues.' },
-  { name: 'Mae Tao Clinic (Mae Sot)', num: 'walk in, go early', lang: 'Burmese · English', note: 'Free care including undocumented workers. Foot traffic doubled — arrive morning.' },
-  { name: 'Phahon Yothin volunteer clinic', num: 'walk in', lang: 'Burmese', note: 'Free primary care + Burmese triage, referrals to Thai public hospitals.' },
+  { name: 'လူမှုကူညီရေး · Thailand social assistance', num: '1300', lang: 'Thai · 24 hours', note: 'Ask for Burmese-language support; availability is not confirmed. Source checked 16 September 2026.', source: 'https://trang.m-society.go.th/e-service/e-service/' },
+  { name: 'Burmese health hotline (Bangkok)', num: '', lang: 'Unverified referral', note: 'No verified telephone number. Do not rely on this listing in an emergency.' },
+  { name: 'Mae Tao Clinic (Mae Sot)', num: '', lang: 'Mae Sot', note: 'Check services and opening hours directly with the clinic. This is not a verified emergency contact.' },
+  { name: 'Phahon Yothin volunteer clinic', num: '', lang: 'Unverified referral', note: 'Location and services require confirmation. Do not rely on this listing in an emergency.' },
 ];
 
 // Crisis keywords → in-session banner with real humans (AGENTS.md §10).

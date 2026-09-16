@@ -134,7 +134,7 @@ function exportChat() {
   });
   download('pirchchat-' + room + '.txt',
     'Pirchchat #' + room + ' — exported ' + new Date().toISOString() + '\n' +
-    'Aggregate log. No IPs stored.\n\n' + lines.join('\n') + '\n');
+    'Public room messages. Nicknames are unverified.\n\n' + lines.join('\n') + '\n');
   flashLeft('Chat log exported (' + lines.length + ' lines).');
 }
 
@@ -265,7 +265,7 @@ function renderHotlines(body, S) {
     S.HOTLINES.map((h) =>
       '<article class="guide-card"><div class="guide-card__head"><span class="guide-card__icon">＋</span>' +
       '<span class="guide-card__title">' + esc(h.name) + '</span></div>' +
-      '<div class="guide-card__body"><p><strong>' + esc(h.num) + '</strong> · ' + esc(h.lang) + '</p><p>' + esc(h.note) + '</p></div></article>'
+      '<div class="guide-card__body"><p>' + (h.num ? '<a href="tel:' + esc(h.num) + '"><strong>' + esc(h.num) + '</strong></a> · ' : '') + esc(h.lang) + '</p><p>' + esc(h.note) + '</p>' + (h.source ? '<a href="' + esc(h.source) + '" target="_blank" rel="noopener">Official source ↗</a>' : '') + '</div></article>'
     ).join('');
 }
 
@@ -305,6 +305,7 @@ function renderJobs(body, S) {
 }
 
 function setActiveTab(name) {
+  if (window.__pirchSetActiveTab) return window.__pirchSetActiveTab(name);
   document.body.setAttribute('data-tab', name);
   $$('.tabs-top__btn').forEach((b) => b.classList.toggle('tabs-top__btn--active', b.dataset.tab === name));
 }
@@ -355,6 +356,8 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   if (maxBtn) maxBtn.addEventListener('click', () => {
     if (!left) return;
+    left.classList.remove('is-min');
+    if (window.__pirchMap) window.__pirchMap.resize();
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     else if (left.requestFullscreen) left.requestFullscreen().catch(() => flashLeft('Fullscreen blocked by browser.'));
   });

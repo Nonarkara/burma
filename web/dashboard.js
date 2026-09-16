@@ -517,8 +517,14 @@ function applyIdentity(identity) {
 function setActiveTab(name) {
   state.activeTab = name;
   document.body.setAttribute('data-tab', name);
-  $$('.tabs-top__btn').forEach((b) => b.classList.toggle('tabs-top__btn--active', b.dataset.tab === name));
+  $$('.tabs-top__btn').forEach((b) => {
+    b.classList.toggle('tabs-top__btn--active', b.dataset.tab === name);
+    b.setAttribute('aria-selected', String(b.dataset.tab === name));
+  });
+  if (name === 'map' && map) requestAnimationFrame(() => map.resize());
 }
+
+window.__pirchSetActiveTab = setActiveTab;
 
 // =====================================================
 // MAP
@@ -531,7 +537,7 @@ function setActiveTab(name) {
 const MAP_STYLES = {
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   streets:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-  dark:      'https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+  dark:      'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
   light:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
 };
 
@@ -557,6 +563,7 @@ function initMap() {
   });
   try { window.__pirchMap = map; } catch (e) {}
   map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
+  new ResizeObserver(() => map.resize()).observe(document.getElementById('map'));
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
   map.on('move', syncMapStatus);
   map.on('zoom', syncMapStatus);
@@ -600,7 +607,7 @@ async function loadRainTiles() {
 }
 
 function setMapStyle(key) {
-  if (!MAP_STYLES[key]) return;
+  if (!map || !MAP_STYLES[key]) return;
   state.mapStyleKey = key;
   const src = map.getSource('basemap');
   if (src) src.setTiles([MAP_STYLES[key]]);
@@ -858,20 +865,25 @@ function flashStatusbar(text) {
 // NEWS
 // =====================================================
 
+let newsRequest = 0;
 async function loadNews() {
+  const requestId = ++newsRequest;
   try {
     const res = await fetch('/api/news?region=' + encodeURIComponent(state.newsFilterRegion), { cache: 'no-store' });
     if (!res.ok) throw new Error('news http ' + res.status);
     const data = await res.json();
+    if (requestId !== newsRequest) return;
+    state.sourceChipsBuilt = false;
     state.news = (data.items || []).map((it) => ({ ...it, kind: 'news' }));
     buildSourceChips();
     renderNews();
     refreshMarkers();
     const agoEl = $('#newsAgo');
-    if (agoEl) agoEl.textContent = 'just now';
+    if (agoEl) agoEl.textContent = 'September 2026 · unverified';
     const lr = $('#mapLastRefresh');
-    if (lr) lr.textContent = 'refreshed ' + timeNow();
+    if (lr) lr.textContent = 'Static news examples · September 2026';
   } catch (e) {
+    if (requestId !== newsRequest) return;
     const listEl = $('#newsList');
     if (listEl) listEl.innerHTML = '<div class="news-item" style="color:var(--negative)">news failed: ' + escapeHtml(String(e.message || e)) + '</div>';
   }
@@ -893,6 +905,8 @@ function buildSourceChips() {
     chips.push('<button type="button" class="chip" data-source="' + escapeHtml(name) + '">' + escapeHtml(name) + ' ' + n + '</button>');
   });
   wrap.innerHTML = chips.join('');
+  if (state.newsSourceFilter && !sources.has(state.newsSourceFilter)) state.newsSourceFilter = null;
+  $$('#sourceChips .chip').forEach((b) => b.classList.toggle('chip--active', (b.dataset.source || null) === state.newsSourceFilter));
   state.sourceChipsBuilt = true;
   $$('#sourceChips .chip').forEach((b) => {
     b.addEventListener('click', () => {
@@ -924,7 +938,7 @@ function renderNews() {
       ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.body_my) + '</div>' : '';
     const bodyEn = '<div class="news-item__body">' + escapeHtml(it.body_en || '') + '</div>';
     const digestEn = (it.digest_en && it.digest_en.trim())
-      ? '<div class="news-item__digest"><span class="news-item__digest-label">Dr Non digest</span><div class="news-item__digest-en">' + escapeHtml(it.digest_en) + '</div>' +
+      ? '<div class="news-item__digest"><span class="news-item__digest-label">Draft annotation · unreviewed</span><div class="news-item__digest-en">' + escapeHtml(it.digest_en) + '</div>' +
         ((it.digest_my && it.digest_my.trim()) ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.digest_my) + '</div>' : '') +
         '</div>' : '';
     return (
@@ -978,7 +992,7 @@ function openIncidentModal(item) {
   const bodyEn = '<p>' + escapeHtml(item.body_en || '') + '</p>';
   const digestBlock = ((item.digest_en && item.digest_en.trim()) || (item.digest_my && item.digest_my.trim()))
     ? '<div class="modal__digest-block">' +
-        '<span class="modal__digest-label">Dr Non digest</span>' +
+        '<span class="modal__digest-label">Draft annotation · unreviewed</span>' +
         ((item.digest_en && item.digest_en.trim()) ? '<p style="margin:0 0 6px;font-style:italic;">' + escapeHtml(item.digest_en) + '</p>' : '') +
         ((item.digest_my && item.digest_my.trim()) ? '<p style="margin:0;font-family:var(--font-burma);font-size:14px;line-height:1.7" lang="my">' + escapeHtml(item.digest_my) + '</p>' : '') +
       '</div>' : '';
@@ -1085,7 +1099,7 @@ function tickClock() {
 
 document.addEventListener('DOMContentLoaded', function () {
   // Identity
-  state.identity = getStoredIdentity();
+  state.identity = window.__pirchchatClient.identity;
   if (!state.identity || !state.identity.name) {
     showIdentityModal();
   } else {
@@ -1093,22 +1107,25 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   $('#identitySubmit').addEventListener('click', () => {
     const nameEl = $('#identityName');
-    const emailEl = $('#identityEmail');
     const name = (nameEl && nameEl.value || '').trim() || 'guest';
-    const email = (emailEl && emailEl.value || '').trim();
-    const id = { name: name.slice(0, 32), email: email, ip: fakeIp(), network: networkId(), since: new Date().toISOString() };
-    saveIdentity(id);
+    const id = window.__pirchchatClient.setIdentity(name);
     state.identity = id;
     applyIdentity(id);
     hideIdentityModal();
   });
 
+  $('#identitySkip').addEventListener('click', hideIdentityModal);
+
   // Mobile tabs
   $$('.tabs-top__btn').forEach((b) => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
-  setActiveTab('map');
+  const requestedTab = new URLSearchParams(location.search).get('tab');
+  setActiveTab(['map', 'news', 'chat'].includes(requestedTab) ? requestedTab : 'map');
 
   // Map
-  initMap();
+  try { initMap(); } catch (e) {
+    const status = $('#mapStatus');
+    if (status) status.textContent = 'Map unavailable — reload to retry. News and chat remain available.';
+  }
   loadRainTiles().then(() => refreshRain());
   setMapStyle('satellite');
   $$('.toolbar__btn[data-layer]').forEach((b) => b.addEventListener('click', () => setMapStyle(b.dataset.layer)));
@@ -1145,6 +1162,7 @@ document.addEventListener('DOMContentLoaded', function () {
     $$('button[data-news-filter]').forEach((x) => x.classList.remove('menubar__item--active'));
     b.classList.add('menubar__item--active');
     state.newsFilterRegion = b.dataset.newsFilter;
+    state.newsSourceFilter = null;
     loadNews();
   }));
 

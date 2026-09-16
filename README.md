@@ -50,9 +50,28 @@ All project specs live in `docs/`:
 
 ## Status
 
-Pre-pilot. Scaffold only. Architecture decision made; counter-proposal drafted; deployment to Hetzner pending Dr Non's call.
+Pre-pilot. The deployed app is the static dashboard in `web/`, with Pages Functions in `functions/` and a separate chat Worker in `chat-worker/`. The Next.js `src/` tree is an unused scaffold.
+
+Working deployment: https://burma-a3k.pages.dev/dashboard. The custom domain `burma.nonarkara.org` is pending a DNS CNAME. See `docs/AUDIT-2026-09-16.md` for the repair evidence and remaining pilot requirements.
 
 ## Co-proposers
 
 - **Si Thu Maung** — GovTech Youth Initiative (Burmese NLP, employer network, atlas data)
 - **Dr. Non Arkaraprasertkul (Dr. Non Arkara)** — Axiom Decision Systems (quest design, mentor, advisory, IP)
+
+## Run and verify the deployed app
+
+Use the installed Cloudflare Wrangler CLI. The root `dev`/`build` scripts belong to the unused Next.js scaffold.
+
+```sh
+npm ci --prefix tests
+node --test tests/chat-regression.test.mjs
+wrangler d1 execute pirchchat --config chat-worker/wrangler.toml --local --persist-to /tmp/pirchchat-audit-state --file chat-worker/schema.sql
+wrangler dev --config chat-worker/wrangler.toml --port 8797 --inspector-port 9297 --persist-to /tmp/pirchchat-audit-state
+# In another terminal:
+wrangler pages dev web --port 8798 --inspector-port 9298 --compatibility-date 2025-09-01
+# With both servers running:
+node tests/local-integration.mjs
+```
+
+The integration test writes only to the local Worker and isolated local D1/R2 storage. Browser testing uses http://127.0.0.1:8798/dashboard. Production chat uses the existing Worker URL.
