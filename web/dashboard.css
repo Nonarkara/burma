@@ -92,41 +92,45 @@ html, body {
 /* ===== Layout ===== */
 
 .dash {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr;
+  display: flex;
+  flex-direction: row;
   height: 100vh;
   width: 100vw;
   background: var(--chrome);
   gap: 4px;
   padding: 4px;
   box-sizing: border-box;
+  min-height: 0;
 }
 
 .dash__left {
   display: flex;
   flex-direction: column;
+  flex: 1 1 50%;
   background: var(--chrome);
   border-top: 2px solid var(--chrome-edge);
   border-left: 2px solid var(--chrome-edge);
   border-right: 2px solid var(--ink);
   border-bottom: 2px solid var(--ink);
+  min-width: 320px;
   min-height: 0;
-  min-width: 0;
   overflow: hidden;
 }
 
 .dash__right {
-  display: grid;
-  grid-template-rows: 1.2fr 1.8fr;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 50%;
   gap: 4px;
-  padding: 4px;
   background: var(--chrome);
   border: none;
+  min-width: 320px;
   min-height: 0;
-  min-width: 0;
   overflow: hidden;
 }
+
+.dash__right .news { flex: 0 0 38%; min-height: 140px; }
+.dash__right .chat { flex: 1 1 62%; min-height: 220px; }
 
 .dash__left, .dash__right { min-height: 0; }
 
@@ -754,6 +758,8 @@ html, body {
   line-height: 1.35;
   color: var(--ink);
   margin: 2px 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .news-item__title--my {
@@ -761,6 +767,8 @@ html, body {
   font-size: 15px;
   font-weight: 700;
   line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .news-item__body {
@@ -772,12 +780,16 @@ html, body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .news-item__body--my {
   font-family: var(--font-burma);
   font-size: 13px;
   line-height: 1.7;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .news-item__digest {
@@ -1288,8 +1300,7 @@ html, body {
 
 @media (max-width: 920px) {
   .dash {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
+    flex-direction: column;
     gap: 0;
     padding: 0;
   }
@@ -1304,12 +1315,12 @@ html, body {
 
   /* show only the selected surface */
   body[data-tab="map"]  .dash__left { display: flex; }
-  body[data-tab="news"] .dash__right { display: grid; grid-template-rows: 1fr; }
+  body[data-tab="news"] .dash__right { display: flex; flex: 1 1 auto; }
   body[data-tab="news"] .dash__right .chat { display: none; }
-  body[data-tab="news"] .dash__right .news { display: flex; }
-  body[data-tab="chat"] .dash__right { display: grid; grid-template-rows: 1fr; }
+  body[data-tab="news"] .dash__right .news { display: flex; flex: 1 1 auto; min-height: 0; }
+  body[data-tab="chat"] .dash__right { display: flex; flex: 1 1 auto; }
   body[data-tab="chat"] .dash__right .news { display: none; }
-  body[data-tab="chat"] .dash__right .chat { display: flex; }
+  body[data-tab="chat"] .dash__right .chat { display: flex; flex: 1 1 auto; min-height: 0; }
 
   /* hide tab from index if URL is /chat or /news */
   body[data-tab="map"]  .tabs-top__btn[data-tab="map"] { background: var(--ink); color: var(--chrome-light); }

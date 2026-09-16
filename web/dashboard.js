@@ -993,6 +993,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Mobile tabs
   $$('.tabs-top__btn').forEach((b) => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
+  setActiveTab('map');
 
   // Map
   initMap();
