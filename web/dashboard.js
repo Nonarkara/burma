@@ -537,11 +537,22 @@ function setActiveTab(name) {
 // MAP
 // =====================================================
 
+// Esri's old "Canvas/Dark_Gray" tile path returns 404 from server.arcgisonline.com.
+// CartoDB's "dark_all" is the open-source replacement for an unlabeled dark vector style.
+// Attribution: "OpenStreetMap contributors · CARTO". Tiles load via the four
+// MapLibre subdomain placeholders (a-d).
 const MAP_STYLES = {
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   streets:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-  dark:      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/Dark_Gray/MapServer/tile/{z}/{y}/{x}',
+  dark:      'https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
   light:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+};
+
+const MAP_ATTRIBUTIONS = {
+  satellite: 'Esri World Imagery',
+  streets:   'Esri World Street Map',
+  dark:      '© CARTO · © OpenStreetMap contributors',
+  light:     'Esri World Topo Map',
 };
 
 let map;
@@ -599,9 +610,9 @@ function setMapStyle(key) {
   const src = map.getSource('basemap');
   if (src) src.setTiles([MAP_STYLES[key]]);
   $$('.toolbar__btn[data-layer]').forEach((b) => b.classList.toggle('is-pressed', b.dataset.layer === key));
-  const labels = { satellite: 'Esri imagery', streets: 'Esri streets', dark: 'Esri dark', light: 'Esri topo' };
+  const labels = { satellite: 'Esri imagery', streets: 'Esri streets', dark: 'CartoDB dark', light: 'Esri topo' };
   const statusEl = $('#mapStatus');
-  if (statusEl) statusEl.textContent = (labels[key] || key) + ' · Asia';
+  if (statusEl) statusEl.textContent = (labels[key] || key) + ' · ' + (MAP_ATTRIBUTIONS[key] || '');
 }
 
 function toggleRain() {
