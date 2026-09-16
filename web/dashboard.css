@@ -1318,8 +1318,8 @@ html, body {
 
 /* ===== Mobile breakpoint — tabbed surface switcher ===== */
 
-@media (max-width: 920px) {
-  /* Mobile: stack the panes vertically. The active one fills the area below
+@media (max-width: 1500px) {
+  /* Mobile + tablet: stack the panes vertically. The active one fills the area below
      the 44px mobile tab bar. The other panes are hidden via body[data-tab]. */
   .dash {
     grid-template-columns: 1fr;
@@ -1356,7 +1356,7 @@ html, body {
   body[data-tab="chat"] .tabs-top__btn[data-tab="chat"] { background: var(--ink); color: var(--chrome-light); }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 1500px) {
   .dash__left, .dash__right {
     border-left: none;
     border-right: none;
