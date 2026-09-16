@@ -69,6 +69,156 @@ const CITIES = [
   { name: 'Bangkok',    lat: 13.7563, lng: 100.5018, country: 'TH', pop: '10.5M', note: 'Diaspora capital' },
 ];
 
+// Hand-curated Burmese TV channels. Streams largely link out to source pages
+// because public embed feeds are intermittent; the marker is the catalog, not
+// the playback. Sources are real, up-to-date at compile time.
+const BURMESE_TV = [
+  { name: 'Mizzima TV',          lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'news',     href: 'https://mizzimaburmese.com/', note: 'Burmese-language news · social' },
+  { name: 'DVB TV',              lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'news',     href: 'https://www.dvb.no/',          note: 'Democratic Voice of Burma' },
+  { name: 'BBC Burmese',          lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'news',     href: 'https://www.bbc.com/burmese',   note: 'BBC News Burmese' },
+  { name: 'The Irrawaddy',       lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'news',     href: 'https://www.irrawaddy.com/',   note: 'Independent reporting' },
+  { name: 'Khit Thit Media',     lat: 21.9747, lng: 96.0839, place: 'Mandalay',     kind: 'news',     href: 'https://www.facebook.com/khitthitmedia', note: 'Khit Thit Facebook live' },
+  { name: 'Frontier Myanmar',    lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'news',     href: 'https://frontiermyanmar.net/', note: 'Independent Burmese reporting' },
+  { name: 'DMRTV',               lat: 19.7633, lng: 96.0785, place: 'Naypyidaw',    kind: 'news',     href: 'https://www.youtube.com/@DMRTV',           note: 'YouTube channel' },
+  { name: '4.5 News Channel',    lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'news',     href: 'https://www.youtube.com/@4dot5news',       note: 'YouTube news' },
+  { name: 'People Channel',      lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'culture',  href: 'https://www.youtube.com/@PeopleChannel',  note: 'YouTube general' },
+  { name: 'Cherry TV',           lat: 16.8409, lng: 96.1735, place: 'Yangon',       kind: 'culture',  href: 'https://akiyaresearch.com/cherryfm/', note: 'Lifestyle + music' },
+];
+
+let radioStations = [];
+let radioMarkers = [];
+let tvMarkers = [];
+
+const RADIO_API = 'https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/MM';
+
+async function loadRadioStations() {
+  try {
+    const r = await fetch(RADIO_API, { headers: { 'user-agent': 'Pirchchat/0.1 (+burma.nonarkara.org)' } });
+    if (!r.ok) throw new Error('radio http ' + r.status);
+    const data = await r.json();
+    radioStations = (data || []).filter((s) => s.url_resolved || s.url).map((s) => ({
+      id: s.stationuuid || s.id || ('radio-' + Math.random().toString(36).slice(2, 8)),
+      name: s.name || 'Unknown',
+      url: s.url_resolved || s.url,
+      codec: s.codec || '',
+      bitrate: s.bitrate || 0,
+      geo: (s.geo_lat && s.geo_long) ? { lat: s.geo_lat, lng: s.geo_long } : null,
+      country: s.countrycode || 'MM',
+      tags: s.tags || '',
+      homepage: s.homepage || '',
+    }));
+    if (state.radioLayerOn) renderRadioMarkers();
+  } catch (e) {
+    // surface in statusbar
+    const sb = $('.dash__left .statusbar .statusbar__item');
+    if (sb) sb.textContent = 'Radio fetch failed: ' + (e && e.message || e);
+  }
+}
+
+function toggleRadio() {
+  state.radioLayerOn = !state.radioLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="radio"]').forEach((b) => b.classList.toggle('is-pressed', state.radioLayerOn));
+  renderRadioMarkers();
+}
+
+function renderRadioMarkers() {
+  if (!map) return;
+  radioMarkers.forEach((m) => { try { m.remove(); } catch (e) {} });
+  radioMarkers = [];
+  if (!state.radioLayerOn) return;
+  radioStations.forEach((s) => {
+    let lat = s.geo && s.geo.lat;
+    let lng = s.geo && s.geo.lng;
+    if (!lat || !lng) {
+      const fromName = pickCityCoordFromName(s.name);
+      if (fromName) { lat = fromName.lat; lng = fromName.lng; }
+    }
+    if (!lat || !lng) return;
+    const el = document.createElement('div');
+    el.className = 'pirch-marker pirch-marker--radio';
+    el.title = s.name + (s.codec ? ' · ' + s.codec : '') + (s.bitrate ? ' · ' + s.bitrate + 'kbps' : '');
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openRadioModal(s);
+    });
+    const m = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+    radioMarkers.push(m);
+  });
+}
+
+function pickCityCoordFromName(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('mandalay')) return CITIES.find((c) => c.name === 'Mandalay');
+  if (n.includes('yangon')) return CITIES.find((c) => c.name === 'Yangon');
+  if (n.includes('naypyidaw') || n.includes('pyinmana')) return CITIES.find((c) => c.name === 'Naypyidaw');
+  if (n.includes('myitkyina')) return CITIES.find((c) => c.name === 'Myitkyina');
+  if (n.includes('taunggyi')) return CITIES.find((c) => c.name === 'Taunggyi');
+  return null;
+}
+
+function openRadioModal(s) {
+  const audio = document.getElementById('audioEl');
+  const player = document.getElementById('audioplayer');
+  const name = document.getElementById('audioName');
+  const meta = document.getElementById('audioMeta');
+  if (!audio || !player || !name || !meta) return;
+  player.hidden = false;
+  name.textContent = s.name;
+  meta.textContent = [s.codec, s.bitrate ? s.bitrate + 'kbps' : '', s.country, s.homepage].filter(Boolean).join(' · ');
+  audio.src = s.url;
+  audio.play().catch(() => {});
+}
+
+function closeAudio() {
+  const player = document.getElementById('audioplayer');
+  const audio = document.getElementById('audioEl');
+  if (audio) { try { audio.pause(); audio.src = ''; } catch (e) {} }
+  if (player) player.hidden = true;
+}
+
+function toggleTv() {
+  state.tvLayerOn = !state.tvLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="tv"]').forEach((b) => b.classList.toggle('is-pressed', state.tvLayerOn));
+  renderTvMarkers();
+}
+
+function renderTvMarkers() {
+  if (!map) return;
+  tvMarkers.forEach((m) => { try { m.remove(); } catch (e) {} });
+  tvMarkers = [];
+  if (!state.tvLayerOn) return;
+  BURMESE_TV.forEach((tv) => {
+    if (typeof tv.lat !== 'number') return;
+    const el = document.createElement('div');
+    el.className = 'pirch-marker pirch-marker--tv';
+    el.title = tv.name + (tv.kind ? ' · ' + tv.kind : '');
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTvModal(tv);
+    });
+    const m = new maplibregl.Marker({ element: el }).setLngLat([tv.lng, tv.lat]).addTo(map);
+    tvMarkers.push(m);
+  });
+}
+
+function openTvModal(tv) {
+  const modal = $('#incidentModal');
+  const titleEl = $('#incidentTitle');
+  const bodyEl = $('#incidentBody');
+  if (!modal || !titleEl || !bodyEl) return;
+  titleEl.textContent = tv.name;
+  bodyEl.innerHTML =
+    '<h3>' + escapeHtml(tv.name) + '</h3>' +
+    '<p><em>' + escapeHtml(tv.note) + '</em></p>' +
+    '<p>Based in ' + escapeHtml(tv.place) + '.</p>' +
+    '<p style="margin-top:12px"><a href="' + escapeHtml(tv.href) + '" target="_blank" rel="noopener">Open source channel ↗</a></p>' +
+    '<div class="modal__meta">' +
+      '<div>Kind: ' + escapeHtml(tv.kind || '') + '</div>' +
+      '<div>Public streaming URL is unreliable for most Burmese channels. We open the source page rather than embed.</div>' +
+    '</div>';
+  modal.hidden = false;
+}
+
 const ROOMS = {
   'monastic-youth': {
     title: '#monastic-youth',
@@ -169,6 +319,8 @@ const state = {
   newsSourceFilter: null,
   newsLayerOn: true,
   citiesLayerOn: false,
+  radioLayerOn: true,
+  tvLayerOn: true,
   rainLayerOn: true,
   rooms: ROOMS,
   currentRoom: 'monastic-youth',
@@ -714,6 +866,16 @@ document.addEventListener('DOMContentLoaded', function () {
   $$('.toolbar__btn[data-layer-toggle="news"]').forEach((b) => b.addEventListener('click', () => { state.newsLayerOn = !state.newsLayerOn; b.classList.toggle('is-pressed', state.newsLayerOn); refreshMarkers(); }));
   $$('.toolbar__btn[data-layer-toggle="rain"]').forEach((b) => b.addEventListener('click', toggleRain));
   $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.addEventListener('click', toggleCities));
+  $$('.toolbar__btn[data-layer-toggle="radio"]').forEach((b) => b.addEventListener('click', toggleRadio));
+  $$('.toolbar__btn[data-layer-toggle="tv"]').forEach((b) => b.addEventListener('click', toggleTv));
+
+  // Audio player close
+  const audioClose = document.getElementById('audioClose');
+  if (audioClose) audioClose.addEventListener('click', closeAudio);
+
+  // Initial radio + TV render
+  loadRadioStations();
+  renderTvMarkers();
 
   // News filter region
   $$('button[data-news-filter]').forEach((b) => b.addEventListener('click', () => {

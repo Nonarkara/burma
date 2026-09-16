@@ -50,10 +50,12 @@
       <button type="button" class="toolbar__btn" data-layer="dark" title="Dark vector">▣ Dark</button>
       <button type="button" class="toolbar__btn" data-layer="light" title="Light topo">▦ Topo</button>
       <span class="toolbar__sep"></span>
-      <button type="button" class="toolbar__btn" data-action="fit" title="Fit all incidents">⌖ Fit</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="news" title="Toggle news markers">● News</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="cities" title="Toggle cities">● Cities</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Toggle rain">☔ Rain</button>
+      <button type="button" class="toolbar__btn" data-action="fit" title="Fit all markers">⌖ Fit</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="news" title="News incident markers">● News</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="cities" title="City markers">● Cities</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)">📻 Radio</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)">📺 TV</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Rain overlay">☔ Rain</button>
       <button type="button" class="toolbar__btn" data-action="add" title="Drop a manual pin">＋ Pin</button>
     </div>
 
@@ -69,10 +71,24 @@
       <div id="map" role="application" aria-label="Map"></div>
       <div class="map-legend">
         <span><span class="legend__dot legend__dot--news" aria-hidden="true"></span>News</span>
-        <span><span class="legend__dot legend__dot--chat" aria-hidden="true"></span>Chat mention</span>
         <span><span class="legend__dot legend__dot--city" aria-hidden="true"></span>City</span>
+        <span><span class="legend__dot legend__dot--radio" aria-hidden="true"></span>Radio</span>
+        <span><span class="legend__dot legend__dot--tv" aria-hidden="true"></span>TV</span>
         <span><span class="legend__dot legend__dot--you" aria-hidden="true"></span>You pinned</span>
       </div>
+
+      <aside class="audioplayer" id="audioplayer" hidden>
+        <header class="audioplayer__bar">
+          <span class="titlebar__dot" aria-hidden="true"></span>
+          <span class="audioplayer__title">Live audio</span>
+          <button type="button" class="titlebar__btn" id="audioClose" title="Stop">×</button>
+        </header>
+        <div class="audioplayer__body">
+          <div class="audioplayer__name" id="audioName">—</div>
+          <div class="audioplayer__meta" id="audioMeta">—</div>
+          <audio id="audioEl" controls preload="none" src=""></audio>
+        </div>
+      </aside>
     </div>
 
     <div class="statusbar" aria-label="Map status bar">
@@ -95,8 +111,9 @@
       </div>
       <nav class="menubar">
         <button type="button" class="menubar__item menubar__item--active" data-news-filter="all"><u>A</u>ll</button>
-        <button type="button" class="menubar__item" data-news-filter="mm"><u>M</u>yanmar</button>
-        <button type="button" class="menubar__item" data-news-filter="diaspora">Di<u>a</u>spora</button>
+        <button type="button" class="menubar__item" data-news-filter="visa-jobs"><u>J</u>obs · Visa</button>
+        <button type="button" class="menubar__item" data-news-filter="mm">M<u>y</u>anmar</button>
+        <button type="button" class="menubar__item" data-news-filter="diaspora">Diasp<u>o</u>ra</button>
         <button type="button" class="menubar__item" data-news-filter="asean">ASEAN</button>
         <button type="button" class="menubar__item" data-news-filter="world">W<u>orld</u></button>
       </nav>

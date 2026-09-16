@@ -383,6 +383,8 @@ html, body {
 .legend__dot--news  { background: var(--negative); }
 .legend__dot--chat  { background: var(--accent); }
 .legend__dot--city  { background: var(--paper); border: 2px solid var(--ink); box-sizing: border-box; }
+.legend__dot--radio { background: var(--server); }
+.legend__dot--tv    { background: var(--positive); }
 .legend__dot--you   { background: var(--positive); }
 
 .pirch-marker {
@@ -397,6 +399,27 @@ html, body {
 .pirch-marker--city {
   background: var(--paper);
   border: 2px solid var(--ink);
+}
+.pirch-marker--radio {
+  background: var(--server);
+  border-radius: 9999px !important;
+  width: 18px;
+  height: 18px;
+}
+.pirch-marker--tv {
+  background: var(--positive);
+  border: 2px solid var(--paper);
+  width: 20px;
+  height: 14px;
+  border-radius: 0 !important;
+  position: relative;
+}
+.pirch-marker--tv::after {
+  content: '';
+  position: absolute;
+  left: 2px; right: 2px; bottom: 2px;
+  height: 2px;
+  background: var(--paper);
 }
 .pirch-marker--you  { background: var(--positive); }
 
@@ -427,6 +450,63 @@ html, body {
   flex-shrink: 0;
 }
 .led--on { background: var(--positive); }
+
+/* ===== Audio player (live radio) ===== */
+
+.audioplayer {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  max-width: 380px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  z-index: 6;
+}
+
+.audioplayer[hidden] { display: none; }
+
+.audioplayer__bar {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 2px 0 4px;
+  background: var(--chrome-dark);
+  border-bottom: 1px solid var(--ink-muted);
+  font-family: var(--font-system);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.audioplayer__title { flex: 1; margin-left: 6px; }
+
+.audioplayer__body {
+  padding: 8px 10px;
+}
+
+.audioplayer__name {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.audioplayer__meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}
+
+.audioplayer audio {
+  width: 100%;
+  height: 32px;
+}
 
 /* ===== News pane ===== */
 
