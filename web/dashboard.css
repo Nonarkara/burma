@@ -92,8 +92,9 @@ html, body {
 /* ===== Layout ===== */
 
 .dash {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 50% 50%;
+  grid-template-rows: 1fr;
   height: 100vh;
   width: 100vw;
   background: var(--chrome);
@@ -106,33 +107,52 @@ html, body {
 .dash__left {
   display: flex;
   flex-direction: column;
-  flex: 1 1 50%;
   background: var(--chrome);
   border-top: 2px solid var(--chrome-edge);
   border-left: 2px solid var(--chrome-edge);
   border-right: 2px solid var(--ink);
   border-bottom: 2px solid var(--ink);
-  min-width: 320px;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
 
 .dash__right {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 50%;
+  display: grid;
+  grid-template-rows: 38% 1fr;
   gap: 4px;
   background: var(--chrome);
   border: none;
-  min-width: 320px;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
 
-.dash__right .news { flex: 0 0 38%; min-height: 140px; }
-.dash__right .chat { flex: 1 1 62%; min-height: 220px; }
+.dash__right .news {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-top: 2px solid var(--chrome-edge);
+  border-left: 2px solid var(--chrome-edge);
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  min-height: 140px;
+  overflow: hidden;
+}
 
-.dash__left, .dash__right { min-height: 0; }
+.dash__right .chat {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-top: 2px solid var(--chrome-edge);
+  border-left: 2px solid var(--chrome-edge);
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.dash__left, .dash__right { min-height: 0; min-width: 0; }
 
 /* ===== Titlebar (Win95) ===== */
 
@@ -1299,10 +1319,15 @@ html, body {
 /* ===== Mobile breakpoint — tabbed surface switcher ===== */
 
 @media (max-width: 920px) {
+  /* Mobile: stack the panes vertically. The active one fills the area below
+     the 44px mobile tab bar. The other panes are hidden via body[data-tab]. */
   .dash {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
     gap: 0;
     padding: 0;
+    position: relative;
+    height: calc(100vh - 44px);
   }
 
   .tabs-top { display: flex; }
@@ -1313,15 +1338,17 @@ html, body {
     display: none;
   }
 
-  /* show only the selected surface — absolute positioning, no flex collapse */
-  .dash { position: relative; height: calc(100vh - 44px); }
-  body[data-tab="map"]  .dash__left  { display: flex; position: absolute; inset: 0; min-height: 0; }
-  body[data-tab="news"] .dash__right { display: flex; position: absolute; inset: 0; min-height: 0; flex-direction: column; }
+  /* show only the selected surface — grid cell that fills the row */
+  .dash__left  { grid-column: 1; grid-row: 1; }
+  .dash__right { grid-column: 1; grid-row: 1; }
+
+  body[data-tab="map"]  .dash__left  { display: flex; }
+  body[data-tab="news"] .dash__right { display: grid; }
   body[data-tab="news"] .dash__right .chat { display: none; }
-  body[data-tab="news"] .dash__right .news { display: flex; flex: 1 1 auto; min-height: 0; }
-  body[data-tab="chat"] .dash__right { display: flex; position: absolute; inset: 0; min-height: 0; flex-direction: column; }
+  body[data-tab="news"] .dash__right .news { display: flex; }
+  body[data-tab="chat"] .dash__right { display: grid; }
   body[data-tab="chat"] .dash__right .news { display: none; }
-  body[data-tab="chat"] .dash__right .chat { display: flex; flex: 1 1 auto; min-height: 0; }
+  body[data-tab="chat"] .dash__right .chat { display: flex; }
 
   /* hide tab from index if URL is /chat or /news */
   body[data-tab="map"]  .tabs-top__btn[data-tab="map"] { background: var(--ink); color: var(--chrome-light); }
