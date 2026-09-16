@@ -92,19 +92,20 @@ html, body {
 /* ===== Layout ===== */
 
 .dash {
-  display: grid;
-  grid-template-columns: 50% 50%;
-  grid-template-rows: 1fr;
+  position: relative;
   height: 100vh;
   width: 100vw;
   background: var(--chrome);
-  gap: 4px;
-  padding: 4px;
   box-sizing: border-box;
   min-height: 0;
 }
 
 .dash__left {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 50%;
   display: flex;
   flex-direction: column;
   background: var(--chrome);
@@ -112,25 +113,30 @@ html, body {
   border-left: 2px solid var(--chrome-edge);
   border-right: 2px solid var(--ink);
   border-bottom: 2px solid var(--ink);
-  min-width: 0;
-  min-height: 0;
+  min-width: 320px;
   overflow: hidden;
 }
 
 .dash__right {
-  display: grid;
-  grid-template-rows: 38% 1fr;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  right: 0;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
+  padding: 4px;
   background: var(--chrome);
   border: none;
-  min-width: 0;
-  min-height: 0;
+  min-width: 320px;
   overflow: hidden;
 }
 
 .dash__right .news {
   display: flex;
   flex-direction: column;
+  flex: 0 0 38%;
   background: var(--paper);
   border-top: 2px solid var(--chrome-edge);
   border-left: 2px solid var(--chrome-edge);
@@ -143,6 +149,7 @@ html, body {
 .dash__right .chat {
   display: flex;
   flex-direction: column;
+  flex: 1 1 62%;
   background: var(--paper);
   border-top: 2px solid var(--chrome-edge);
   border-left: 2px solid var(--chrome-edge);
@@ -152,7 +159,7 @@ html, body {
   overflow: hidden;
 }
 
-.dash__left, .dash__right { min-height: 0; min-width: 0; }
+.dash__left, .dash__right { min-height: 0; }
 
 /* ===== Titlebar (Win95) ===== */
 
