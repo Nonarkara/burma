@@ -727,60 +727,8 @@ document.addEventListener('DOMContentLoaded', function () {
   loadNews();
   setInterval(loadNews, 120000);
 
-  // Chat room tabs
-  $$('button[data-room]').forEach((b) => b.addEventListener('click', () => renderRoom(b.dataset.room)));
-  renderRoom('monastic-youth');
-
-  // Topic chips in chat
-  $$('#topicChips .chip').forEach((b) => {
-    b.addEventListener('click', () => {
-      $$('#topicChips .chip').forEach((x) => x.classList.remove('chip--active'));
-      b.classList.add('chip--active');
-      state.chatTopic = b.dataset.topic;
-      renderMessages();
-    });
-  });
-
-  // Composer — submit
-  $('#composer').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const raw = $('#input').value.trim();
-    if (!raw && !window.__pendingAttachment) return;
-    const url = detectFirstUrl(raw);
-    let preview = null;
-    if (url) {
-      try {
-        const r = await fetch('/api/preview?url=' + encodeURIComponent(url), { cache: 'no-store' });
-        if (r.ok) {
-          const j = await r.json();
-          if (j.ok) preview = j;
-        }
-      } catch (e) { /* ignore */ }
-      if (!preview) preview = { url: url, host: url.replace(/^https?:\/\//, '').split('/')[0], title: url };
-    }
-    const attachment = window.__pendingAttachment;
-    appendUserMessage(raw || '(attachment)', { imageDataUrl: attachment, preview: preview });
-    $('#input').value = '';
-    window.__pendingAttachment = null;
-    $('#input').placeholder = 'Type a Burmese or English message…  URLs become preview cards';
-  });
-
-  // Composer — file attach
-  $('#fileInput').addEventListener('change', (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    if (file.size > 1024 * 600) {
-      alert('Image is over 600KB. Resize and try again.');
-      event.target.value = '';
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      window.__pendingAttachment = reader.result;
-      $('#input').placeholder = 'Image attached (' + Math.round(file.size / 1024) + 'KB). Type a caption or send.';
-    };
-    reader.readAsDataURL(file);
-  });
+  // Chat (room tabs, topic chips, composer, file attach) is owned by chat-client.js.
+  // Identity modal here only writes the network ID + name; chat-client.js reads it.
 
   // Modal close
   $('#incidentClose').addEventListener('click', () => { $('#incidentModal').hidden = true; });

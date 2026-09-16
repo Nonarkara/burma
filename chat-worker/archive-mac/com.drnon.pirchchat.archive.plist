@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.drnon.pirchchat.archive</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-l</string>
+    <string>-c</string>
+    <string>~/pirchchat-archive/mirror.sh &gt;&gt; ~/pirchchat-archive/archive.log 2&gt;&amp;1</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <integer>0</integer>
+    <integer>3</integer>
+    <integer>0</integer>
+    <integer>0</integer>
+  </array>
+  <!-- Run at 03:00 UTC = 10:00 ICT daily -->
+  <key>StandardOutPath</key>
+  <string>~/pirchchat-archive/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>~/pirchchat-archive/stderr.log</string>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>

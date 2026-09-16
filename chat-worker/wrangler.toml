@@ -1,0 +1,33 @@
+name = "pirchchat-chat"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[observability.logs]
+enabled = true
+
+# D1 — message archive + identity table + rooms + members + uploads + pins
+[[d1_databases]]
+binding = "DB"
+database_name = "pirchchat"
+database_id = "2f3d42a4-ba2b-4b18-bbfb-f6f251979d8d"
+
+# R2 — image attachments (with public CDN)
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "pirchchat-uploads"
+
+# Durable Object — one instance per room
+[[durable_objects.bindings]]
+name = "CHAT_ROOM"
+class_name = "ChatRoomDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatRoomDO"]
+
+# Public bucket access for serving attachments
+[[r2_buckets.lifecycle]]
+type = "lifecycle"
+[[r2_buckets.lifecycle.rules]]
+name = "expire-empty-prefix"
+enabled = false
