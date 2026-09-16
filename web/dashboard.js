@@ -214,9 +214,139 @@ function openTvModal(tv) {
     '<p style="margin-top:12px"><a href="' + escapeHtml(tv.href) + '" target="_blank" rel="noopener">Open source channel ↗</a></p>' +
     '<div class="modal__meta">' +
       '<div>Kind: ' + escapeHtml(tv.kind || '') + '</div>' +
-      '<div>Public streaming URL is unreliable for most Burmese channels. We open the source page rather than embed.</div>' +
+      '<div>Live embed runs in the TV panel at the bottom of the map. This modal opens the source page.</div>' +
     '</div>';
   modal.hidden = false;
+}
+
+// ===== Live TV panel — always-visible Burmese channels on the map =====
+
+// Channels with public YouTube live-stream handles. If the channel is not
+// currently broadcasting, YouTube serves the latest uploaded video — better
+// than a blank box. Mute by default so four streams don't deafen the room.
+const BURMESE_TV_LIVE = [
+  { handle: 'khitthitmedia',  name: 'Khit Thit Media',    lang: 'burmese', kind: 'news' },
+  { handle: 'irrawaddyemagazine', name: 'Irrawaddy',         lang: 'burmese', kind: 'news' },
+  { handle: 'dvburmese',       name: 'DVB Burmese',         lang: 'burmese', kind: 'news' },
+  { handle: 'mizzimaburmese',  name: 'Mizzima Burmese',     lang: 'burmese', kind: 'news' },
+  { handle: 'frontiermyanmar', name: 'Frontier Myanmar',    lang: 'burmese', kind: 'news' },
+];
+
+let tvCards = [];
+
+function ytEmbedURL(handle, mute) {
+  const m = mute ? 1 : 0;
+  return 'https://www.youtube.com/embed/live_stream?channel=@' + encodeURIComponent(handle) +
+    '&autoplay=1' +
+    '&mute=' + m +
+    '&playsinline=1' +
+    '&rel=0' +
+    '&modestbranding=1' +
+    '&enablejsapi=0';
+}
+
+function buildTvPanel() {
+  const row = document.getElementById('tvpanelRow');
+  if (!row) return;
+  row.innerHTML = '';
+  tvCards = [];
+  BURMESE_TV_LIVE.forEach((ch, idx) => {
+    const card = document.createElement('div');
+    card.className = 'tv-card';
+    const muted = true;     // start muted across the board
+    card.innerHTML =
+      '<header class="tv-card__bar">' +
+        '<span class="dot dot--muted" aria-hidden="true"></span>' +
+        '<span class="tv-card__name">' + escapeHtml(ch.name) + '</span>' +
+        '<button type="button" class="tv-card__mute" data-mute="0">🔇</button>' +
+      '</header>' +
+      '<div class="tv-card__frame">' +
+        '<div class="tv-card__fallback" hidden>' + escapeHtml(ch.name) + ' — loading live stream…</div>' +
+      '</div>';
+    row.appendChild(card);
+    const frame = card.querySelector('.tv-card__frame');
+    const iframe = document.createElement('iframe');
+    iframe.loading = 'lazy';
+    iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+    iframe.referrerPolicy = 'no-referrer-when-downgrade';
+    iframe.allowFullscreen = true;
+    iframe.src = ytEmbedURL(ch.handle, muted);
+    iframe.dataset.muted = muted ? '1' : '0';
+    iframe.addEventListener('load', () => {
+      const fb = card.querySelector('.tv-card__fallback');
+      if (fb) fb.hidden = true;
+      const dot = card.querySelector('.tv-card__bar .dot');
+      if (dot) dot.classList.remove('dot--muted');
+      if (dot) dot.classList.add('dot--live');
+    });
+    frame.appendChild(iframe);
+
+    const muteBtn = card.querySelector('.tv-card__mute');
+    muteBtn.addEventListener('click', () => {
+      const isMuted = iframe.dataset.muted === '1';
+      const nextMuted = isMuted ? 0 : 1;
+      iframe.dataset.muted = String(nextMuted);
+      // Reload to apply new mute state (YouTube's mute prop requires reload).
+      iframe.src = ytEmbedURL(ch.handle, !!nextMuted);
+      muteBtn.textContent = nextMuted ? '🔇' : '🔊';
+      muteBtn.dataset.mute = String(nextMuted);
+      const dot = card.querySelector('.tv-card__bar .dot');
+      if (dot) {
+        dot.classList.toggle('dot--muted', !!nextMuted);
+        dot.classList.toggle('dot--live', !nextMuted);
+      }
+    });
+
+    tvCards.push({ ch, card, iframe });
+  });
+
+  const muteAll = document.getElementById('tvpanelMuteAll');
+  const unmuteAll = document.getElementById('tvpanelUnmuteAll');
+  const hint = document.getElementById('tvpanelHint');
+  function setAll(mute) {
+    tvCards.forEach((t) => {
+      t.iframe.dataset.muted = mute ? '1' : '0';
+      t.iframe.src = ytEmbedURL(t.ch.handle, mute);
+      const btn = t.card.querySelector('.tv-card__mute');
+      btn.textContent = mute ? '🔇' : '🔊';
+      const dot = t.card.querySelector('.tv-card__bar .dot');
+      if (dot) {
+        dot.classList.toggle('dot--muted', mute);
+        dot.classList.toggle('dot--live', !mute);
+      }
+    });
+    if (hint) hint.textContent = mute
+      ? 'All muted. Click a speaker to hear that channel.'
+      : 'All live. Click a speaker to mute.';
+  }
+  if (muteAll) muteAll.addEventListener('click', () => setAll(true));
+  if (unmuteAll) unmuteAll.addEventListener('click', () => setAll(false));
+}
+
+// Chat status indicator — surface the WS connection state in the status bar.
+let chatWSPingTimer = null;
+
+function startChatStatusIndicator() {
+  const statusBar = document.querySelector('.chat .statusbar');
+  if (!statusBar) return;
+  const span = document.createElement('span');
+  span.className = 'statusbar__item';
+  span.id = 'chatStatus';
+  span.textContent = 'Chat · connecting…';
+  statusBar.insertBefore(span, statusBar.firstChild);
+
+  // Poll window.__pirchchatClient every 2s for WS state.
+  setInterval(() => {
+    const text = span.textContent;
+    const conn = window.__pirchchatClient && window.__pirchchatClient.state;
+    if (conn && conn.ws && conn.ws.readyState === 1) {
+      span.textContent = 'Chat · live · ' + (conn.currentRoom || '—');
+      span.style.color = 'var(--positive)';
+    } else {
+      span.textContent = 'Chat · reconnecting…';
+      span.style.color = 'var(--ink-muted)';
+    }
+  }, 2000);
 }
 
 const ROOMS = {
@@ -876,6 +1006,12 @@ document.addEventListener('DOMContentLoaded', function () {
   // Initial radio + TV render
   loadRadioStations();
   renderTvMarkers();
+
+  // Live TV panel — always-visible Burmese YouTube embeds at the bottom of the map.
+  buildTvPanel();
+
+  // Chat status indicator
+  startChatStatusIndicator();
 
   // News filter region
   $$('button[data-news-filter]').forEach((b) => b.addEventListener('click', () => {

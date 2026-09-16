@@ -451,6 +451,177 @@ html, body {
 }
 .led--on { background: var(--positive); }
 
+/* ===== TV panel — always floating at bottom of map area ===== */
+
+.tvpanel {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  z-index: 4;
+  max-height: 220px;
+}
+
+.tvpanel__bar {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 4px 0 6px;
+  background: var(--chrome-dark);
+  border-bottom: 1px solid var(--ink-muted);
+  font-family: var(--font-system);
+}
+
+.tvpanel__title {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 8px 0 0;
+}
+
+.tvpanel__hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+
+.tvpanel__spacer { flex: 1; }
+
+.tvpanel__mute-all,
+.tvpanel__unmute-all {
+  appearance: none;
+  border: 1px solid var(--ink);
+  border-top-color: var(--chrome-edge);
+  border-left-color: var(--chrome-edge);
+  background: var(--chrome);
+  padding: 1px 8px;
+  font-family: var(--font-system);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.tvpanel__mute-all:active,
+.tvpanel__unmute-all:active {
+  border-top-color: var(--ink);
+  border-left-color: var(--ink);
+  border-right-color: var(--chrome-edge);
+  border-bottom-color: var(--chrome-edge);
+}
+
+.tvpanel__row {
+  display: flex;
+  flex: 1;
+  gap: 1px;
+  background: var(--rule);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tv-card {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 220px;
+  background: var(--paper);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  min-width: 0;
+}
+
+.tv-card__bar {
+  display: flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px 0 4px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  font-family: var(--font-system);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tv-card__bar .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--negative);
+  margin-right: 4px;
+}
+
+.tv-card__bar .dot--muted { background: var(--ink-muted); }
+.tv-card__bar .dot--live { background: var(--positive); }
+
+.tv-card__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tv-card__mute {
+  appearance: none;
+  border: 1px solid var(--ink);
+  border-top-color: var(--chrome-edge);
+  border-left-color: var(--chrome-edge);
+  background: var(--chrome);
+  padding: 0 6px;
+  font-family: var(--font-system);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.tv-card__mute:active {
+  border-top-color: var(--ink);
+  border-left-color: var(--ink);
+  border-right-color: var(--chrome-edge);
+  border-bottom-color: var(--chrome-edge);
+}
+
+.tv-card__frame {
+  position: relative;
+  padding-bottom: 56.25%;
+  background: #000;
+  flex: 1;
+}
+
+.tv-card__frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.tv-card__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--chrome-light);
+  background: #1a1a1a;
+  text-align: center;
+  padding: 8px;
+}
+
+@media (max-width: 920px) {
+  .tvpanel { left: 4px; right: 4px; bottom: 4px; max-height: 280px; }
+  .tv-card { flex-basis: 180px; }
+}
+
 /* ===== Audio player (live radio) ===== */
 
 .audioplayer {

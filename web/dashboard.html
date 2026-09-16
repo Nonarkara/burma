@@ -89,6 +89,22 @@
           <audio id="audioEl" controls preload="none" src=""></audio>
         </div>
       </aside>
+
+      <!-- ===== LIVE TV PANEL — always floating at the bottom of the map ===== -->
+      <section class="tvpanel" aria-labelledby="tvpanel-h" id="tvpanel">
+        <header class="tvpanel__bar">
+          <span class="titlebar__dot" aria-hidden="true"></span>
+          <h3 id="tvpanel-h" class="tvpanel__title">Burmese TV — live</h3>
+          <span class="tvpanel__hint" id="tvpanelHint">All muted. Click a speaker to hear that channel.</span>
+          <span class="tvpanel__spacer"></span>
+          <button type="button" class="tvpanel__mute-all" id="tvpanelMuteAll" title="Mute all">Mute all</button>
+          <button type="button" class="tvpanel__unmute-all" id="tvpanelUnmuteAll" title="Unmute all">Unmute all</button>
+        </header>
+        <div class="tvpanel__row" id="tvpanelRow">
+          <!-- cards injected by JS -->
+        </div>
+      </section>
+    </div>
     </div>
 
     <div class="statusbar" aria-label="Map status bar">

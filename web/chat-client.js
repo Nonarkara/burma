@@ -64,6 +64,7 @@ window.__pirchchatClient = {
     return state.identity;
   },
   get identity() { return state.identity; },
+  get state() { return state; },
 };
 
 // ===== API calls =====
