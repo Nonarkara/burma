@@ -413,6 +413,8 @@ html, body {
   vertical-align: middle;
 }
 
+.legend__dot--border { background: var(--accent); }
+.legend__dot--gate   { background: var(--accent); border: 1px solid var(--ink); }
 .legend__dot--news  { background: var(--negative); }
 .legend__dot--chat  { background: var(--accent); }
 .legend__dot--city  { background: var(--paper); border: 2px solid var(--ink); box-sizing: border-box; }
@@ -420,6 +422,14 @@ html, body {
 .legend__dot--tv    { background: var(--positive); }
 .legend__dot--you   { background: var(--positive); }
 .legend__dot--quake { background: var(--negative); border-radius: 9999px !important; }
+
+.pirch-marker--gate {
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+}
 
 .pirch-marker--quake {
   background: var(--negative);
@@ -555,6 +565,33 @@ html, body {
   border-left-color: var(--ink);
   border-right-color: var(--chrome-edge);
   border-bottom-color: var(--chrome-edge);
+}
+
+.tvpanel__filters {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 6px;
+}
+
+.tvpanel__filter-btn {
+  appearance: none;
+  border: 1px solid var(--ink-muted);
+  background: var(--chrome);
+  padding: 0 5px;
+  font-family: var(--font-system);
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.tvpanel__filter-btn:hover {
+  background: var(--accent-soft);
+}
+
+.tvpanel__filter-btn.is-active {
+  background: var(--chrome-dark);
+  border-color: var(--ink);
+  font-weight: 700;
 }
 
 .tvpanel__row {

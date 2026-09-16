@@ -1,0 +1,107 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "mae-sot-sez",
+        "name": "Mae Sot SEZ & Friendship Bridges",
+        "name_my": "မဲဆောက် စီးပွားရေးဇုန် နှင့် ချစ်ကြည်ရေးတံတား",
+        "type": "sez",
+        "counterpart": "Myawaddy (မြဝတီ)",
+        "theater": "myanmar-frontier",
+        "status": "active",
+        "summary": "Primary western customs, humanitarian, and commercial gateway facing Myawaddy. Thai-Myanmar Friendship Bridges 1 & 2."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [98.5746, 16.7163]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "mae-sai-gate",
+        "name": "Mae Sai Border Gate",
+        "name_my": "မယ်ဆိုင် နယ်စပ်ဂိတ်",
+        "type": "checkpoint",
+        "counterpart": "Tachileik, Shan State (တာချီလိတ်)",
+        "theater": "myanmar-frontier",
+        "status": "active",
+        "summary": "Northern frontier crossing connecting Chiang Rai to Tachileik and Eastern Shan State trade network."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [99.8762, 20.4335]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "three-pagodas-pass",
+        "name": "Three Pagodas Pass",
+        "name_my": "ဘုရားသုံးဆူ တောင်ကြားလမ်း",
+        "type": "pass",
+        "counterpart": "Payathonzu, Karen/Mon State (ဘုရားသုံးဆူ)",
+        "theater": "myanmar-frontier",
+        "status": "watch",
+        "summary": "Historic border pass in Sangkhla Buri, Kanchanaburi connecting to Payathonzu across the Tenasserim hills."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [98.3847, 15.3025]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ranong-gate",
+        "name": "Ranong - Kawthaung Gate",
+        "name_my": "ရနောင်း - ကော့သောင်း ရေကြောင်းဂိတ်",
+        "type": "maritime",
+        "counterpart": "Kawthaung, Tanintharyi (ကော့သောင်း)",
+        "theater": "myanmar-frontier",
+        "status": "active",
+        "summary": "Southern maritime customs and ferry gateway spanning the Kraburi river estuary."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [98.6358, 9.9658]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "htee-khee-gate",
+        "name": "Ban Phu Nam Ron / Htee Khee Gate",
+        "name_my": "ထီးခီး နယ်စပ်ဂိတ်",
+        "type": "checkpoint",
+        "counterpart": "Htee Khee / Dawei Corridor (ထားဝယ်လမ်း)",
+        "theater": "myanmar-frontier",
+        "status": "watch",
+        "summary": "Western trade corridor in Kanchanaburi leading to Dawei deep-sea port project in Tanintharyi."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [98.9242, 13.9167]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "mae-sam-laep",
+        "name": "Ban Mae Sam Laep / Salween Gate",
+        "name_my": "သံလွင်မြစ်ကမ်း မယ်စလပ်ဂိတ်",
+        "type": "riverine",
+        "counterpart": "Karen State / Mutraw District",
+        "theater": "myanmar-frontier",
+        "status": "watch",
+        "summary": "Salween River frontier checkpoint in Mae Hong Son providing riverine transit and humanitarian access."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [97.7125, 18.1583]
+      }
+    }
+  ]
+}

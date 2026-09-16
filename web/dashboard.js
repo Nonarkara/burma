@@ -228,71 +228,198 @@ function openTvModal(tv) {
 //     segments: https://live-stream.dvb.no/hls/stream_src/index.m3u8).
 //   - Every other channel gets a Watch card that opens its live page in a
 //     new tab. YouTube search URLs always resolve; invented @handles do not.
-const DVB_HLS = 'https://live-stream.dvb.no/hls/stream_src/index.m3u8';
-
 const BURMESE_TV_LIVE = [
-  { name: 'DVB TV', kind: 'hls', hls: DVB_HLS, note: 'Inline HLS · press play', fallback: 'https://burmese.dvb.no/live' },
-  { name: 'Mizzima TV', kind: 'watch', q: 'Mizzima TV live', note: 'YouTube blocks embeds — Watch opens the live page' },
-  { name: 'Irrawaddy', kind: 'watch', q: 'The Irrawaddy live', note: 'YouTube blocks embeds — Watch opens the live page' },
-  { name: 'Khit Thit Media', kind: 'watch', q: 'Khit Thit Media live', note: 'YouTube blocks embeds — Watch opens the live page' },
-  { name: 'Frontier Myanmar', kind: 'watch', q: 'Frontier Myanmar live', note: 'YouTube blocks embeds — Watch opens the live page' },
+  {
+    id: 'dvb',
+    name: 'DVB TV',
+    category: 'News',
+    hls: 'https://live-stream.dvb.no/hls/stream_src/index.m3u8',
+    note: 'Democratic Voice of Burma · Independent news',
+    fallback: 'https://burmese.dvb.no/live',
+    source: 'IPTV-ORG / Broadcaster CDN',
+  },
+  {
+    id: 'channelk',
+    name: 'Channel K',
+    category: 'Entertainment',
+    hls: 'https://mmtvs.exliatycl.online/channelk/stream.m3u8',
+    note: 'Youth & Entertainment channel',
+    fallback: 'https://www.facebook.com/channelkmyanmar',
+    source: 'IPTV-ORG / MM Streams',
+  },
+  {
+    id: '5plus',
+    name: '5 Plus',
+    category: 'Variety',
+    hls: 'https://mmtvs.exliatycl.online/5plus/stream.m3u8',
+    note: 'News & Variety 720p',
+    fallback: 'https://www.facebook.com/5pluschannel',
+    source: 'IPTV-ORG / MM Streams',
+  },
+  {
+    id: 'channel9',
+    name: 'Channel 9',
+    category: 'General',
+    hls: 'https://mmtvs.exliatycl.online/channel9/stream.m3u8',
+    note: 'General broadcast & diaspora',
+    fallback: 'https://www.facebook.com/channel9myanmar',
+    source: 'IPTV-ORG / MM Streams',
+  },
+  {
+    id: 'thaipbs',
+    name: 'Thai PBS ASEAN',
+    category: 'ASEAN',
+    hls: 'https://thaipbs-live.cdn.byteark.com/live/playlist.m3u8',
+    note: 'Thai Public Broadcasting · Myanmar border & ASEAN watch',
+    fallback: 'https://www.thaipbs.or.th/live',
+    source: 'Direct ByteArk CDN',
+  },
+  {
+    id: 'rtmasean',
+    name: 'RTM ASEAN',
+    category: 'ASEAN',
+    hls: 'https://d25tgymtnqzu8s.cloudfront.net/event/smil:event1/chunklist_b2596000_slENG.m3u8',
+    note: 'ASEAN regional news stream',
+    fallback: 'https://rtmklik.rtm.gov.my/',
+    source: 'RTM CloudFront CDN',
+  },
+  {
+    id: 'fortunetv',
+    name: 'Fortune TV',
+    category: 'Entertainment',
+    hls: 'http://103.215.194.93:8282/hls/fortunetv/vmix.m3u8',
+    note: 'Myanmar entertainment & cultural programming',
+    fallback: 'https://fortunetv.com.mm/',
+    source: 'IPTV-ORG / Direct HLS',
+  },
+  {
+    id: 'mizzima',
+    name: 'Mizzima TV',
+    category: 'News',
+    watch: 'https://mizzimaburmese.com/live-tv',
+    note: 'Mizzima TV Live Portal & Broadcasts',
+    fallback: 'https://mizzimaburmese.com/',
+    source: 'Live portal',
+  },
+  {
+    id: 'irrawaddy',
+    name: 'The Irrawaddy',
+    category: 'News',
+    watch: 'https://www.irrawaddy.com/',
+    note: 'Independent investigative reporting',
+    fallback: 'https://burmese.irrawaddy.com/',
+    source: 'Live portal',
+  },
+  {
+    id: 'khitthit',
+    name: 'Khit Thit Media',
+    category: 'News',
+    watch: 'https://www.facebook.com/khitthitmedia',
+    note: 'Khit Thit Live Stream & Field Reports',
+    fallback: 'https://www.facebook.com/khitthitmedia',
+    source: 'Live portal',
+  },
 ];
 
-let dvbVideo = null;
+let tvPlayers = [];
 
-function ytSearchURL(q) {
-  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+function filterTvCategory(cat) {
+  state.tvCategoryFilter = cat || 'all';
+  $$('.tvpanel__filter-btn').forEach((b) => b.classList.toggle('is-active', (b.dataset.tvFilter || 'all') === state.tvCategoryFilter));
+  buildTvPanel();
 }
 
 function buildTvPanel() {
   const row = document.getElementById('tvpanelRow');
   if (!row) return;
-  row.innerHTML = '';
-  dvbVideo = null;
 
-  BURMESE_TV_LIVE.forEach((ch) => {
+  // Destroy previous Hls instances to free memory and decoders
+  (tvPlayers || []).forEach((p) => {
+    try { if (p.hls) p.hls.destroy(); } catch (e) {}
+  });
+  tvPlayers = [];
+  row.innerHTML = '';
+
+  let list = BURMESE_TV_LIVE;
+  const cat = (state.tvCategoryFilter || 'all').toLowerCase();
+  if (cat !== 'all') {
+    list = list.filter((ch) => ch.category.toLowerCase() === cat);
+  }
+
+  list.forEach((ch) => {
     const card = document.createElement('div');
     card.className = 'tv-card';
-    if (ch.kind === 'hls') {
+    card.id = 'tv-card-' + ch.id;
+
+    if (ch.hls) {
+      card.innerHTML =
+        '<header class="tv-card__bar">' +
+          '<span class="dot dot--live" aria-hidden="true"></span>' +
+          '<span class="tv-card__name" title="' + escapeHtml(ch.name + ' · ' + ch.note) + '">' + escapeHtml(ch.name) + '</span>' +
+          '<button type="button" class="tv-card__mute" data-mute-for="' + escapeHtml(ch.id) + '">Unmute</button>' +
+        '</header>' +
+        '<div class="tv-card__frame">' +
+          '<video controls preload="metadata" playsinline style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>' +
+          '<div class="tv-card__fallback" style="display:none">Connecting stream…</div>' +
+        '</div>';
+      row.appendChild(card);
+
+      const video = card.querySelector('video');
+      const fb = card.querySelector('.tv-card__fallback');
+      const muteBtn = card.querySelector('.tv-card__mute');
+      video.muted = true; // start muted for browser autoplay policies
+      let hlsInstance = null;
+
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = ch.hls;
+        video.play().catch(() => {});
+      } else if (window.Hls && window.Hls.isSupported()) {
+        hlsInstance = new window.Hls({ maxBufferLength: 15, enableWorker: true });
+        hlsInstance.loadSource(ch.hls);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+        hlsInstance.on(window.Hls.Events.ERROR, (_, data) => {
+          if (data && data.fatal) {
+            if (fb) {
+              fb.style.display = 'block';
+              fb.innerHTML = 'Stream standby · <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">portal ↗</a>';
+            }
+            switch (data.type) {
+              case window.Hls.ErrorTypes.NETWORK_ERROR:
+                hlsInstance.startLoad();
+                break;
+              case window.Hls.ErrorTypes.MEDIA_ERROR:
+                hlsInstance.recoverMediaError();
+                break;
+              default:
+                hlsInstance.destroy();
+                break;
+            }
+          }
+        });
+      }
+
+      if (muteBtn) {
+        muteBtn.addEventListener('click', () => {
+          video.muted = !video.muted;
+          muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
+          if (!video.muted) video.play().catch(() => {});
+        });
+      }
+
+      tvPlayers.push({ id: ch.id, video, hls: hlsInstance, ch });
+    } else {
       card.innerHTML =
         '<header class="tv-card__bar">' +
           '<span class="dot dot--live" aria-hidden="true"></span>' +
           '<span class="tv-card__name">' + escapeHtml(ch.name) + '</span>' +
-          '<span class="tv-card__tag">HLS</span>' +
-        '</header>' +
-        '<div class="tv-card__frame">' +
-          '<video controls preload="none" playsinline style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>' +
-          '<div class="tv-card__fallback">Press play — ' + escapeHtml(ch.note) + '<br><a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">dvb.no/live ↗</a></div>' +
-        '</div>';
-      row.appendChild(card);
-      const video = card.querySelector('video');
-      const fb = card.querySelector('.tv-card__fallback');
-      dvbVideo = video;
-      video.muted = true; // start muted so autoplay policies never block the first tap
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = ch.hls; // Safari / iOS native HLS
-        video.addEventListener('playing', () => { if (fb) fb.hidden = true; }, { once: true });
-      } else if (window.Hls && window.Hls.isSupported()) {
-        const hls = new window.Hls({ maxBufferLength: 20 });
-        hls.loadSource(ch.hls);
-        hls.attachMedia(video);
-        hls.on(window.Hls.Events.MANIFEST_PARSED, () => { if (fb) fb.hidden = true; });
-        hls.on(window.Hls.Events.ERROR, (_, data) => {
-          if (data && data.fatal && fb) { fb.hidden = false; fb.innerHTML = 'Stream hiccup — <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">watch at dvb.no/live ↗</a>'; }
-        });
-      } else {
-        if (fb) fb.innerHTML = 'This browser cannot play HLS — <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">watch at dvb.no/live ↗</a>';
-      }
-    } else {
-      const url = ytSearchURL(ch.q);
-      card.innerHTML =
-        '<header class="tv-card__bar">' +
-          '<span class="dot dot--muted" aria-hidden="true"></span>' +
-          '<span class="tv-card__name">' + escapeHtml(ch.name) + '</span>' +
+          '<span class="tv-card__tag" style="font-size:9px;color:var(--ink-muted)">PORTAL</span>' +
         '</header>' +
         '<div class="tv-card__watch">' +
           '<p>' + escapeHtml(ch.note) + '</p>' +
-          '<a class="tv-card__go" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">Watch live ↗</a>' +
+          '<a class="tv-card__go" href="' + escapeHtml(ch.watch) + '" target="_blank" rel="noopener">Watch Live Stream ↗</a>' +
         '</div>';
       row.appendChild(card);
     }
@@ -301,9 +428,30 @@ function buildTvPanel() {
   const muteAll = document.getElementById('tvpanelMuteAll');
   const unmuteAll = document.getElementById('tvpanelUnmuteAll');
   const hint = document.getElementById('tvpanelHint');
-  if (hint) hint.textContent = 'DVB plays inline. YouTube blocks embeds — Watch opens the live page.';
-  if (muteAll) muteAll.addEventListener('click', () => { if (dvbVideo) dvbVideo.muted = true; });
-  if (unmuteAll) unmuteAll.addEventListener('click', () => { if (dvbVideo) { dvbVideo.muted = false; dvbVideo.play().catch(() => {}); } });
+  if (hint) hint.textContent = 'IPTV live feeds · Click Unmute on any card for audio';
+  if (muteAll) {
+    muteAll.onclick = () => {
+      tvPlayers.forEach((p) => {
+        if (p.video) {
+          p.video.muted = true;
+          const btn = document.querySelector(`[data-mute-for="${p.id}"]`);
+          if (btn) btn.textContent = 'Unmute';
+        }
+      });
+    };
+  }
+  if (unmuteAll) {
+    unmuteAll.onclick = () => {
+      tvPlayers.forEach((p) => {
+        if (p.video) {
+          p.video.muted = false;
+          p.video.play().catch(() => {});
+          const btn = document.querySelector(`[data-mute-for="${p.id}"]`);
+          if (btn) btn.textContent = 'Mute';
+        }
+      });
+    };
+  }
 }
 
 // Chat status indicator — surface the WS connection state in the status bar.
@@ -443,6 +591,12 @@ const state = {
   activeTab: 'map',
   nasaLayerOn: false,
   quakeLayerOn: false,
+  bordersLayerOn: true,
+  himawariLayerOn: false,
+  gpmRainLayerOn: false,
+  viirsFloodLayerOn: false,
+  tvCategoryFilter: 'all',
+  frontierGateMarkers: [],
   wxPick: false,
   quakeMarkers: [],
   citiesMarkers: [],
@@ -530,43 +684,91 @@ window.__pirchSetActiveTab = setActiveTab;
 // MAP
 // =====================================================
 
-// Esri's old "Canvas/Dark_Gray" tile path returns 404 from server.arcgisonline.com.
-// CartoDB's "dark_all" is the open-source replacement for an unlabeled dark vector style.
-// Attribution: "OpenStreetMap contributors · CARTO". Tiles load via the four
-// MapLibre subdomain placeholders (a-d).
+// Esri World Dark Gray Canvas (from FloodDash) provides a balanced, high-contrast
+// slate background for markers and vector layers without Carto's pitch-black void.
+// Both Dark and Satellite basemaps are paired with Esri's boundary/places reference overlays.
 const MAP_STYLES = {
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   streets:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-  dark:      'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+  dark:      'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
   light:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
 };
 
+const MAP_REF_STYLES = {
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  dark:      'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+};
+
 const MAP_ATTRIBUTIONS = {
-  satellite: 'Esri World Imagery',
+  satellite: 'Esri World Imagery & Places',
   streets:   'Esri World Street Map',
-  dark:      '© CARTO · © OpenStreetMap contributors',
+  dark:      'Esri Dark Gray Canvas · © OpenStreetMap',
   light:     'Esri World Topo Map',
 };
+
+// Bangkok date for GIBS daily products (midnight rollover, no stale tiles)
+function bangkokDate(offsetDays = 0) {
+  const d = new Date(Date.now() + 7 * 3600_000 - offsetDays * 86_400_000);
+  return d.toISOString().slice(0, 10);
+}
+
+const GIBS_BEST = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best';
 
 let map;
 let newsMarkers = [];
 
 function initMap() {
+  const isDark = state.mapStyleKey === 'dark';
+  const isSat = state.mapStyleKey === 'satellite';
+
   map = new maplibregl.Map({
     container: 'map',
-    style: { version: 8, sources: { basemap: { type: 'raster', tiles: [MAP_STYLES.satellite], tileSize: 256, attribution: 'Esri' } }, layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }] },
+    style: {
+      version: 8,
+      sources: {
+        basemap: {
+          type: 'raster',
+          tiles: [MAP_STYLES[state.mapStyleKey]],
+          tileSize: 256,
+          attribution: MAP_ATTRIBUTIONS[state.mapStyleKey],
+          maxzoom: 19,
+        },
+        'basemap-ref': {
+          type: 'raster',
+          tiles: [MAP_REF_STYLES[state.mapStyleKey] || MAP_REF_STYLES.satellite],
+          tileSize: 256,
+          maxzoom: 19,
+        },
+      },
+      layers: [
+        { id: 'basemap', type: 'raster', source: 'basemap' },
+        {
+          id: 'basemap-ref',
+          type: 'raster',
+          source: 'basemap-ref',
+          layout: { visibility: (isSat || isDark) ? 'visible' : 'none' },
+          paint: { 'raster-opacity': isDark ? 0.9 : 0.85 },
+        },
+      ],
+    },
     center: [96.16, 21.0],
     zoom: 5,
     minZoom: 3,
-    maxZoom: 14,
+    maxZoom: 15,
     attributionControl: false,
   });
+
   try { window.__pirchMap = map; } catch (e) {}
   map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
   new ResizeObserver(() => map.resize()).observe(document.getElementById('map'));
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
   map.on('move', syncMapStatus);
   map.on('zoom', syncMapStatus);
+
+  map.on('load', () => {
+    if (state.bordersLayerOn) loadBordersData();
+  });
+
   map.on('click', (e) => {
     if (state.wxPick) {
       state.wxPick = false;
@@ -596,7 +798,6 @@ async function loadRainTiles() {
     const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
     if (!r.ok) throw new Error('rainviewer http ' + r.status);
     const j = await r.json();
-    // Use the latest precipitation tile path
     const host = j.host;
     const path = j && j.rain && j.rain.nowcast && j.rain.nowcast[0] && j.rain.nowcast[0].path;
     if (!host || !path) throw new Error('no rain tiles');
@@ -611,8 +812,21 @@ function setMapStyle(key) {
   state.mapStyleKey = key;
   const src = map.getSource('basemap');
   if (src) src.setTiles([MAP_STYLES[key]]);
+
+  const refSrc = map.getSource('basemap-ref');
+  const refUrl = MAP_REF_STYLES[key];
+  if (refSrc && refUrl) {
+    refSrc.setTiles([refUrl]);
+    if (map.getLayer('basemap-ref')) {
+      map.setLayoutProperty('basemap-ref', 'visibility', 'visible');
+      map.setPaintProperty('basemap-ref', 'raster-opacity', key === 'dark' ? 0.9 : 0.85);
+    }
+  } else if (map.getLayer('basemap-ref')) {
+    map.setLayoutProperty('basemap-ref', 'visibility', 'none');
+  }
+
   $$('.toolbar__btn[data-layer]').forEach((b) => b.classList.toggle('is-pressed', b.dataset.layer === key));
-  const labels = { satellite: 'Esri imagery', streets: 'Esri streets', dark: 'CartoDB dark', light: 'Esri topo' };
+  const labels = { satellite: 'Esri imagery', streets: 'Esri streets', dark: 'Esri dark canvas', light: 'Esri topo' };
   const statusEl = $('#mapStatus');
   if (statusEl) statusEl.textContent = (labels[key] || key) + ' · ' + (MAP_ATTRIBUTIONS[key] || '');
 }
@@ -637,16 +851,69 @@ function refreshRain() {
   }
 }
 
-function toggleCities() {
-  state.citiesLayerOn = !state.citiesLayerOn;
-  $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.classList.toggle('is-pressed', state.citiesLayerOn));
-  renderCities();
+// ---------- Space Observation Layers (from FloodDash) ----------
+
+function toggleHimawari() {
+  state.himawariLayerOn = !state.himawariLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="himawari"]').forEach((b) => b.classList.toggle('is-pressed', state.himawariLayerOn));
+  if (!map) return;
+  const dateStr = bangkokDate(0);
+  const tiles = [`${GIBS_BEST}/Himawari_AHI_Band13_Clean_Infrared/default/${dateStr}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`];
+  if (state.himawariLayerOn) {
+    if (!map.getSource('himawari')) {
+      map.addSource('himawari', { type: 'raster', tiles, tileSize: 256, maxzoom: 6, attribution: 'JAXA/JMA Himawari-9' });
+      const before = map.getLayer('rain') ? 'rain' : (map.getLayer('borders-line') ? 'borders-line' : undefined);
+      map.addLayer({ id: 'himawari', type: 'raster', source: 'himawari', paint: { 'raster-opacity': 0.72 } }, before);
+    } else {
+      map.getSource('himawari').setTiles(tiles);
+      map.setLayoutProperty('himawari', 'visibility', 'visible');
+    }
+    flashStatusbar('Himawari-9 Clean IR (10-min storm cloud tops) · JAXA/JMA · ' + dateStr);
+  } else if (map.getLayer('himawari')) {
+    map.setLayoutProperty('himawari', 'visibility', 'none');
+  }
 }
 
-// ---------- NASA GIBS true-color (yesterday, no key) ----------
-function gibsDate() {
-  const d = new Date(Date.now() - 86400000);
-  return d.toISOString().slice(0, 10);
+function toggleGpmRain() {
+  state.gpmRainLayerOn = !state.gpmRainLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="gpmrain"]').forEach((b) => b.classList.toggle('is-pressed', state.gpmRainLayerOn));
+  if (!map) return;
+  const dateStr = bangkokDate(0);
+  const tiles = [`${GIBS_BEST}/IMERG_Precipitation_Rate_30min/default/${dateStr}/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`];
+  if (state.gpmRainLayerOn) {
+    if (!map.getSource('gpmrain')) {
+      map.addSource('gpmrain', { type: 'raster', tiles, tileSize: 256, maxzoom: 6, attribution: 'JAXA/NASA GPM IMERG' });
+      const before = map.getLayer('rain') ? 'rain' : (map.getLayer('borders-line') ? 'borders-line' : undefined);
+      map.addLayer({ id: 'gpmrain', type: 'raster', source: 'gpmrain', paint: { 'raster-opacity': 0.65 } }, before);
+    } else {
+      map.getSource('gpmrain').setTiles(tiles);
+      map.setLayoutProperty('gpmrain', 'visibility', 'visible');
+    }
+    flashStatusbar('GPM IMERG Space Rain rate · JAXA/NASA · ' + dateStr);
+  } else if (map.getLayer('gpmrain')) {
+    map.setLayoutProperty('gpmrain', 'visibility', 'none');
+  }
+}
+
+function toggleViirsFlood() {
+  state.viirsFloodLayerOn = !state.viirsFloodLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="viirsflood"]').forEach((b) => b.classList.toggle('is-pressed', state.viirsFloodLayerOn));
+  if (!map) return;
+  const dateStr = bangkokDate(1);
+  const tiles = [`${GIBS_BEST}/VIIRS_Combined_Flood_1-Day/default/${dateStr}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`];
+  if (state.viirsFloodLayerOn) {
+    if (!map.getSource('viirsflood')) {
+      map.addSource('viirsflood', { type: 'raster', tiles, tileSize: 256, maxzoom: 9, attribution: 'NASA VIIRS Flood' });
+      const before = map.getLayer('rain') ? 'rain' : (map.getLayer('borders-line') ? 'borders-line' : undefined);
+      map.addLayer({ id: 'viirsflood', type: 'raster', source: 'viirsflood', paint: { 'raster-opacity': 0.75 } }, before);
+    } else {
+      map.getSource('viirsflood').setTiles(tiles);
+      map.setLayoutProperty('viirsflood', 'visibility', 'visible');
+    }
+    flashStatusbar('NASA VIIRS 1-day satellite flood composite · ' + dateStr);
+  } else if (map.getLayer('viirsflood')) {
+    map.setLayoutProperty('viirsflood', 'visibility', 'none');
+  }
 }
 
 function toggleNasa() {
@@ -654,18 +921,169 @@ function toggleNasa() {
   $$('.toolbar__btn[data-layer-toggle="nasa"]').forEach((b) => b.classList.toggle('is-pressed', state.nasaLayerOn));
   if (!map) return;
   if (state.nasaLayerOn) {
-    const tiles = ['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/' + gibsDate() + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg'];
+    const dateStr = bangkokDate(1);
+    const tiles = [`${GIBS_BEST}/MODIS_Terra_CorrectedReflectance_TrueColor/default/${dateStr}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`];
     if (!map.getSource('nasa')) {
-      map.addSource('nasa', { type: 'raster', tiles, tileSize: 256, attribution: 'NASA GIBS / MODIS Terra' });
+      map.addSource('nasa', { type: 'raster', tiles, tileSize: 256, maxzoom: 9, attribution: 'NASA GIBS / MODIS Terra' });
       const before = map.getLayer('rain') ? 'rain' : undefined;
       map.addLayer({ id: 'nasa', type: 'raster', source: 'nasa', paint: { 'raster-opacity': 0.95 } }, before);
     } else {
       map.getSource('nasa').setTiles(tiles);
       map.setLayoutProperty('nasa', 'visibility', 'visible');
     }
-    flashStatusbar('NASA Terra true-color · ' + gibsDate() + ' · JAXA Himawari + FIRMS fires under Layers menu.');
+    flashStatusbar('NASA Terra true-color · ' + dateStr + ' · JAXA Himawari + FIRMS under Layers menu.');
   } else if (map.getLayer('nasa')) {
     map.setLayoutProperty('nasa', 'visibility', 'none');
+  }
+}
+
+function toggleCities() {
+  state.citiesLayerOn = !state.citiesLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.classList.toggle('is-pressed', state.citiesLayerOn));
+  renderCities();
+}
+
+// ---------- Borders & Frontier Gates (from Global Politics) ----------
+
+async function loadBordersData() {
+  if (!map) return;
+  try {
+    const [bordersRes, conflictRes, gatesRes] = await Promise.all([
+      fetch('data/region_borders.geojson').then((r) => r.json()),
+      fetch('data/conflict_zones.geojson').then((r) => r.json()),
+      fetch('data/frontier_gates.geojson').then((r) => r.json()),
+    ]);
+
+    // 1. National sovereign borders
+    if (!map.getSource('region-borders')) {
+      map.addSource('region-borders', { type: 'geojson', data: bordersRes });
+      map.addLayer({
+        id: 'borders-glow',
+        type: 'line',
+        source: 'region-borders',
+        paint: {
+          'line-color': '#d4a017',
+          'line-width': 4,
+          'line-opacity': 0.35,
+          'line-blur': 2,
+        },
+      });
+      map.addLayer({
+        id: 'borders-line',
+        type: 'line',
+        source: 'region-borders',
+        paint: {
+          'line-color': '#d4a017',
+          'line-width': 2,
+          'line-opacity': 0.95,
+        },
+      });
+    }
+
+    // 2. Conflict / Frontier corridors
+    if (!map.getSource('conflict-zones')) {
+      map.addSource('conflict-zones', { type: 'geojson', data: conflictRes });
+      map.addLayer({
+        id: 'conflict-fill',
+        type: 'fill',
+        source: 'conflict-zones',
+        paint: {
+          'fill-color': ['match', ['get', 'status'], 'active', '#a51931', '#b45309'],
+          'fill-opacity': 0.16,
+        },
+      });
+      map.addLayer({
+        id: 'conflict-line',
+        type: 'line',
+        source: 'conflict-zones',
+        paint: {
+          'line-color': ['match', ['get', 'status'], 'active', '#a51931', '#b45309'],
+          'line-width': 1.5,
+          'line-dasharray': [3, 2],
+        },
+      });
+
+      map.on('click', 'conflict-fill', (e) => {
+        const f = e.features && e.features[0];
+        if (f) openConflictZoneModal(f.properties);
+      });
+      map.on('mouseenter', 'conflict-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'conflict-fill', () => { map.getCanvas().style.cursor = ''; });
+    }
+
+    // 3. Frontier Gates & Checkpoints
+    renderFrontierGates(gatesRes.features || []);
+  } catch (err) {
+    console.warn('Border data load error:', err);
+  }
+}
+
+function renderFrontierGates(features) {
+  (state.frontierGateMarkers || []).forEach((m) => { try { m.remove(); } catch (e) {} });
+  state.frontierGateMarkers = [];
+  if (!state.bordersLayerOn) return;
+
+  features.forEach((feat) => {
+    const coords = feat.geometry && feat.geometry.coordinates;
+    if (!coords) return;
+    const p = feat.properties || {};
+    const el = document.createElement('div');
+    el.className = 'pirch-marker pirch-marker--gate';
+    el.title = p.name + ' (' + (p.counterpart || '') + ')';
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openFrontierGateModal(p, coords);
+    });
+    const m = new maplibregl.Marker({ element: el }).setLngLat([coords[0], coords[1]]).addTo(map);
+    state.frontierGateMarkers.push(m);
+  });
+}
+
+function openFrontierGateModal(p, coords) {
+  openIncidentModal({
+    title_en: p.name + ' · ' + (p.counterpart || ''),
+    title_my: p.name_my || '',
+    body_en: p.summary + ' Status: ' + (p.status || 'active').toUpperCase() + '. Frontier theater: ' + (p.theater || 'myanmar-frontier') + '.',
+    body_my: '',
+    digest_en: 'Cross-border corridor monitor (Thailand Geopolitical Watch lineage).',
+    digest_my: '',
+    sourceLabel: 'Frontier Gate Intelligence',
+    source: 'Global Politics',
+    ts: new Date().toISOString(),
+    url: 'https://burma.nonarkara.org/',
+    location: { lat: coords[1], lng: coords[0], place: p.name },
+  });
+}
+
+function openConflictZoneModal(p) {
+  openIncidentModal({
+    title_en: p.name,
+    title_my: '',
+    body_en: p.summary + ' Status: ' + (p.status || '').toUpperCase() + ' · Theater: ' + (p.theaterId || 'frontier') + '.',
+    body_my: '',
+    digest_en: 'Monitored cross-border corridor from Thailand Geopolitical Watch.',
+    digest_my: '',
+    sourceLabel: 'Conflict Corridor',
+    source: 'Global Politics',
+    ts: new Date().toISOString(),
+    url: 'https://burma.nonarkara.org/',
+    location: { lat: 16.5, lng: 98.8, place: p.name },
+  });
+}
+
+function toggleBorders() {
+  state.bordersLayerOn = !state.bordersLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="borders"]').forEach((b) => b.classList.toggle('is-pressed', state.bordersLayerOn));
+  if (!map) return;
+  const vis = state.bordersLayerOn ? 'visible' : 'none';
+  ['borders-line', 'borders-glow', 'conflict-fill', 'conflict-line'].forEach((id) => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+  });
+  if (state.bordersLayerOn) {
+    loadBordersData();
+  } else {
+    (state.frontierGateMarkers || []).forEach((m) => { try { m.remove(); } catch (e) {} });
+    state.frontierGateMarkers = [];
   }
 }
 
@@ -1135,6 +1553,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (a === 'add') enableAddPin();
     if (a === 'wx') toggleWx();
   }));
+  $$('.toolbar__btn[data-layer-toggle="borders"]').forEach((b) => b.addEventListener('click', toggleBorders));
+  $$('.toolbar__btn[data-layer-toggle="himawari"]').forEach((b) => b.addEventListener('click', toggleHimawari));
+  $$('.toolbar__btn[data-layer-toggle="gpmrain"]').forEach((b) => b.addEventListener('click', toggleGpmRain));
+  $$('.toolbar__btn[data-layer-toggle="viirsflood"]').forEach((b) => b.addEventListener('click', toggleViirsFlood));
   $$('.toolbar__btn[data-layer-toggle="nasa"]').forEach((b) => b.addEventListener('click', toggleNasa));
   $$('.toolbar__btn[data-layer-toggle="quakes"]').forEach((b) => b.addEventListener('click', toggleQuakes));
   $$('.toolbar__btn[data-layer-toggle="news"]').forEach((b) => b.addEventListener('click', () => { state.newsLayerOn = !state.newsLayerOn; b.classList.toggle('is-pressed', state.newsLayerOn); refreshMarkers(); }));
@@ -1142,6 +1564,9 @@ document.addEventListener('DOMContentLoaded', function () {
   $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.addEventListener('click', toggleCities));
   $$('.toolbar__btn[data-layer-toggle="radio"]').forEach((b) => b.addEventListener('click', toggleRadio));
   $$('.toolbar__btn[data-layer-toggle="tv"]').forEach((b) => b.addEventListener('click', toggleTv));
+
+  // TV panel category filter buttons
+  $$('.tvpanel__filter-btn').forEach((b) => b.addEventListener('click', () => filterTvCategory(b.dataset.tvFilter)));
 
   // Audio player close
   const audioClose = document.getElementById('audioClose');
@@ -1151,7 +1576,7 @@ document.addEventListener('DOMContentLoaded', function () {
   loadRadioStations();
   renderTvMarkers();
 
-  // Live TV panel — always-visible Burmese YouTube embeds at the bottom of the map.
+  // Live TV panel — always-visible Burmese IPTV feeds at the bottom of the map.
   buildTvPanel();
 
   // Chat status indicator

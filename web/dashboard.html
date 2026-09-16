@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pirchchat — Dashboard</title>
 <meta name="description" content="A Burmese-language community dashboard. Real-time news, geocoded incidents on a map, persistent rooms. Win95 chrome.">
-<link rel="stylesheet" href="dashboard.css?v=20260916-absolute">
+<link rel="stylesheet" href="dashboard.css?v=20260917-geopolitics-flood">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
@@ -53,11 +53,15 @@
       <button type="button" class="toolbar__btn" data-layer="light" title="Light topo">▦ Topo</button>
       <span class="toolbar__sep"></span>
       <button type="button" class="toolbar__btn" data-action="fit" title="Fit all markers">⌖ Fit</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="borders" title="National borders &amp; frontier gates (Global Politics)">● Borders</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="news" title="News incident markers">● News</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="cities" title="City markers">● Cities</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)">● Radio</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)">● TV</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Rain overlay">● Rain</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Ground rain radar overlay (RainViewer)">● Rain</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="himawari" title="Himawari-9 clean IR clouds (JAXA/JMA via GIBS)">☁ Himawari</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="gpmrain" title="GPM IMERG space rain rate (JAXA/NASA)">☔ Space Rain</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="viirsflood" title="NASA VIIRS 1-day flood composite">🌊 Flood</button>
       <button type="button" class="toolbar__btn" data-layer-toggle="nasa" title="NASA Terra true-color, yesterday">◉ NASA</button>
       <button type="button" class="toolbar__btn" data-layer-toggle="quakes" title="USGS earthquakes M4.5+, last 30 days">▲ Quakes</button>
       <button type="button" class="toolbar__btn" data-action="add" title="Drop a manual pin">＋ Pin</button>
@@ -78,6 +82,8 @@
     <div class="map-wrapper">
       <div id="map" role="application" aria-label="Map"></div>
       <div class="map-legend">
+        <span><span class="legend__dot legend__dot--border" aria-hidden="true"></span>Border</span>
+        <span><span class="legend__dot legend__dot--gate" aria-hidden="true"></span>Gate</span>
         <span><span class="legend__dot legend__dot--news" aria-hidden="true"></span>News</span>
         <span><span class="legend__dot legend__dot--city" aria-hidden="true"></span>City</span>
         <span><span class="legend__dot legend__dot--radio" aria-hidden="true"></span>Radio</span>
@@ -104,7 +110,13 @@
         <header class="tvpanel__bar">
           <span class="titlebar__dot" aria-hidden="true"></span>
           <h3 id="tvpanel-h" class="tvpanel__title">Burmese TV — live</h3>
-          <span class="tvpanel__hint" id="tvpanelHint">All muted. Click a speaker to hear that channel.</span>
+          <span class="tvpanel__filters" id="tvpanelFilters">
+            <button type="button" class="tvpanel__filter-btn is-active" data-tv-filter="all">All</button>
+            <button type="button" class="tvpanel__filter-btn" data-tv-filter="news">News</button>
+            <button type="button" class="tvpanel__filter-btn" data-tv-filter="entertainment">Variety</button>
+            <button type="button" class="tvpanel__filter-btn" data-tv-filter="asean">ASEAN</button>
+          </span>
+          <span class="tvpanel__hint" id="tvpanelHint">IPTV feeds · Click Unmute on any card for audio</span>
           <span class="tvpanel__spacer"></span>
           <button type="button" class="tvpanel__mute-all" id="tvpanelMuteAll" title="Mute all">Mute all</button>
           <button type="button" class="tvpanel__unmute-all" id="tvpanelUnmuteAll" title="Unmute all">Unmute all</button>
@@ -282,8 +294,8 @@
 </div>
 
 <script src="survival.js?v=20260916-audit"></script>
-<script src="dashboard.js?v=20260916-audit"></script>
-<script src="chat-client.js?v=20260916-audit"></script>
-<script src="chrome.js?v=20260916-audit"></script>
+<script src="dashboard.js?v=20260917-geopolitics-flood"></script>
+<script src="chat-client.js?v=20260917-geopolitics-flood"></script>
+<script src="chrome.js?v=20260917-geopolitics-flood"></script>
 </body>
 </html>
