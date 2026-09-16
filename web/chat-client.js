@@ -179,6 +179,7 @@ function handleWsMessage(roomId, data) {
   if (data.type === 'message') {
     if (state.seenMessageIds.has(data.message.id)) return;
     state.seenMessageIds.add(data.message.id);
+    maybeCrisis(data.message.body_html);
     state.history.push(data.message);
     if (state.history.length > 200) state.history = state.history.slice(-200);
     appendMessageDom(data.message);
@@ -233,6 +234,9 @@ function renderMessages() {
 function renderMessageHtml(m) {
   if (m.body_html && m.body_html.startsWith('[server]')) {
     return '<div class="msg msg--server">— ' + escapeHtml(m.body_html.slice(7)) + '</div>';
+  }
+  if (m.body_html && m.body_html.startsWith('[action] ')) {
+    return '<div class="msg msg--action">∗ ' + escapeHtml((m.author_name || 'anon') + ' ' + m.body_html.slice(9)) + '</div>';
   }
   const topicTag = m.topics ? '<span class="msg__topic-tag">' + escapeHtml(m.topics) + '</span>' : '';
   const bodyText = m.body_html ? m.body_html : '';
@@ -308,6 +312,80 @@ async function tryPreview(url) {
   } catch (e) { return null; }
 }
 
+function maybeCrisis(text) {
+  try {
+    const plain = String(text || '').replace(/<[^>]+>/g, ' ');
+    if (window.PirchSurvival && window.PirchSurvival.checkCrisis(plain)) {
+      if (window.__pirchShowCrisis) window.__pirchShowCrisis();
+    }
+  } catch (e) {}
+}
+
+async function handleCommand(raw) {
+  const parts = raw.slice(1).split(/\s+/);
+  const cmd = (parts[0] || '').toLowerCase();
+  const arg = raw.slice(1 + parts[0].length).trim();
+  if (cmd === 'nick' && arg) {
+    const name = arg.slice(0, 32);
+    state.identity.name = name;
+    saveIdentity(state.identity);
+    const label = document.getElementById('chatUserLabel');
+    if (label) label.textContent = name + ' @ ' + state.identity.network;
+    appendSystemMessage('You are now known as ' + name + '.');
+    return true;
+  }
+  if (cmd === 'me' && arg) {
+    try {
+      await postMessage(state.currentRoom, { body_html: '[action] ' + escapeHtml(arg) });
+    } catch (e) { appendSystemMessage('post failed: ' + (e && e.message || e)); }
+    return true;
+  }
+  if ((cmd === 'join' || cmd === 'j') && arg) {
+    const id = arg.replace(/^#/, '').trim();
+    if (KNOWN_ROOMS.includes(id)) { switchRoom(id); }
+    else appendSystemMessage('Unknown room "' + id + '". Rooms: ' + KNOWN_ROOMS.join(', '));
+    return true;
+  }
+  if (cmd === 'guide') {
+    if (window.__pirchOpenGuide) window.__pirchOpenGuide(arg || 'all');
+    else appendSystemMessage('Guide is loading — try again in a second.');
+    return true;
+  }
+  if (cmd === 'hotline' || cmd === 'hotlines') {
+    if (window.__pirchOpenGuide) window.__pirchOpenGuide('hotlines');
+    else appendSystemMessage('Hotlines: Thailand 1300 (24h) · Burmese health hotline (Bangkok) · Mae Tao Clinic Mae Sot.');
+    return true;
+  }
+  if (cmd === 'export') {
+    const lines = state.history.map((m) => {
+      const d = new Date(m.ts || Date.now());
+      const t = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+      return '[' + t + '] <' + (m.author_name || 'anon') + '> ' + String(m.body_html || '').replace(/<[^>]+>/g, '');
+    });
+    const blob = new Blob(['Pirchchat #' + state.currentRoom + ' — ' + new Date().toISOString() + '\n\n' + lines.join('\n') + '\n'], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'pirchchat-' + state.currentRoom + '.txt';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+    appendSystemMessage('Log exported (' + lines.length + ' lines).');
+    return true;
+  }
+  if (cmd === 'clear') {
+    const wrap = document.getElementById('messages');
+    if (wrap) wrap.innerHTML = '';
+    return true;
+  }
+  if (cmd === 'help' || cmd === '?') {
+    const h = document.getElementById('chatHelp');
+    if (h) h.click();
+    else appendSystemMessage('/nick /me /join /guide /hotline /export /clear /help');
+    return true;
+  }
+  appendSystemMessage('Unknown command "/' + cmd + '". Try /help.');
+  return true;
+}
+
 async function handleSubmit(event) {
   event.preventDefault();
   if (!state.currentRoom) return;
@@ -315,6 +393,12 @@ async function handleSubmit(event) {
   const raw = (input && input.value || '').trim();
   const attachment = window.__pendingAttachment;
   if (!raw && !attachment) return;
+  if (raw.startsWith('/') && !attachment) {
+    if (input) input.value = '';
+    await handleCommand(raw);
+    return;
+  }
+  maybeCrisis(raw);
   const payload = { body_html: '' };
   if (raw) {
     payload.body_html = escapeHtml(raw);

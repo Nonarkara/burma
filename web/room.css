@@ -200,12 +200,46 @@ html, body {
   cursor: pointer;
 }
 
-.toolbar__btn:active {
+.toolbar__btn:active,
+.toolbar__btn.is-pressed {
   border-top: 1px solid var(--ink);
   border-left: 1px solid var(--ink);
   border-right: 1px solid var(--chrome-edge);
   border-bottom: 1px solid var(--chrome-edge);
+  background: var(--chrome-dark);
 }
+
+.dropdown {
+  position: absolute;
+  z-index: 50;
+  min-width: 220px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 12px;
+}
+
+.dropdown[hidden] { display: none; }
+
+.dropdown__item {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdown__item:hover { background: var(--ink); color: var(--chrome-light); }
 
 .tb-icon {
   font-family: var(--font-mono);

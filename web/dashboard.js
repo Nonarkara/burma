@@ -219,108 +219,91 @@ function openTvModal(tv) {
   modal.hidden = false;
 }
 
-// ===== Live TV panel — always-visible Burmese channels on the map =====
+// ===== Live TV panel — one real inline stream + honest watch-links =====
+//
+// What we learned Sept 2026: YouTube's /embed/live_stream endpoint needs a
+// numeric channel ID (not an @handle) AND the owner must allow embedding —
+// most Burmese news channels disallow it, so iframes render dead. Instead:
+//   - DVB TV plays INLINE via its own public HLS (verified 200, live
+//     segments: https://live-stream.dvb.no/hls/stream_src/index.m3u8).
+//   - Every other channel gets a Watch card that opens its live page in a
+//     new tab. YouTube search URLs always resolve; invented @handles do not.
+const DVB_HLS = 'https://live-stream.dvb.no/hls/stream_src/index.m3u8';
 
-// Channels with public YouTube live-stream handles. If the channel is not
-// currently broadcasting, YouTube serves the latest uploaded video — better
-// than a blank box. Mute by default so four streams don't deafen the room.
 const BURMESE_TV_LIVE = [
-  { handle: 'khitthitmedia',  name: 'Khit Thit Media',    lang: 'burmese', kind: 'news' },
-  { handle: 'irrawaddyemagazine', name: 'Irrawaddy',         lang: 'burmese', kind: 'news' },
-  { handle: 'dvburmese',       name: 'DVB Burmese',         lang: 'burmese', kind: 'news' },
-  { handle: 'mizzimaburmese',  name: 'Mizzima Burmese',     lang: 'burmese', kind: 'news' },
-  { handle: 'frontiermyanmar', name: 'Frontier Myanmar',    lang: 'burmese', kind: 'news' },
+  { name: 'DVB TV', kind: 'hls', hls: DVB_HLS, note: 'Inline HLS · press play', fallback: 'https://burmese.dvb.no/live' },
+  { name: 'Mizzima TV', kind: 'watch', q: 'Mizzima TV live', note: 'YouTube blocks embeds — Watch opens the live page' },
+  { name: 'Irrawaddy', kind: 'watch', q: 'The Irrawaddy live', note: 'YouTube blocks embeds — Watch opens the live page' },
+  { name: 'Khit Thit Media', kind: 'watch', q: 'Khit Thit Media live', note: 'YouTube blocks embeds — Watch opens the live page' },
+  { name: 'Frontier Myanmar', kind: 'watch', q: 'Frontier Myanmar live', note: 'YouTube blocks embeds — Watch opens the live page' },
 ];
 
-let tvCards = [];
+let dvbVideo = null;
 
-function ytEmbedURL(handle, mute) {
-  const m = mute ? 1 : 0;
-  return 'https://www.youtube.com/embed/live_stream?channel=@' + encodeURIComponent(handle) +
-    '&autoplay=1' +
-    '&mute=' + m +
-    '&playsinline=1' +
-    '&rel=0' +
-    '&modestbranding=1' +
-    '&enablejsapi=0';
+function ytSearchURL(q) {
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
 }
 
 function buildTvPanel() {
   const row = document.getElementById('tvpanelRow');
   if (!row) return;
   row.innerHTML = '';
-  tvCards = [];
-  BURMESE_TV_LIVE.forEach((ch, idx) => {
+  dvbVideo = null;
+
+  BURMESE_TV_LIVE.forEach((ch) => {
     const card = document.createElement('div');
     card.className = 'tv-card';
-    const muted = true;     // start muted across the board
-    card.innerHTML =
-      '<header class="tv-card__bar">' +
-        '<span class="dot dot--muted" aria-hidden="true"></span>' +
-        '<span class="tv-card__name">' + escapeHtml(ch.name) + '</span>' +
-        '<button type="button" class="tv-card__mute" data-mute="0">🔇</button>' +
-      '</header>' +
-      '<div class="tv-card__frame">' +
-        '<div class="tv-card__fallback" hidden>' + escapeHtml(ch.name) + ' — loading live stream…</div>' +
-      '</div>';
-    row.appendChild(card);
-    const frame = card.querySelector('.tv-card__frame');
-    const iframe = document.createElement('iframe');
-    iframe.loading = 'lazy';
-    iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
-    iframe.referrerPolicy = 'no-referrer-when-downgrade';
-    iframe.allowFullscreen = true;
-    iframe.src = ytEmbedURL(ch.handle, muted);
-    iframe.dataset.muted = muted ? '1' : '0';
-    iframe.addEventListener('load', () => {
+    if (ch.kind === 'hls') {
+      card.innerHTML =
+        '<header class="tv-card__bar">' +
+          '<span class="dot dot--live" aria-hidden="true"></span>' +
+          '<span class="tv-card__name">' + escapeHtml(ch.name) + '</span>' +
+          '<span class="tv-card__tag">HLS</span>' +
+        '</header>' +
+        '<div class="tv-card__frame">' +
+          '<video controls preload="none" playsinline style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>' +
+          '<div class="tv-card__fallback">Press play — ' + escapeHtml(ch.note) + '<br><a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">dvb.no/live ↗</a></div>' +
+        '</div>';
+      row.appendChild(card);
+      const video = card.querySelector('video');
       const fb = card.querySelector('.tv-card__fallback');
-      if (fb) fb.hidden = true;
-      const dot = card.querySelector('.tv-card__bar .dot');
-      if (dot) dot.classList.remove('dot--muted');
-      if (dot) dot.classList.add('dot--live');
-    });
-    frame.appendChild(iframe);
-
-    const muteBtn = card.querySelector('.tv-card__mute');
-    muteBtn.addEventListener('click', () => {
-      const isMuted = iframe.dataset.muted === '1';
-      const nextMuted = isMuted ? 0 : 1;
-      iframe.dataset.muted = String(nextMuted);
-      // Reload to apply new mute state (YouTube's mute prop requires reload).
-      iframe.src = ytEmbedURL(ch.handle, !!nextMuted);
-      muteBtn.textContent = nextMuted ? '🔇' : '🔊';
-      muteBtn.dataset.mute = String(nextMuted);
-      const dot = card.querySelector('.tv-card__bar .dot');
-      if (dot) {
-        dot.classList.toggle('dot--muted', !!nextMuted);
-        dot.classList.toggle('dot--live', !nextMuted);
+      dvbVideo = video;
+      video.muted = true; // start muted so autoplay policies never block the first tap
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = ch.hls; // Safari / iOS native HLS
+        video.addEventListener('playing', () => { if (fb) fb.hidden = true; }, { once: true });
+      } else if (window.Hls && window.Hls.isSupported()) {
+        const hls = new window.Hls({ maxBufferLength: 20 });
+        hls.loadSource(ch.hls);
+        hls.attachMedia(video);
+        hls.on(window.Hls.Events.MANIFEST_PARSED, () => { if (fb) fb.hidden = true; });
+        hls.on(window.Hls.Events.ERROR, (_, data) => {
+          if (data && data.fatal && fb) { fb.hidden = false; fb.innerHTML = 'Stream hiccup — <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">watch at dvb.no/live ↗</a>'; }
+        });
+      } else {
+        if (fb) fb.innerHTML = 'This browser cannot play HLS — <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">watch at dvb.no/live ↗</a>';
       }
-    });
-
-    tvCards.push({ ch, card, iframe });
+    } else {
+      const url = ytSearchURL(ch.q);
+      card.innerHTML =
+        '<header class="tv-card__bar">' +
+          '<span class="dot dot--muted" aria-hidden="true"></span>' +
+          '<span class="tv-card__name">' + escapeHtml(ch.name) + '</span>' +
+        '</header>' +
+        '<div class="tv-card__watch">' +
+          '<p>' + escapeHtml(ch.note) + '</p>' +
+          '<a class="tv-card__go" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">Watch live ↗</a>' +
+        '</div>';
+      row.appendChild(card);
+    }
   });
 
   const muteAll = document.getElementById('tvpanelMuteAll');
   const unmuteAll = document.getElementById('tvpanelUnmuteAll');
   const hint = document.getElementById('tvpanelHint');
-  function setAll(mute) {
-    tvCards.forEach((t) => {
-      t.iframe.dataset.muted = mute ? '1' : '0';
-      t.iframe.src = ytEmbedURL(t.ch.handle, mute);
-      const btn = t.card.querySelector('.tv-card__mute');
-      btn.textContent = mute ? '🔇' : '🔊';
-      const dot = t.card.querySelector('.tv-card__bar .dot');
-      if (dot) {
-        dot.classList.toggle('dot--muted', mute);
-        dot.classList.toggle('dot--live', !mute);
-      }
-    });
-    if (hint) hint.textContent = mute
-      ? 'All muted. Click a speaker to hear that channel.'
-      : 'All live. Click a speaker to mute.';
-  }
-  if (muteAll) muteAll.addEventListener('click', () => setAll(true));
-  if (unmuteAll) unmuteAll.addEventListener('click', () => setAll(false));
+  if (hint) hint.textContent = 'DVB plays inline. YouTube blocks embeds — Watch opens the live page.';
+  if (muteAll) muteAll.addEventListener('click', () => { if (dvbVideo) dvbVideo.muted = true; });
+  if (unmuteAll) unmuteAll.addEventListener('click', () => { if (dvbVideo) { dvbVideo.muted = false; dvbVideo.play().catch(() => {}); } });
 }
 
 // Chat status indicator — surface the WS connection state in the status bar.
@@ -458,6 +441,10 @@ const state = {
   userPins: [],
   addPinMode: false,
   activeTab: 'map',
+  nasaLayerOn: false,
+  quakeLayerOn: false,
+  wxPick: false,
+  quakeMarkers: [],
   citiesMarkers: [],
   citySourceId: null,
   rainSourceId: null,
@@ -568,11 +555,19 @@ function initMap() {
     maxZoom: 14,
     attributionControl: false,
   });
+  try { window.__pirchMap = map; } catch (e) {}
   map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-right');
   map.on('move', syncMapStatus);
   map.on('zoom', syncMapStatus);
   map.on('click', (e) => {
+    if (state.wxPick) {
+      state.wxPick = false;
+      $$('.toolbar__btn[data-action="wx"]').forEach((b) => b.classList.remove('is-pressed'));
+      map.getCanvas().style.cursor = '';
+      fetchWeather(e.lngLat.lat, e.lngLat.lng);
+      return;
+    }
     if (!state.addPinMode) return;
     state.addPinMode = false;
     map.getCanvas().style.cursor = '';
@@ -639,6 +634,123 @@ function toggleCities() {
   state.citiesLayerOn = !state.citiesLayerOn;
   $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.classList.toggle('is-pressed', state.citiesLayerOn));
   renderCities();
+}
+
+// ---------- NASA GIBS true-color (yesterday, no key) ----------
+function gibsDate() {
+  const d = new Date(Date.now() - 86400000);
+  return d.toISOString().slice(0, 10);
+}
+
+function toggleNasa() {
+  state.nasaLayerOn = !state.nasaLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="nasa"]').forEach((b) => b.classList.toggle('is-pressed', state.nasaLayerOn));
+  if (!map) return;
+  if (state.nasaLayerOn) {
+    const tiles = ['https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/' + gibsDate() + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg'];
+    if (!map.getSource('nasa')) {
+      map.addSource('nasa', { type: 'raster', tiles, tileSize: 256, attribution: 'NASA GIBS / MODIS Terra' });
+      const before = map.getLayer('rain') ? 'rain' : undefined;
+      map.addLayer({ id: 'nasa', type: 'raster', source: 'nasa', paint: { 'raster-opacity': 0.95 } }, before);
+    } else {
+      map.getSource('nasa').setTiles(tiles);
+      map.setLayoutProperty('nasa', 'visibility', 'visible');
+    }
+    flashStatusbar('NASA Terra true-color · ' + gibsDate() + ' · JAXA Himawari + FIRMS fires under Layers menu.');
+  } else if (map.getLayer('nasa')) {
+    map.setLayoutProperty('nasa', 'visibility', 'none');
+  }
+}
+
+// ---------- USGS earthquakes M4.5+, last 30 days ----------
+async function toggleQuakes() {
+  state.quakeLayerOn = !state.quakeLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="quakes"]').forEach((b) => b.classList.toggle('is-pressed', state.quakeLayerOn));
+  if (!map) return;
+  (state.quakeMarkers || []).forEach((m) => { try { m.remove(); } catch (e) {} });
+  state.quakeMarkers = [];
+  if (!state.quakeLayerOn) return;
+  flashStatusbar('Fetching USGS earthquakes…');
+  try {
+    const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const url = 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson' +
+      '&starttime=' + since + '&minmagnitude=4.5&latitude=21&longitude=96&maxradiuskm=2500&limit=100&orderby=time';
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('usgs http ' + r.status);
+    const gj = await r.json();
+    (gj.features || []).forEach((f) => {
+      const coords = f.geometry && f.geometry.coordinates;
+      if (!coords) return;
+      const mag = (f.properties && f.properties.mag) || 0;
+      const el = document.createElement('div');
+      el.className = 'pirch-marker pirch-marker--quake';
+      const s = Math.max(10, Math.min(26, 6 + mag * 3));
+      el.style.width = s + 'px';
+      el.style.height = s + 'px';
+      el.title = 'M' + mag.toFixed(1) + ' · ' + ((f.properties && f.properties.place) || '');
+      el.addEventListener('click', (e) => { e.stopPropagation(); openQuakeModal(f); });
+      state.quakeMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([coords[0], coords[1]]).addTo(map));
+    });
+    flashStatusbar((gj.features || []).length + ' quakes (USGS, 30d, M4.5+). Click one for depth + time.');
+  } catch (e) {
+    flashStatusbar('Quakes failed: ' + (e && e.message || e));
+  }
+}
+
+function openQuakeModal(f) {
+  const p = f.properties || {};
+  const coords = (f.geometry && f.geometry.coordinates) || [0, 0, 0];
+  const t = p.time ? new Date(p.time).toLocaleString('en-GB', { timeZone: 'Asia/Yangon' }) + ' MMT' : '—';
+  openIncidentModal({
+    title_en: 'M' + (p.mag != null ? Number(p.mag).toFixed(1) : '?') + ' — ' + (p.place || 'unknown'),
+    title_my: '',
+    body_en: 'Depth ' + coords[2] + ' km · ' + t + ' · tsunami flag ' + (p.tsunami ? 'YES' : 'no') + ' · felt reports ' + (p.felt != null ? p.felt : 0) + '. Discuss in #listening-club: did anyone feel it?',
+    body_my: '',
+    digest_en: '',
+    digest_my: '',
+    sourceLabel: 'USGS Earthquakes',
+    source: 'USGS',
+    ts: p.time ? new Date(p.time).toISOString() : '',
+    url: p.url || 'https://earthquake.usgs.gov/',
+    location: { lat: coords[1], lng: coords[0], place: p.place || '' },
+  });
+}
+
+// ---------- Click-for-weather (Open-Meteo, no key) ----------
+const WMO = { 0: 'Clear', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Icing fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Dense drizzle', 61: 'Slight rain', 63: 'Rain', 65: 'Heavy rain', 71: 'Slight snow', 73: 'Snow', 75: 'Heavy snow', 80: 'Slight showers', 81: 'Showers', 82: 'Violent showers', 95: 'Thunderstorm', 96: 'Storm + hail', 99: 'Storm + heavy hail' };
+
+function toggleWx() {
+  state.wxPick = !state.wxPick;
+  $$('.toolbar__btn[data-action="wx"]').forEach((b) => b.classList.toggle('is-pressed', !!state.wxPick));
+  if (map) map.getCanvas().style.cursor = state.wxPick ? 'crosshair' : '';
+  if (state.wxPick) flashStatusbar('Click any point for live temperature / rain / wind. ESC cancels.');
+}
+
+async function fetchWeather(lat, lng) {
+  flashStatusbar('Fetching weather for ' + lat.toFixed(2) + ', ' + lng.toFixed(2) + '…');
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat.toFixed(3) + '&longitude=' + lng.toFixed(3) +
+      '&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=auto';
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('weather http ' + r.status);
+    const j = await r.json();
+    const c = j.current || {};
+    openIncidentModal({
+      title_en: 'Weather at ' + lat.toFixed(2) + ', ' + lng.toFixed(2),
+      title_my: '',
+      body_en: (WMO[c.weather_code] || 'Code ' + c.weather_code) + ' · ' + c.temperature_2m + '°C · humidity ' + c.relative_humidity_2m + '% · rain ' + c.precipitation + ' mm · wind ' + c.wind_speed_10m + ' km/h · observed ' + (c.time || '').replace('T', ' ') + '. Screenshot this into the room and compare with the rain overlay.',
+      body_my: '',
+      digest_en: '',
+      digest_my: '',
+      sourceLabel: 'Open-Meteo',
+      source: 'open-meteo',
+      ts: new Date().toISOString(),
+      url: 'https://open-meteo.com/',
+      location: { lat, lng, place: lat.toFixed(2) + ', ' + lng.toFixed(2) },
+    });
+  } catch (e) {
+    flashStatusbar('Weather failed: ' + (e && e.message || e));
+  }
 }
 
 function renderCities() {
@@ -1004,7 +1116,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const a = b.dataset.action;
     if (a === 'fit') fitAllMarkers();
     if (a === 'add') enableAddPin();
+    if (a === 'wx') toggleWx();
   }));
+  $$('.toolbar__btn[data-layer-toggle="nasa"]').forEach((b) => b.addEventListener('click', toggleNasa));
+  $$('.toolbar__btn[data-layer-toggle="quakes"]').forEach((b) => b.addEventListener('click', toggleQuakes));
   $$('.toolbar__btn[data-layer-toggle="news"]').forEach((b) => b.addEventListener('click', () => { state.newsLayerOn = !state.newsLayerOn; b.classList.toggle('is-pressed', state.newsLayerOn); refreshMarkers(); }));
   $$('.toolbar__btn[data-layer-toggle="rain"]').forEach((b) => b.addEventListener('click', toggleRain));
   $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.addEventListener('click', toggleCities));

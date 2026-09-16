@@ -24,26 +24,27 @@
   </header>
 
   <nav class="menubar" aria-label="Menu">
-    <button type="button" class="menubar__item"><u>F</u>ile</button>
-    <button type="button" class="menubar__item"><u>R</u>oom</button>
-    <button type="button" class="menubar__item"><u>T</u>ools</button>
-    <button type="button" class="menubar__item"><u>O</u>ptions</button>
-    <button type="button" class="menubar__item"><u>W</u>indow</button>
-    <button type="button" class="menubar__item"><u>H</u>elp</button>
+    <button type="button" class="menubar__item" data-menu="file"><u>F</u>ile</button>
+    <button type="button" class="menubar__item" data-menu="room"><u>R</u>oom</button>
+    <button type="button" class="menubar__item" data-menu="tools"><u>T</u>ools</button>
+    <button type="button" class="menubar__item" data-menu="options"><u>O</u>ptions</button>
+    <button type="button" class="menubar__item" data-menu="window"><u>W</u>indow</button>
+    <button type="button" class="menubar__item" data-menu="help"><u>H</u>elp</button>
   </nav>
+  <div class="dropdown" id="roomMenu" hidden></div>
 
   <div class="toolbar" role="toolbar" aria-label="Toolbar">
-    <button type="button" class="toolbar__btn" title="Connect"><span class="tb-icon">●</span>Connect</button>
-    <button type="button" class="toolbar__btn" title="Mode"><span class="tb-icon">▤</span>Mode</button>
-    <button type="button" class="toolbar__btn" title="Channels"><span class="tb-icon">⊞</span>Channels</button>
-    <button type="button" class="toolbar__btn" title="Favorites"><span class="tb-icon">★</span>Favorites</button>
-    <button type="button" class="toolbar__btn" title="Popup"><span class="tb-icon">⊡</span>Popup</button>
-    <button type="button" class="toolbar__btn" title="Alarm"><span class="tb-icon">⏰</span>Alarm</button>
-    <button type="button" class="toolbar__btn" title="Event"><span class="tb-icon">⌛</span>Event</button>
-    <button type="button" class="toolbar__btn" title="Engage"><span class="tb-icon">◌</span>Engage</button>
-    <button type="button" class="toolbar__btn" title="File Send"><span class="tb-icon">⇈</span>File Send</button>
-    <button type="button" class="toolbar__btn" title="Chat"><span class="tb-icon">⌗</span>Chat</button>
-    <button type="button" class="toolbar__btn" title="Push"><span class="tb-icon">→</span>Push</button>
+    <button type="button" class="toolbar__btn" data-act="connect" title="Connect / disconnect (toggles status)"><span class="tb-icon">●</span>Connect</button>
+    <button type="button" class="toolbar__btn" data-act="mode" title="Toggle moderated mode"><span class="tb-icon">▤</span>Mode</button>
+    <button type="button" class="toolbar__btn" data-act="channels" title="List all rooms"><span class="tb-icon">⊞</span>Channels</button>
+    <button type="button" class="toolbar__btn" data-act="favorites" title="Star this room as a favorite"><span class="tb-icon">★</span>Favorites</button>
+    <button type="button" class="toolbar__btn" data-act="popup" title="Toggle timestamps"><span class="tb-icon">⊡</span>Popup</button>
+    <button type="button" class="toolbar__btn" data-act="alarm" title="Toggle mention beep"><span class="tb-icon">⏰</span>Alarm</button>
+    <button type="button" class="toolbar__btn" data-act="event" title="Show recent room events"><span class="tb-icon">⌛</span>Event</button>
+    <button type="button" class="toolbar__btn" data-act="engage" title="Insert a greeting template"><span class="tb-icon">◌</span>Engage</button>
+    <button type="button" class="toolbar__btn" data-act="filesend" title="Send images via the dashboard"><span class="tb-icon">⇈</span>File Send</button>
+    <button type="button" class="toolbar__btn" data-act="chat" title="Open the full dashboard chat"><span class="tb-icon">⌗</span>Chat</button>
+    <button type="button" class="toolbar__btn" data-act="push" title="Copy room link"><span class="tb-icon">→</span>Push</button>
   </div>
 
   <div class="linkbar">

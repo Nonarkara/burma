@@ -8,7 +8,12 @@ This is the only deployable surface today, at `burma.nonarkara.org`.
 - **`style.css`** — landing page styles.
 - **`room.html`** — chat room interior. Authentic Windows 95 / PIRCH98 chrome. 2-tone bevel borders, gray chrome, monospace messages, member list on the right, ch chunky scrollbars, status bar at the bottom.
 - **`room.css`** — chat room styles.
-- **`room.js`** — small JS that posts user input back to the same scrollback and seeds a few extra messages so visitors see the room "in motion." Server is not real — this is an honest demo until Surface 1 (Hetzner CX22) ships.
+- **`room.js`** — standalone room logic: nickname prompt, /nick /me /help /clear /channels, toolbar (connect/mode/channels/favorites/timestamps/beep/events/greeting/file-send/chat/link) and menubar dropdowns. Server is not real — this is an honest demo until Surface 1 (Hetzner CX22) ships.
+- **`survival.js`** — curated Thai-side survival knowledge (visa renewal, Saturday desk, Mae Tao + Phahon Yothin clinics, dengue/haze, kyat–baht, housing split, bakery training, monastery, Mae Sai). Plus phrasebook (Burmese/Thai/English), human hotlines, crisis keyword matcher.
+- **`chrome.js`** — every button does something: Win95 dropdown menus (File/View/Layers/Tools), titlebar minimize/maximize/close, Guide + Hotlines toolbar buttons, news export, chat help, crisis banner wiring, mention beep, keyboard shortcuts (G guide, B basemap, F fit, W weather-pick).
+- **TV panel** — DVB TV plays inline via its own public HLS (`live-stream.dvb.no`, verified live Sept 2026, hls.js for non-Safari). YouTube channels disallow embedding, so Mizzima / Irrawaddy / Khit Thit / Frontier are Watch cards that open the live search page — no dead iframes.
+- **Map evidence layers** — NASA GIBS MODIS Terra true-color (yesterday, no key), USGS earthquakes M4.5+ 30d (click for depth/time/tsunami flag), click-anywhere weather via Open-Meteo (no key), RainViewer rain. JMA Himawari-9 + NASA FIRMS fires as link-outs under Layers.
+- **Jobs tab (Guide)** — verified job boards (Sabai Job, DOE, JobThai, JobsDB, MAP Foundation), a 6-line good-job checklist, 5 walk-away red flags, per-board Discuss buttons that drop the question into #bkk-burmese.
 
 ## Floors
 

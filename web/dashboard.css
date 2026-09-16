@@ -417,6 +417,13 @@ html, body {
 .legend__dot--radio { background: var(--server); }
 .legend__dot--tv    { background: var(--positive); }
 .legend__dot--you   { background: var(--positive); }
+.legend__dot--quake { background: var(--negative); border-radius: 9999px !important; }
+
+.pirch-marker--quake {
+  background: var(--negative);
+  border-radius: 9999px !important;
+  border: 2px solid var(--paper);
+}
 
 .pirch-marker {
   width: 14px;
@@ -646,6 +653,59 @@ html, body {
   background: #1a1a1a;
   text-align: center;
   padding: 8px;
+  pointer-events: none;
+}
+
+.tv-card__fallback a { pointer-events: auto; color: var(--accent-soft); }
+
+.tv-card__fallback[hidden] { display: none; }
+
+.tv-card__frame video { z-index: 1; }
+
+.tv-card__tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--positive);
+  margin-left: 6px;
+}
+
+.tv-card__watch {
+  padding: 10px 12px;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  background: #1a1a1a;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.tv-card__watch p { margin: 0; line-height: 1.5; }
+
+.tv-card__go {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 4px 12px;
+  background: var(--accent);
+  color: var(--ink);
+  font-family: var(--font-system);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+.tv-card__go:active {
+  border-top-color: var(--ink);
+  border-left-color: var(--ink);
+  border-right-color: var(--chrome-edge);
+  border-bottom-color: var(--chrome-edge);
 }
 
 @media (max-width: 920px) {
@@ -1301,6 +1361,200 @@ html, body {
   color: var(--accent);
   margin-bottom: 6px;
 }
+
+/* ===== Dropdown menu (Win95 popup) ===== */
+
+.dropdown {
+  position: absolute;
+  z-index: 50;
+  min-width: 240px;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 12px;
+}
+
+.dropdown[hidden] { display: none; }
+
+.dropdown__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdown__item:hover { background: var(--ink); color: var(--chrome-light); }
+.dropdown__item--sep { border-top: 1px solid var(--ink-muted); }
+.dropdown__key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+.dropdown__item:hover .dropdown__key { color: var(--chrome-light); }
+
+/* ===== Crisis banner (human escalation, not refusal) ===== */
+
+.crisis {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--accent-soft);
+  border-top: 2px solid var(--negative);
+  border-bottom: 1px solid var(--ink-muted);
+  font-size: 12px;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.crisis[hidden] { display: none; }
+
+.crisis button {
+  appearance: none;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ===== Guide cards ===== */
+
+.guide-card {
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
+  margin-bottom: 10px;
+}
+
+.guide-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  padding: 5px 10px;
+}
+
+.guide-card__icon { color: var(--accent); font-weight: 700; }
+
+.guide-card__title { font-weight: 700; font-size: 13px; }
+
+.guide-card__title-my {
+  font-family: var(--font-burma);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.guide-card__body { padding: 8px 10px; font-size: 12.5px; }
+.guide-card__body--my { font-family: var(--font-burma); line-height: 1.7; font-size: 13.5px; }
+
+.guide-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 6px 10px;
+  background: var(--chrome);
+  border-top: 1px solid var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+}
+
+.guide-card__ask {
+  appearance: none;
+  background: var(--chrome);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-system);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  margin: 8px 10px 10px;
+  cursor: pointer;
+}
+
+.guide-card__ask:active {
+  border-top-color: var(--ink);
+  border-left-color: var(--ink);
+  border-right-color: var(--chrome-edge);
+  border-bottom-color: var(--chrome-edge);
+}
+
+.phrase-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.phrase-table th, .phrase-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.phrase-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  background: var(--chrome);
+}
+.phrase-table td[lang="my"] { font-family: var(--font-burma); font-size: 14px; }
+.phrase-copy {
+  appearance: none;
+  background: var(--chrome);
+  border: 1px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.calc-row { display: flex; gap: 6px; align-items: center; margin: 8px 10px 10px; flex-wrap: wrap; }
+.calc-row input {
+  width: 120px;
+  padding: 4px 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--paper);
+  color: var(--ink);
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--chrome-edge);
+  border-bottom: 1px solid var(--chrome-edge);
+}
+.calc-out { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+
+/* Minimized map pane */
+.dash__left.is-min .map-wrapper,
+.dash__left.is-min .toolbar,
+.dash__left.is-min .linkbar,
+.dash__left.is-min .menubar { display: none; }
+
+/* /me action lines */
+.msg--action { color: var(--notice); font-style: italic; display: block; }
 
 /* ===== Scrollbars (Win95 chunky) ===== */
 

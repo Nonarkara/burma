@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 </head>
 <body class="win95 full-bleed" data-tab="map">
 
@@ -31,18 +32,19 @@
       <span class="titlebar__dot" aria-hidden="true"></span>
       <span class="titlebar__title">Pirchchat — Map</span>
       <span class="titlebar__spacer"></span>
-      <button class="titlebar__btn" type="button" aria-label="Minimize" title="Minimize">_</button>
+      <button class="titlebar__btn" type="button" aria-label="Minimize" title="Minimize" id="mapMin">_</button>
       <button class="titlebar__btn" type="button" aria-label="Maximize" title="Maximize" id="mapMax">▢</button>
-      <button class="titlebar__btn titlebar__btn--close" type="button" aria-label="Close">×</button>
+      <button class="titlebar__btn titlebar__btn--close" type="button" aria-label="Close" title="Close" id="mapClose">×</button>
     </div>
 
     <nav class="menubar" aria-label="Map menu">
-      <button type="button" class="menubar__item"><u>F</u>ile</button>
-      <button type="button" class="menubar__item"><u>V</u>iew</button>
-      <button type="button" class="menubar__item"><u>L</u>ayers</button>
-      <button type="button" class="menubar__item"><u>T</u>ools</button>
+      <button type="button" class="menubar__item" data-mapmenu="file"><u>F</u>ile</button>
+      <button type="button" class="menubar__item" data-mapmenu="view"><u>V</u>iew</button>
+      <button type="button" class="menubar__item" data-mapmenu="layers"><u>L</u>ayers</button>
+      <button type="button" class="menubar__item" data-mapmenu="tools"><u>T</u>ools</button>
       <button type="button" class="menubar__item" onclick="window.location='index.html'">Ho<u>m</u>e</button>
     </nav>
+    <div class="dropdown" id="mapMenu" hidden></div>
 
     <div class="toolbar" role="toolbar" aria-label="Map toolbar">
       <button type="button" class="toolbar__btn is-pressed" data-layer="satellite" title="Satellite imagery">▢ Satellite</button>
@@ -53,10 +55,16 @@
       <button type="button" class="toolbar__btn" data-action="fit" title="Fit all markers">⌖ Fit</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="news" title="News incident markers">● News</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="cities" title="City markers">● Cities</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)">📻 Radio</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)">📺 TV</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Rain overlay">☔ Rain</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)">● Radio</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)">● TV</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Rain overlay">● Rain</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="nasa" title="NASA Terra true-color, yesterday">◉ NASA</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="quakes" title="USGS earthquakes M4.5+, last 30 days">▲ Quakes</button>
       <button type="button" class="toolbar__btn" data-action="add" title="Drop a manual pin">＋ Pin</button>
+      <button type="button" class="toolbar__btn" data-action="wx" title="Pick any point for live temperature / rain / wind">◍ Wx</button>
+      <span class="toolbar__sep"></span>
+      <button type="button" class="toolbar__btn" data-action="guide" title="Survival guide — visa, clinics, housing, rates">✎ Guide</button>
+      <button type="button" class="toolbar__btn" data-action="hotlines" title="Human hotlines — 1300, clinics">＋ Hotlines</button>
     </div>
 
     <div class="linkbar">
@@ -75,6 +83,7 @@
         <span><span class="legend__dot legend__dot--radio" aria-hidden="true"></span>Radio</span>
         <span><span class="legend__dot legend__dot--tv" aria-hidden="true"></span>TV</span>
         <span><span class="legend__dot legend__dot--you" aria-hidden="true"></span>You pinned</span>
+        <span><span class="legend__dot legend__dot--quake" aria-hidden="true"></span>Quake</span>
       </div>
 
       <aside class="audioplayer" id="audioplayer" hidden>
@@ -132,6 +141,9 @@
         <button type="button" class="menubar__item" data-news-filter="diaspora">Diasp<u>o</u>ra</button>
         <button type="button" class="menubar__item" data-news-filter="asean">ASEAN</button>
         <button type="button" class="menubar__item" data-news-filter="world">W<u>orld</u></button>
+        <button type="button" class="menubar__item" data-news-action="guide" title="Survival guide">Guide</button>
+        <button type="button" class="menubar__item" data-news-action="jobs" title="Job boards + good-job checklist">Jobs</button>
+        <button type="button" class="menubar__item" data-news-action="export" title="Download these news items as text">Export</button>
       </nav>
       <div class="chipbar" id="sourceChips" role="toolbar" aria-label="Filter by source"></div>
       <div class="news__list" id="newsList" aria-live="polite" aria-label="Live news list"></div>
@@ -156,6 +168,7 @@
         <button type="button" class="menubar__item" data-room="cm-burmese">Cm-burm<u>e</u>se</button>
         <button type="button" class="menubar__item" data-room="digest-today">Diges<u>t</u>-today</button>
         <button type="button" class="menubar__item" data-room="listening-club">L<u>i</u>stening-club</button>
+        <button type="button" class="menubar__item" id="chatHelp" title="Chat commands and ground rules">?</button>
       </nav>
 
       <div class="chipbar" id="topicChips" role="toolbar" aria-label="Filter messages by topic">
@@ -174,6 +187,13 @@
           <header class="members__head">Members</header>
           <ul class="members__list" id="memberList"></ul>
         </aside>
+      </div>
+
+      <div class="crisis" id="crisisBanner" hidden>
+        <strong>Someone here may need a real human.</strong>
+        <span>Thailand social emergency <strong>1300</strong> (24h, free) · Burmese health hotline (24h, Bangkok) · Mae Tao Clinic Mae Sot (walk in, morning).</span>
+        <button type="button" id="crisisHotlines">Hotlines</button>
+        <button type="button" id="crisisDismiss" aria-label="Dismiss">×</button>
       </div>
 
       <form class="composer" id="composer" autocomplete="off">
@@ -227,6 +247,30 @@
   </div>
 </div>
 
+<!-- ===== SURVIVAL GUIDE MODAL ===== -->
+<div class="modal" id="guideModal" hidden>
+  <div class="modal__panel modal__panel--tall">
+    <div class="titlebar">
+      <span class="titlebar__dot" aria-hidden="true"></span>
+      <span class="titlebar__title" id="guideTitle">Survival guide — ရှင်သန်ရေး လမ်းညွှန်</span>
+      <span class="titlebar__spacer"></span>
+      <button class="titlebar__btn titlebar__btn--close" type="button" id="guideClose">×</button>
+    </div>
+    <nav class="menubar" id="guideTabs" aria-label="Guide sections">
+      <button type="button" class="menubar__item menubar__item--active" data-guide="all">All</button>
+      <button type="button" class="menubar__item" data-guide="jobs">Jobs · Visa</button>
+      <button type="button" class="menubar__item" data-guide="sharing">Health</button>
+      <button type="button" class="menubar__item" data-guide="housing">Housing</button>
+      <button type="button" class="menubar__item" data-guide="learning">Learning</button>
+      <button type="button" class="menubar__item" data-guide="ideas">Money</button>
+      <button type="button" class="menubar__item" data-guide="jobs">Jobs</button>
+      <button type="button" class="menubar__item" data-guide="phrases">Phrases</button>
+      <button type="button" class="menubar__item" data-guide="hotlines">Hotlines</button>
+    </nav>
+    <div class="modal__body" id="guideBody"></div>
+  </div>
+</div>
+
 <!-- ===== INCIDENT / NEWS MODAL ===== -->
 <div class="modal" id="incidentModal" hidden>
   <div class="modal__panel">
@@ -240,7 +284,9 @@
   </div>
 </div>
 
+<script src="survival.js"></script>
 <script src="dashboard.js"></script>
 <script src="chat-client.js"></script>
+<script src="chrome.js"></script>
 </body>
 </html>
