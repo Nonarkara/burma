@@ -1606,11 +1606,11 @@ html, body {
   .dash__left  { inset: 0; }
   .dash__right { inset: 0; }
 
-  body[data-tab="map"]  .dash__left  { display: flex; }
-  body[data-tab="news"] .dash__right { display: flex; }
+  body[data-tab="map"]  .dash__left  { display: flex; left: 0; right: 0; }
+  body[data-tab="news"] .dash__right { display: flex; left: 0; right: 0; }
   body[data-tab="news"] .dash__right .chat { display: none; }
   body[data-tab="news"] .dash__right .news { display: flex; }
-  body[data-tab="chat"] .dash__right { display: flex; }
+  body[data-tab="chat"] .dash__right { display: flex; left: 0; right: 0; }
   body[data-tab="chat"] .dash__right .news { display: none; }
   body[data-tab="chat"] .dash__right .chat { display: flex; }
 
