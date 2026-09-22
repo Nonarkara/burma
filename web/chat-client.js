@@ -9,6 +9,13 @@ const API_BASE = location.hostname === 'localhost' || location.hostname === '127
 
 const KNOWN_ROOMS = ['monastic-youth', 'bkk-burmese', 'cm-burmese', 'digest-today', 'listening-club'];
 
+const MICRO_QUEST = [
+  {prompt:'ဆေးခန်းတစ်ခုတွင် စာရင်းပစ္စည်း မကိုက်ညီပါ။ သင် ပထမဆုံး ဘာလုပ်မလဲ။', choices:[['လက်ရှိစာရင်းကို စစ်ပြီး အမှားပုံစံကို မှတ်တမ်းတင်မည်','systems'],['အဖွဲ့ဝင်များကို ခေါ်ပြီး လက်ရှိအလုပ်စဉ်ကို နားထောင်မည်','collaboration'],['ပစ္စည်းကို အမျိုးအစားခွဲပြီး အရေအတွက် ပြန်တွက်မည်','analysis']]},
+  {prompt:'ရပ်ရွာသင်တန်းတစ်ခုတွင် ဖုန်းအသုံးပြုမှု အခက်အခဲရှိသည်။', choices:[['လူတိုင်းလိုက်လုပ်နိုင်သော အဆင့်လိုက်စာရွက် ပြုလုပ်မည်','systems'],['တစ်ဦးချင်း မေးခွန်းကို နားထောင်ပြီး တွဲလုပ်မည်','collaboration'],['ဘယ်အဆင့်မှာ ပိုရပ်တန့်သလဲ စစ်မည်','analysis']]},
+  {prompt:'အလုပ်သင်အခွင့်အရေး စာရင်းကို အဖွဲ့တစ်ဖွဲ့နှင့် မျှဝေရမည်။', choices:[['အရင်းအမြစ်၊ နေ့စွဲ၊ လိုအပ်ချက်ပါသော စာရင်းတစ်ခု ပြုလုပ်မည်','systems'],['ဘာသာပြန်နှင့် မျှဝေမည့် အဖွဲ့ကို စုစည်းမည်','collaboration'],['အချက်တစ်ခုစီကို မူရင်းအရင်းအမြစ်နှင့် တိုက်စစ်မည်','analysis']]}
+];
+let questAnswers = [];
+
 function escapeHtml(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -508,6 +515,26 @@ function flashNet(text) {
   el.textContent = (state.identity.name || 'guest') + ' · ' + text;
 }
 
+function renderQuest() {
+  const panel = document.getElementById('questPanel'); if (!panel) return;
+  if (questAnswers.length < MICRO_QUEST.length) {
+    const q = MICRO_QUEST[questAnswers.length];
+    panel.innerHTML = '<h3>TKCX-Youth · ၃ မိနစ် Quest</h3><p>' + escapeHtml(q.prompt) + '</p><div class="micro-panel__choices">' + q.choices.map((choice, i) => '<button type="button" class="micro-panel__choice" data-quest-choice="' + i + '">' + escapeHtml(choice[0]) + '</button>').join('') + '</div><p class="micro-panel__meta">' + (questAnswers.length + 1) + ' / 3 · session-only reflection, not a diagnosis or stored profile.</p>';
+    panel.querySelectorAll('[data-quest-choice]').forEach((button) => button.addEventListener('click', () => { questAnswers.push(q.choices[Number(button.dataset.questChoice)][1]); renderQuest(); }));
+    return;
+  }
+  const scores = {systems:0, collaboration:0, analysis:0}; questAnswers.forEach((key) => scores[key]++);
+  const lead = Object.entries(scores).sort((a,b) => b[1] - a[1]).slice(0,2).map(([key]) => ({systems:'အလုပ်စဉ် စီမံခြင်း', collaboration:'အဖွဲ့နှင့် ညှိနှိုင်းခြင်း', analysis:'အချက်အလက် စစ်ဆေးခြင်း'}[key]));
+  panel.innerHTML = '<h3>လုပ်ဆောင်နိုင်စွမ်း အကြမ်းဖျဉ်း</h3><p>ဒီအဖြေသုံးခုက <strong>' + escapeHtml(lead.join(' · ')) + '</strong> ကို လေ့ကျင့်လိုကြောင်း ပြသည်။ အမည်တပ်ခြင်း မဟုတ်ပါ။</p><p><strong>လမ်းကြောင်း ၃ ခု</strong></p><ol><li>ဒစ်ဂျစ်တယ် စာရင်းနှင့် အုပ်ချုပ်ရေး လေ့ကျင့်မှု</li><li>ဘာသာပြန် / ရပ်ရွာ ညှိနှိုင်း လေ့ကျင့်မှု</li><li>အရင်းအမြစ် စစ်ဆေးပြီး အခွင့်အရေးစာရင်း ပြုစုခြင်း</li></ol><p class="micro-panel__meta">Reference paths only. Verify any programme directly with its provider.</p><button type="button" id="questRestart">ပြန်စမည်</button>';
+  panel.querySelector('#questRestart').addEventListener('click', () => { questAnswers = []; renderQuest(); });
+}
+
+function renderExchange() {
+  const panel = document.getElementById('exchangePanel'); if (!panel) return;
+  panel.innerHTML = '<h3>အရည်အချင်း · အရင်းအမြစ် ဖလှယ်</h3><p>မပို့ရသေးသော စာကြမ်းသာ ဖြစ်သည်။ ကိုယ်ရေးအချက်အလက်၊ ဖုန်းနံပါတ်၊ နေရာအတိအကျ မထည့်ပါနှင့်။</p><div class="micro-panel__choices"><button type="button" data-exchange="I can teach">I can teach: Graphic design / English / other</button><button type="button" data-exchange="I am looking for">I am looking for: apprenticeship / room leads / other</button></div><label>အကြောင်းအရာ <input id="exchangeText" maxlength="160" placeholder="short, non-identifying detail"></label><p class="micro-panel__meta">This prepares the chat composer; it never posts automatically.</p>';
+  panel.querySelectorAll('[data-exchange]').forEach((button) => button.addEventListener('click', () => { const input = document.getElementById('input'); const detail = document.getElementById('exchangeText'); if (input) { input.value = button.dataset.exchange + ': ' + (detail && detail.value || ''); input.focus(); } }));
+}
+
 // ===== Wiring =====
 
 function wire() {
@@ -521,6 +548,9 @@ function wire() {
   if (form) form.addEventListener('submit', handleSubmit);
   const fi = document.getElementById('fileInput');
   if (fi) fi.addEventListener('change', handleFile);
+  const quest = document.getElementById('questToggle'); const exchange = document.getElementById('exchangeToggle');
+  if (quest) quest.addEventListener('click', () => { const panel = document.getElementById('questPanel'); const other = document.getElementById('exchangePanel'); if (!panel) return; panel.hidden = !panel.hidden; if (!panel.hidden) { if (other) other.hidden = true; renderQuest(); } });
+  if (exchange) exchange.addEventListener('click', () => { const panel = document.getElementById('exchangePanel'); const other = document.getElementById('questPanel'); if (!panel) return; panel.hidden = !panel.hidden; if (!panel.hidden) { if (other) other.hidden = true; renderExchange(); } });
 
   // Topic chips
   document.querySelectorAll('#topicChips .chip').forEach((b) => {

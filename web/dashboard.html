@@ -55,6 +55,7 @@
       <button type="button" class="toolbar__btn" data-action="fit" title="Fit all markers">⌖ Fit</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="borders" title="National borders &amp; frontier gates (Global Politics)">● Borders</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="news" title="News incident markers">● News</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="support" title="Public support and transit reference points">● Support</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="cities" title="City markers">● Cities</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)">● Radio</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)">● TV</button>
@@ -85,6 +86,7 @@
         <span><span class="legend__dot legend__dot--border" aria-hidden="true"></span>Border</span>
         <span><span class="legend__dot legend__dot--gate" aria-hidden="true"></span>Gate</span>
         <span><span class="legend__dot legend__dot--news" aria-hidden="true"></span>News</span>
+        <span><span class="legend__dot legend__dot--support" aria-hidden="true"></span>Support</span>
         <span><span class="legend__dot legend__dot--city" aria-hidden="true"></span>City</span>
         <span><span class="legend__dot legend__dot--radio" aria-hidden="true"></span>Radio</span>
         <span><span class="legend__dot legend__dot--tv" aria-hidden="true"></span>TV</span>
@@ -157,6 +159,13 @@
         <button type="button" class="menubar__item" data-news-action="export" title="Download these news items as text">Export</button>
       </nav>
       <div class="chipbar" id="sourceChips" role="toolbar" aria-label="Filter by source"></div>
+      <section class="action-desk" aria-label="Actionable takeaways and signal desk">
+        <div class="action-desk__head"><strong>အချက်ပြ စားပွဲ · Signal desk</strong><span>Rules-based reference · AI synthesis is not connected</span></div>
+        <div class="chipbar" id="deskChips" role="toolbar" aria-label="Filter action desk">
+          <button type="button" class="chip chip--active" data-desk="all">All</button><button type="button" class="chip" data-desk="action">Action briefs</button><button type="button" class="chip" data-desk="signal">Signal vs rumor</button><button type="button" class="chip" data-desk="opportunity">ASEAN paths</button>
+        </div>
+        <div id="actionDeskList" class="action-desk__list"></div>
+      </section>
       <p class="news-provenance">နမူနာ အကြောင်းအရာ · Unverified static examples, not a live news feed. Do not use for travel, health or work decisions.</p>
       <div class="news__list" id="newsList" aria-live="polite" aria-label="News examples"></div>
       <div class="statusbar">
@@ -180,6 +189,8 @@
         <button type="button" class="menubar__item" data-room="cm-burmese">Cm-burm<u>e</u>se</button>
         <button type="button" class="menubar__item" data-room="digest-today">Diges<u>t</u>-today</button>
         <button type="button" class="menubar__item" data-room="listening-club">L<u>i</u>stening-club</button>
+        <button type="button" class="menubar__item" id="questToggle">၃ မိနစ် Quest</button>
+        <button type="button" class="menubar__item" id="exchangeToggle">ဖလှယ်</button>
         <button type="button" class="menubar__item" id="chatHelp" title="Chat commands and ground rules">?</button>
       </nav>
 
@@ -200,6 +211,8 @@
           <ul class="members__list" id="memberList"></ul>
         </aside>
       </div>
+      <section class="micro-panel" id="questPanel" hidden aria-label="Three-minute skill discovery"></section>
+      <section class="micro-panel" id="exchangePanel" hidden aria-label="Peer skill and resource exchange"></section>
 
       <div class="crisis" id="crisisBanner" hidden>
         <strong>Someone here may need a real human.</strong>
@@ -294,6 +307,7 @@
 </div>
 
 <script src="survival.js?v=20260916-audit"></script>
+<script src="data/opportunity-safety.js?v=20260922-c2"></script>
 <script src="dashboard.js?v=20260917-geopolitics-flood"></script>
 <script src="chat-client.js?v=20260917-geopolitics-flood"></script>
 <script src="chrome.js?v=20260917-geopolitics-flood"></script>

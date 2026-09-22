@@ -416,6 +416,7 @@ html, body {
 .legend__dot--border { background: var(--accent); }
 .legend__dot--gate   { background: var(--accent); border: 1px solid var(--ink); }
 .legend__dot--news  { background: var(--negative); }
+.legend__dot--support { background: var(--positive); border: 1px solid var(--ink); }
 .legend__dot--chat  { background: var(--accent); }
 .legend__dot--city  { background: var(--paper); border: 2px solid var(--ink); box-sizing: border-box; }
 .legend__dot--radio { background: var(--server); }
@@ -986,6 +987,23 @@ html, body {
   grid-template-columns: 1fr 180px;
   min-height: 0;
 }
+
+.action-desk { border-top: 1px solid var(--ink-muted); border-bottom: 1px solid var(--ink-muted); background: var(--chrome); padding: 6px 8px; }
+.action-desk__head { display:flex; justify-content:space-between; gap:8px; font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); }
+.action-desk__head strong { color:var(--ink); }
+.action-desk__list { display:grid; gap:5px; margin-top:5px; }
+.desk-card { border:1px solid var(--ink); background:var(--paper); padding:5px 7px; font-size:11px; }
+.desk-card__meta { display:flex; gap:6px; margin-bottom:3px; font-family:var(--font-mono); font-size:9px; color:var(--ink-muted); }
+.desk-badge { border:1px solid var(--ink); padding:0 3px; color:var(--ink); background:var(--accent-soft); }
+.desk-badge--unverified { background:var(--chrome); }
+.micro-panel { border-top: 1px solid var(--ink); background:var(--chrome); padding:8px 12px; max-height:250px; overflow:auto; font-family:var(--font-burma); font-size:13px; }
+.micro-panel h3 { margin:0 0 5px; font-size:15px; }
+.micro-panel p { margin:4px 0; }
+.micro-panel__choices { display:grid; gap:4px; margin:7px 0; }
+.micro-panel__choice, .micro-panel button { border:1px solid var(--ink); border-radius:0; background:var(--paper); color:var(--ink); padding:4px 7px; text-align:left; font:inherit; }
+.micro-panel__choice:hover, .micro-panel button:hover { background:var(--accent-soft); }
+.micro-panel__meta { font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); }
+.pirch-marker--support { width:14px; height:14px; box-sizing:border-box; background:var(--positive); border:2px solid var(--ink); }
 
 @media (max-width: 720px) {
   .chat__body { grid-template-columns: 1fr; }

@@ -579,6 +579,9 @@ const state = {
   newsFilterRegion: 'all',
   newsSourceFilter: null,
   newsLayerOn: true,
+  supportLayerOn: false,
+  supportMarkers: [],
+  deskFilter: 'all',
   citiesLayerOn: false,
   radioLayerOn: true,
   tvLayerOn: true,
@@ -1251,8 +1254,35 @@ function refreshMarkers() {
   if (state.newsLayerOn) renderNewsMarkers(items.concat(state.userPins));
   else clearNewsMarkers();
   const inc = document.getElementById('mapIncCount');
-  if (inc) inc.textContent = newsMarkers.length + ' markers';
+  if (inc) inc.textContent = (newsMarkers.length + state.supportMarkers.length) + ' markers';
 }
+
+function renderSupportMarkers() {
+  state.supportMarkers.forEach((m) => { try { m.remove(); } catch (e) {} });
+  state.supportMarkers = [];
+  const points = (window.PirchOpportunitySafety && window.PirchOpportunitySafety.points) || [];
+  if (!map || !state.supportLayerOn) { refreshMarkers(); return; }
+  points.forEach((point) => {
+    const el = document.createElement('div');
+    el.className = 'pirch-marker pirch-marker--support';
+    el.title = point.title_en + ' · ' + point.tier;
+    el.addEventListener('click', (event) => { event.stopPropagation(); openSupportModal(point); });
+    state.supportMarkers.push(new maplibregl.Marker({element: el}).setLngLat([point.lng, point.lat]).addTo(map));
+  });
+  refreshMarkers();
+}
+
+function openSupportModal(point) {
+  const modal = $('#incidentModal'); const title = $('#incidentTitle'); const body = $('#incidentBody');
+  if (!modal || !title || !body) return;
+  title.textContent = point.title_en;
+  body.innerHTML = '<h3 lang="my">' + escapeHtml(point.title_my) + '</h3><h3>' + escapeHtml(point.title_en) + '</h3>' +
+    '<p lang="my">' + escapeHtml(point.summary_my) + '</p><p>' + escapeHtml(point.summary_en) + '</p>' +
+    '<div class="modal__meta"><div>Source tier: ' + escapeHtml(point.tier) + '</div><div>Reviewed: ' + escapeHtml((window.PirchOpportunitySafety || {}).reviewedAt || '—') + '</div><div>Map precision: ' + escapeHtml(point.precision) + '</div><div><a target="_blank" rel="noopener" href="' + escapeHtml(point.source_url) + '">Open ' + escapeHtml(point.source_name) + ' ↗</a></div></div>';
+  modal.hidden = false;
+}
+
+function toggleSupport() { state.supportLayerOn = !state.supportLayerOn; $$('.toolbar__btn[data-layer-toggle="support"]').forEach((b) => b.classList.toggle('is-pressed', state.supportLayerOn)); renderSupportMarkers(); }
 
 function fitAllMarkers() {
   if (!map) return;
@@ -1387,6 +1417,18 @@ function renderNews() {
 
   const c = $('#newsCount');
   if (c) c.textContent = items.length + (items.length === 1 ? ' item' : ' items');
+}
+
+const ACTION_DESK = [
+  {kind:'action', badge:'REFERENCE', title:'Thai paperwork: make a source checklist first', text:'Eligibility, cost and deadline are not confirmed by this static corpus. Check the official Thai channel and a trusted support organisation before paying anyone.', source:'Thailand Immigration Bureau', url:'https://www.immigration.go.th/', reviewed:'2026-09-22'},
+  {kind:'signal', badge:'UNVERIFIED', title:'Border-closure and amnesty posts', text:'Do not treat forwarded posts as a travel instruction. This desk has no live border feed and does not mark this claim Verified or Debunked without a dated primary source.', source:'Reference policy', url:'https://www.immigration.go.th/', reviewed:'2026-09-22'},
+  {kind:'opportunity', badge:'OPEN PROGRAMME', title:'ASEAN Ahead · digital skills pathway', text:'ASEAN Foundation announced a two-year youth workforce programme in February 2026. Read the official programme page for eligibility and current enrolment information.', source:'ASEAN Foundation', url:'https://aseanfoundation.org/advancing-future-skills-for-asean-youth-workforce-asean-foundation-and-linkedin-launch-asean-ahead-programme/', reviewed:'2026-09-22'}
+];
+
+function renderActionDesk() {
+  const wrap = $('#actionDeskList'); if (!wrap) return;
+  const items = ACTION_DESK.filter((item) => state.deskFilter === 'all' || item.kind === state.deskFilter);
+  wrap.innerHTML = items.map((item) => '<article class="desk-card"><div class="desk-card__meta"><span class="desk-badge">' + escapeHtml(item.badge) + '</span><span>' + escapeHtml(item.kind) + '</span><span>reviewed ' + escapeHtml(item.reviewed) + '</span></div><strong>' + escapeHtml(item.title) + '</strong><div>' + escapeHtml(item.text) + '</div><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">Open source ↗</a></article>').join('') || '<div class="desk-card">No entries in this view.</div>';
 }
 
 function focusOnItem(item) {
@@ -1560,6 +1602,7 @@ document.addEventListener('DOMContentLoaded', function () {
   $$('.toolbar__btn[data-layer-toggle="nasa"]').forEach((b) => b.addEventListener('click', toggleNasa));
   $$('.toolbar__btn[data-layer-toggle="quakes"]').forEach((b) => b.addEventListener('click', toggleQuakes));
   $$('.toolbar__btn[data-layer-toggle="news"]').forEach((b) => b.addEventListener('click', () => { state.newsLayerOn = !state.newsLayerOn; b.classList.toggle('is-pressed', state.newsLayerOn); refreshMarkers(); }));
+  $$('.toolbar__btn[data-layer-toggle="support"]').forEach((b) => b.addEventListener('click', toggleSupport));
   $$('.toolbar__btn[data-layer-toggle="rain"]').forEach((b) => b.addEventListener('click', toggleRain));
   $$('.toolbar__btn[data-layer-toggle="cities"]').forEach((b) => b.addEventListener('click', toggleCities));
   $$('.toolbar__btn[data-layer-toggle="radio"]').forEach((b) => b.addEventListener('click', toggleRadio));
@@ -1592,6 +1635,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }));
 
   // News load + periodic refresh
+  $$('#deskChips .chip').forEach((b) => b.addEventListener('click', () => { $$('#deskChips .chip').forEach((x) => x.classList.remove('chip--active')); b.classList.add('chip--active'); state.deskFilter = b.dataset.desk; renderActionDesk(); }));
+  renderActionDesk();
   loadNews();
   setInterval(loadNews, 120000);
 
