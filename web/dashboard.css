@@ -988,6 +988,21 @@ html, body {
   min-height: 0;
 }
 
+.room-topic {
+  padding: 3px 8px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-system);
+  font-size: 11px;
+  color: var(--ink-muted);
+  line-height: 1.4;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.room-topic[hidden] { display: none; }
+
 .action-desk { border-top: 1px solid var(--ink-muted); border-bottom: 1px solid var(--ink-muted); background: var(--chrome); padding: 6px 8px; }
 .action-desk__head { display:flex; justify-content:space-between; gap:8px; font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); }
 .action-desk__head strong { color:var(--ink); }

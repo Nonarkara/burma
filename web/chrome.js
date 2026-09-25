@@ -70,6 +70,7 @@ const MENUS = {
   layers: [
     { label: 'Toggle: Borders & Gates (Global Politics)', key: '', fn: () => clickToolbar('[data-layer-toggle="borders"]') },
     { label: 'Toggle: News markers', key: '', fn: () => clickToolbar('[data-layer-toggle="news"]') },
+    { label: 'Toggle: Support & Transit points', key: '', fn: () => clickToolbar('[data-layer-toggle="support"]') },
     { label: 'Toggle: Cities', key: '', fn: () => clickToolbar('[data-layer-toggle="cities"]') },
     { label: 'Toggle: Radio', key: '', fn: () => clickToolbar('[data-layer-toggle="radio"]') },
     { label: 'Toggle: TV', key: '', fn: () => clickToolbar('[data-layer-toggle="tv"]') },

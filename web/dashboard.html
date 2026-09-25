@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pirchchat — Dashboard</title>
 <meta name="description" content="A Burmese-language community dashboard. Real-time news, geocoded incidents on a map, persistent rooms. Win95 chrome.">
-<link rel="stylesheet" href="dashboard.css?v=20260917-geopolitics-flood">
+<link rel="stylesheet" href="dashboard.css?v=20260925-audit">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
@@ -47,29 +47,29 @@
     <div class="dropdown" id="mapMenu" hidden></div>
 
     <div class="toolbar" role="toolbar" aria-label="Map toolbar">
-      <button type="button" class="toolbar__btn is-pressed" data-layer="satellite" title="Satellite imagery">▢ Satellite</button>
-      <button type="button" class="toolbar__btn" data-layer="streets" title="Streets">▤ Streets</button>
-      <button type="button" class="toolbar__btn" data-layer="dark" title="Dark vector">▣ Dark</button>
-      <button type="button" class="toolbar__btn" data-layer="light" title="Light topo">▦ Topo</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer="satellite" title="Satellite imagery" data-en="▢ Satellite" data-my="▢ ဂြိုဟ်တု">▢ Satellite</button>
+      <button type="button" class="toolbar__btn" data-layer="streets" title="Streets" data-en="▤ Streets" data-my="▤ လမ်း">▤ Streets</button>
+      <button type="button" class="toolbar__btn" data-layer="dark" title="Dark vector" data-en="▣ Dark" data-my="▣ အမှောင်">▣ Dark</button>
+      <button type="button" class="toolbar__btn" data-layer="light" title="Light topo" data-en="▦ Topo" data-my="▦ မြေမျက်နှာ">▦ Topo</button>
       <span class="toolbar__sep"></span>
-      <button type="button" class="toolbar__btn" data-action="fit" title="Fit all markers">⌖ Fit</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="borders" title="National borders &amp; frontier gates (Global Politics)">● Borders</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="news" title="News incident markers">● News</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="support" title="Public support and transit reference points">● Support</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="cities" title="City markers">● Cities</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)">● Radio</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)">● TV</button>
-      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Ground rain radar overlay (RainViewer)">● Rain</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="himawari" title="Himawari-9 clean IR clouds (JAXA/JMA via GIBS)">☁ Himawari</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="gpmrain" title="GPM IMERG space rain rate (JAXA/NASA)">☔ Space Rain</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="viirsflood" title="NASA VIIRS 1-day flood composite">🌊 Flood</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="nasa" title="NASA Terra true-color, yesterday">◉ NASA</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="quakes" title="USGS earthquakes M4.5+, last 30 days">▲ Quakes</button>
-      <button type="button" class="toolbar__btn" data-action="add" title="Drop a manual pin">＋ Pin</button>
-      <button type="button" class="toolbar__btn" data-action="wx" title="Pick any point for live temperature / rain / wind">◍ Wx</button>
+      <button type="button" class="toolbar__btn" data-action="fit" title="Fit all markers" data-en="⌖ Fit" data-my="⌖ ကွက်တိ">⌖ Fit</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="borders" title="National borders & frontier gates (Global Politics)" data-en="● Borders" data-my="● နယ်စပ်">● Borders</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="news" title="News incident markers" data-en="● News" data-my="● သတင်း">● News</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="support" title="Public support and transit reference points" data-en="● Support" data-my="● ကူညီ">● Support</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="cities" title="City markers" data-en="● Cities" data-my="● မြို့">● Cities</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)" data-en="● Radio" data-my="● ရေဒီယို">● Radio</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)" data-en="● TV" data-my="● ရုပ်သံ">● TV</button>
+      <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Ground rain radar overlay (RainViewer)" data-en="● Rain" data-my="● မိုး">● Rain</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="himawari" title="Himawari-9 clean IR clouds (JAXA/JMA via GIBS)" data-en="☁ Himawari" data-my="☁ ဆီမွာရီ">☁ Himawari</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="gpmrain" title="GPM IMERG space rain rate (JAXA/NASA)" data-en="☔ Space Rain" data-my="☔ အာကာသမိုး">☔ Space Rain</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="viirsflood" title="NASA VIIRS 1-day flood composite" data-en="🌊 Flood" data-my="🌊 ရေကြီး">🌊 Flood</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="nasa" title="NASA Terra true-color, yesterday" data-en="◉ NASA" data-my="◉ NASA">◉ NASA</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="quakes" title="USGS earthquakes M4.5+, last 30 days" data-en="▲ Quakes" data-my="▲ ငလျင်">▲ Quakes</button>
+      <button type="button" class="toolbar__btn" data-action="add" title="Drop a manual pin" data-en="＋ Pin" data-my="＋ အမှတ်">＋ Pin</button>
+      <button type="button" class="toolbar__btn" data-action="wx" title="Pick any point for live temperature / rain / wind" data-en="◍ Wx" data-my="◍ ရာသီဥတု">◍ Wx</button>
       <span class="toolbar__sep"></span>
-      <button type="button" class="toolbar__btn" data-action="guide" title="Survival guide — visa, clinics, housing, rates">✎ Guide</button>
-      <button type="button" class="toolbar__btn" data-action="hotlines" title="Human hotlines — 1300, clinics">＋ Hotlines</button>
+      <button type="button" class="toolbar__btn" data-action="guide" title="Survival guide — visa, clinics, housing, rates" data-en="✎ Guide" data-my="✎ လမ်းညွှန်">✎ Guide</button>
+      <button type="button" class="toolbar__btn" data-action="hotlines" title="Human hotlines — 1300, clinics" data-en="＋ Hotlines" data-my="＋ ဟိုတ်လိုင်း">＋ Hotlines</button>
     </div>
 
     <div class="linkbar">
@@ -194,6 +194,8 @@
         <button type="button" class="menubar__item" id="chatHelp" title="Chat commands and ground rules">?</button>
       </nav>
 
+      <div class="room-topic" id="roomTopic" hidden></div>
+
       <div class="chipbar" id="topicChips" role="toolbar" aria-label="Filter messages by topic">
         <button type="button" class="chip chip--active" data-topic="all">All</button>
         <button type="button" class="chip" data-topic="jobs">Jobs</button>
@@ -222,13 +224,19 @@
       </div>
 
       <p class="chat-notice">အများမြင် စကားဝိုင်း · Public chat is saved. Use a nickname; do not share personal details.</p>
+      <footer class="statusbar" aria-label="Chat status bar">
+        <span class="statusbar__item"><span class="led led--on" aria-hidden="true" id="chatLed"></span><span id="chatStatus">Chat · connecting…</span></span>
+        <span class="statusbar__item" id="chatMembers">— in room</span>
+        <span class="statusbar__spacer"></span>
+        <span class="statusbar__item">pirchchat · public · saved</span>
+      </footer>
       <form class="composer" id="composer" autocomplete="off">
         <label class="composer__attach" title="Attach image">
           <input type="file" id="fileInput" accept="image/*" hidden>
           <span aria-hidden="true">＋</span>
         </label>
-        <input type="text" name="msg" id="input" class="composer__input" placeholder="Type a Burmese or English message…  URLs become preview cards" aria-label="Message">
-        <button type="submit" class="composer__send">Send</button>
+        <input type="text" name="msg" id="input" class="composer__input" placeholder="မြန်မာ သို့မဟုတ် အင်္ဂလိပ် ရိုက်ထည့်ပါ — Enter နှိပ်ပါ" aria-label="Message">
+        <button type="submit" class="composer__send">ပို့ · Send</button>
       </form>
     </section>
 
@@ -241,22 +249,26 @@
   <div class="modal__panel">
     <div class="titlebar">
       <span class="titlebar__dot" aria-hidden="true"></span>
-      <span class="titlebar__title">Pirchchat — Who are you?</span>
+      <span class="titlebar__title">Pirchchat — သင်ဘယ်သူလဲ · Who are you?</span>
       <span class="titlebar__spacer"></span>
     </div>
     <div class="modal__body">
-      <p class="modal__intro"><strong>Welcome.</strong> Pirchchat is a quiet room for people who care about Burmese communities. Pick a name. The community stays small by people inviting people.</p>
+      <p class="modal__intro" lang="my">အမည် တစ်ခု ရွေးပါ။ အသိုင်းအဝိုင်းက လူချင်း ယုံကြည်မှုနှင့် ချဲ့သည်။</p>
+      <p class="modal__intro"><strong>Pick a name.</strong> The community stays small by people inviting people.</p>
 
       <label class="modal__field">
-        <span>Display name</span>
-        <input type="text" id="identityName" maxlength="32" placeholder="How should others see you?" autocomplete="off">
+        <span>ပေါ်လာမည့် အမည် · Display name</span>
+        <input type="text" id="identityName" maxlength="32" placeholder="အမည် ရိုက်ထည့်ပါ (Nickname)" autocomplete="off">
       </label>
 
       <div class="modal__rules">
-        <strong>Ground rules:</strong>
+        <strong>Ground rules — စည်းကမ်း</strong>
         <ul>
+          <li lang="my">အခန်းအတွင်း အသုံးဝင်ပါ။ စပမ် မထည့်ပါနှင့်။</li>
           <li>Be useful to the room. No spam. No politics of personal grievance.</li>
-          <li>Burmese first, English second. Use a nickname. Do not share names, contact details or precise locations.</li>
+          <li lang="my">မြန်မာစကား အဓိက၊ အင်္ဂလိပ် ဒုတိယ။ ကိုယ်ရေးအချက်အလက် မထည့်ပါနှင့်။</li>
+          <li>Burmese first, English second. Do not share names, contact details or precise locations.</li>
+          <li lang="my">အမည်က ဒီဘရောက်ဇာမှာသာ သိမ်းသည်။ အတည်ပြုအကောင့် မဟုတ်ပါ။</li>
           <li>Your nickname is saved on this browser. It is not a verified identity or an account; recovery is not available.</li>
         </ul>
       </div>
@@ -308,8 +320,8 @@
 
 <script src="survival.js?v=20260916-audit"></script>
 <script src="data/opportunity-safety.js?v=20260922-c2"></script>
-<script src="dashboard.js?v=20260917-geopolitics-flood"></script>
-<script src="chat-client.js?v=20260917-geopolitics-flood"></script>
-<script src="chrome.js?v=20260917-geopolitics-flood"></script>
+<script src="dashboard.js?v=20260925-audit"></script>
+<script src="chat-client.js?v=20260925-audit"></script>
+<script src="chrome.js?v=20260925-audit"></script>
 </body>
 </html>

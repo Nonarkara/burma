@@ -455,27 +455,27 @@ function buildTvPanel() {
 }
 
 // Chat status indicator — surface the WS connection state in the status bar.
-let chatWSPingTimer = null;
-
 function startChatStatusIndicator() {
-  const statusBar = document.querySelector('.chat .statusbar');
-  if (!statusBar) return;
-  const span = document.createElement('span');
-  span.className = 'statusbar__item';
-  span.id = 'chatStatus';
-  span.textContent = 'Chat · connecting…';
-  statusBar.insertBefore(span, statusBar.firstChild);
+  const statusEl = document.getElementById('chatStatus');
+  const ledEl = document.getElementById('chatLed');
+  const membersEl = document.getElementById('chatMembers');
+  if (!statusEl) return;
 
-  // Poll window.__pirchchatClient every 2s for WS state.
+  // Poll window.__pirchchatClient every 2s for WS state and member count.
   setInterval(() => {
-    const text = span.textContent;
-    const conn = window.__pirchchatClient && window.__pirchchatClient.state;
+    const client = window.__pirchchatClient;
+    const conn = client && client.state;
     if (conn && conn.ws && conn.ws.readyState === 1) {
-      span.textContent = 'Chat · live · ' + (conn.currentRoom || '—');
-      span.style.color = 'var(--positive)';
+      statusEl.textContent = 'Chat · live · ' + (conn.currentRoom || '—');
+      statusEl.style.color = 'var(--positive)';
+      if (ledEl) ledEl.className = 'led led--on';
     } else {
-      span.textContent = 'Chat · reconnecting…';
-      span.style.color = 'var(--ink-muted)';
+      statusEl.textContent = 'Chat · reconnecting…';
+      statusEl.style.color = 'var(--ink-muted)';
+      if (ledEl) ledEl.className = 'led';
+    }
+    if (membersEl && conn && Array.isArray(conn.members)) {
+      membersEl.textContent = conn.members.length + (conn.members.length === 1 ? ' member' : ' members');
     }
   }, 2000);
 }

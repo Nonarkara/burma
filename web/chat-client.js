@@ -252,12 +252,30 @@ function appendSystemMessage(text) {
   wrap.scrollTop = wrap.scrollHeight;
 }
 
+const ROOM_TOPICS = {
+  'monastic-youth': 'Monastic education, novice monks, transitioning out, Burmese diaspora in Mae Sot and Chiang Mai. Open to anyone passing through.',
+  'bkk-burmese': 'Bangkok diaspora. Housing, paperwork, food, work, school, language. Burmese-first.',
+  'cm-burmese': 'Chiang Mai diaspora. Lanna, language exchange, weekend meetups.',
+  'digest-today': 'Today\'s Burmese-language news digest. Auto-posted 06:00 ICT. Discussion welcome.',
+  'listening-club': 'What people are saying across Burmese-language sources. Surfaced trends only.',
+};
+
 // ===== Rendering =====
 
 function renderRoomTitle(room) {
   const t = document.getElementById('chatRoomTitle');
   if (t) t.textContent = room.title || ('#' + room.id);
-
+  const topicEl = document.getElementById('roomTopic');
+  if (topicEl) {
+    const topic = room.topic || ROOM_TOPICS[room.id] || '';
+    if (topic) {
+      topicEl.textContent = topic;
+      topicEl.hidden = false;
+    } else {
+      topicEl.textContent = '';
+      topicEl.hidden = true;
+    }
+  }
 }
 
 function renderMembers() {
