@@ -7,7 +7,7 @@ import { webcrypto } from 'node:crypto';
 function client(fetchImpl = async () => ({ok:true,json:async()=>({rooms:[],messages:[]})})) {
   const elements = new Map();
   const el = (id) => {
-    if (!elements.has(id)) elements.set(id,{value:'',textContent:'',innerHTML:'',placeholder:'',children:[],appendChild(n){this.children.push(n);},classList:{toggle(){},add(){},remove(){}}});
+    if (!elements.has(id)) elements.set(id,{value:'',textContent:'',innerHTML:'',placeholder:'',children:[],querySelector(){return null;},appendChild(n){this.children.push(n);},classList:{toggle(){},add(){},remove(){}}});
     return elements.get(id);
   };
   const timers = new Map(); let timerId=0;
@@ -43,7 +43,7 @@ test('out-of-order room fetch cannot replace the newest room',async()=>{
   waiting[0](response({rooms:[]}));await new Promise(setImmediate);
   if(waiting[3]) waiting[3](response({messages:[{id:'old',body_html:'old room'}]}));
   await a;assert.equal(c.state.currentRoom,'bkk-burmese');assert.equal(c.state.history[0].id,'new');
-  assert.equal(c.Socket.all.length,1);
+  assert.equal(c.Socket.all.filter((s)=>!s.url.includes('silent=1')).length,1);
 });
 
 test('failed send retains the draft',async()=>{

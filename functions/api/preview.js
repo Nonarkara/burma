@@ -5,8 +5,9 @@ function publicHttpUrl(value) {
   const u = new URL(value);
   const host = u.hostname.toLowerCase().replace(/\.$/, '');
   if (!/^https?:$/.test(u.protocol) || u.username || u.password ||
-      !host.includes('.') || host.endsWith('.localhost') || host.endsWith('.local') ||
-      host.startsWith('[') || /^(0|10|127|169\.254|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(host)) {
+      !host.includes('.') || /\.(localhost|local|internal|invalid|test)$/.test(host) ||
+      (u.port && u.port !== '80' && u.port !== '443') ||
+      host.startsWith('[') || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
     throw new Error('URL must be a public HTTP(S) website');
   }
   return u;
@@ -93,8 +94,8 @@ export async function onRequestGet(context) {
     const description = ogDesc || twDesc || '';
     let image = ogImage || twImage || '';
 
-    if (image && !/^https?:/i.test(image)) {
-      try { image = new URL(image, parsed).toString(); } catch (e) { image = ''; }
+    if (image) {
+      try { image = publicHttpUrl(new URL(image, parsed).href).href; } catch (e) { image = ''; }
     }
 
     return new Response(JSON.stringify({
@@ -114,7 +115,7 @@ export async function onRequestGet(context) {
       },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: 'fetch_error', message: String(e && e.message || e) }), {
+    return new Response(JSON.stringify({ ok: false, error: 'fetch_error' }), {
       status: 504,
       headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' },
     });

@@ -14,6 +14,71 @@
 
 const HISTORY_LIMIT = 50;
 const RATE_LIMIT_PER_MIN = 12;
+const MAX_JSON_BYTES = 16 * 1024;
+
+// Enforce actual streamed bytes; Content-Length alone is not trustworthy.
+export async function readLimitedBody(request, maxBytes) {
+  if (Number(request.headers.get('content-length')) > maxBytes) {
+    throw Object.assign(new Error('payload_too_large'), { status: 413 });
+  }
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks = []; let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) throw Object.assign(new Error('payload_too_large'), { status: 413 });
+      chunks.push(value);
+    }
+  } finally { await reader.cancel(); }
+  const bytes = new Uint8Array(size); let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
+}
+
+async function readJson(request) {
+  const bytes = await readLimitedBody(request, MAX_JSON_BYTES);
+  try {
+    const body = JSON.parse(new TextDecoder().decode(bytes));
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error();
+    return body;
+  } catch { throw Object.assign(new Error('invalid_json'), { status: 400 }); }
+}
+
+function publicWatchUrl(value) {
+  try {
+    const u = new URL(value);
+    if (u.protocol !== 'https:' || u.username || u.password || u.href.length > 2048) throw new Error();
+    return u.href;
+  } catch { throw Object.assign(new Error('invalid_watch_url'), { status: 400 }); }
+}
+
+/**
+ * sanitizeBody — the stored message is TEXT, never HTML.
+ * Decode entities, strip tags, re-escape, then wrap Burmese-script runs in
+ * our own span for rendering. Kills the &-entity bypass (<img onerror>
+ * decodes to a live tag if stored verbatim) at the source, for all viewers.
+ */
+function sanitizeBody(value) {
+  const text = String(value || '')
+    .replace(/&#0*39;|'/gi, "'")
+    .replace(/\u0026lt;/gi, '<')
+    .replace(/\u0026gt;/gi, '>')
+    .replace(/\u0026quot;/gi, '"')
+    .replace(/\u0026amp;/gi, '&')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '');
+  const escaped = text
+    .replace(/&/g, '\u0026amp;')
+    .replace(/</g, '\u0026lt;')
+    .replace(/>/g, '\u0026gt;')
+    .replace(/"/g, '\u0026quot;');
+  return escaped
+    .replace(/[\u1000-\u109F][\u1000-\u109F\s]*/g, '<span lang="my">$&</span>')
+    .replace(/\n/g, '<br>');
+}
 
 export class ChatRoomDO {
   constructor(state, env) {
@@ -23,6 +88,7 @@ export class ChatRoomDO {
     this.history = [];           // rolling in-memory cache
     this.messageTimes = new Map(); // pubkey -> ms timestamps in last 60s (per-user rate limit)
     this.started = false;
+    this.watchState = null;      // {url, kind, name, by_name, by_pubkey, ts}
   }
 
   async ensureStarted() {
@@ -47,12 +113,13 @@ export class ChatRoomDO {
     catch (e) { return jsonResponse({ ok: false, error: 'storage_unavailable' }, 503); }
     const url = new URL(request.url);
     const path = url.pathname;
+    const roomId = this.state.id.toString();
 
     if (path === '/' || path === '') {
       return this.handleWebSocket(request);
     }
 
-    if (path.endsWith('/history')) {
+    if (path === '/history' && request.method === 'GET') {
       const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit')) || HISTORY_LIMIT, HISTORY_LIMIT));
       // Always read fresh from D1 for the GET endpoint, so a fresh tab on another device sees the latest.
       try {
@@ -63,13 +130,13 @@ export class ChatRoomDO {
         const history = (rows.results || []).reverse();
         return jsonResponse({ ok: true, room: roomId, messages: history });
       } catch (e) {
-        return jsonResponse({ ok: false, error: String(e && e.message || e), messages: this.history.slice(-limit) }, 500);
+        return jsonResponse({ ok: false, error: 'storage_unavailable', messages: this.history.slice(-limit) }, 503);
       }
     }
 
-    if (path.endsWith('/message') && request.method === 'POST') {
+    if (path === '/message' && request.method === 'POST') {
       try {
-        const body = await request.json();
+        const body = await readJson(request);
         const msg = await this.handlePost(body, request.headers.get('CF-Connecting-IP') || request.headers.get('x-pirchchat-identity') || 'anonymous');
         if (!msg) return jsonResponse({ ok: false, error: 'rate_limited' }, 429);
         return jsonResponse({ ok: true, id: msg.id, ts: msg.ts, message: msg });
@@ -78,44 +145,105 @@ export class ChatRoomDO {
       }
     }
 
-    if (path.endsWith('/pin') && request.method === 'POST') {
+    if (path === '/pin' && request.method === 'POST') {
       try {
-        const body = await request.json();
+        const body = await readJson(request);
+        if (!Number.isFinite(body.lat) || !Number.isFinite(body.lng) ||
+            Math.abs(body.lat) > 90 || Math.abs(body.lng) > 180 ||
+            (body.note != null && (typeof body.note !== 'string' || body.note.length > 500))) {
+          return jsonResponse({ ok: false, error: 'invalid_pin' }, 400);
+        }
+        if (!this.allowMutation(request.headers.get('CF-Connecting-IP') || 'anonymous')) return jsonResponse({ ok: false, error: 'rate_limited' }, 429);
         const id = crypto.randomUUID();
         const ts = Date.now();
         await this.env.DB.prepare(
           'INSERT INTO pinned_locations (id, pubkey, lat, lng, note, ts) VALUES (?, ?, ?, ?, ?, ?)'
-        ).bind(id, body.pubkey || 'anon', body.lat, body.lng, body.note || '', ts).run();
+        ).bind(id, String(body.pubkey || 'anon').slice(0, 128), body.lat, body.lng, body.note || '', ts).run();
         return jsonResponse({ ok: true, id });
       } catch (e) {
-        return jsonResponse({ ok: false, error: String(e && e.message || e) }, 400);
+        return jsonResponse({ ok: false, error: e.status ? e.message : 'storage_unavailable' }, e.status || 503);
       }
     }
 
-    if (path.endsWith('/pins')) {
+    if (path === '/pins' && request.method === 'GET') {
       try {
         const rows = await this.env.DB.prepare(
           'SELECT id, pubkey, lat, lng, note, ts FROM pinned_locations ORDER BY ts DESC LIMIT 200'
         ).all();
         return jsonResponse({ ok: true, pins: rows.results || [] });
       } catch (e) {
-        return jsonResponse({ ok: false, error: String(e && e.message || e) }, 500);
+        return jsonResponse({ ok: false, error: 'storage_unavailable' }, 503);
+      }
+    }
+
+    // ---- watch-together endpoints ----
+    if (path === '/watch' && request.method === 'GET') {
+      try {
+        // Ensure table exists
+        await this.env.DB.prepare(
+          'CREATE TABLE IF NOT EXISTS watch_state (room_id TEXT PRIMARY KEY, url TEXT, kind TEXT, name TEXT, by_name TEXT, by_pubkey TEXT, ts TEXT)'
+        ).run();
+        const row = await this.env.DB.prepare(
+          'SELECT url, kind, name, by_name, by_pubkey, ts FROM watch_state WHERE room_id = ?'
+        ).bind(roomId).first();
+        return jsonResponse({ ok: true, state: row || null });
+      } catch (e) {
+        return jsonResponse({ ok: false, error: 'storage_unavailable' }, 503);
+      }
+    }
+
+    if (path === '/watch' && request.method === 'POST') {
+      try {
+        const body = await readJson(request);
+        if (body.stop !== true) publicWatchUrl(body.url);
+        if (!this.allowMutation(request.headers.get('CF-Connecting-IP') || 'anonymous')) return jsonResponse({ ok: false, error: 'rate_limited' }, 429);
+        // Ensure table exists
+        await this.env.DB.prepare(
+          'CREATE TABLE IF NOT EXISTS watch_state (room_id TEXT PRIMARY KEY, url TEXT, kind TEXT, name TEXT, by_name TEXT, by_pubkey TEXT, ts TEXT)'
+        ).run();
+        const stop = body.stop === true;
+        if (stop) {
+          // Clear watch state
+          await this.env.DB.prepare(
+            'DELETE FROM watch_state WHERE room_id = ?'
+          ).bind(roomId).run();
+          this.watchState = null;
+          this.broadcast({ type: 'watch', state: null });
+          return jsonResponse({ ok: true, stopped: true });
+        }
+        const url = publicWatchUrl(body.url);
+        const kind = body.kind === 'hls' ? 'hls' : 'link';
+        const name = String(body.name || 'Watch together').slice(0, 160);
+        const { by_name, by_pubkey } = body;
+        const identity = (by_name || by_pubkey || 'anon').toString().slice(0, 32);
+        const ts = Date.now().toString();
+        await this.env.DB.prepare(
+          'INSERT OR REPLACE INTO watch_state (room_id, url, kind, name, by_name, by_pubkey, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(roomId, url, kind || 'hls', name || 'Watch together', identity, identity, ts).run();
+        this.watchState = { url, kind: kind || 'hls', name: name || 'Watch together', by_name: identity, by_pubkey: identity, ts };
+        this.broadcast({ type: 'watch', state: this.watchState });
+        return jsonResponse({ ok: true, state: this.watchState });
+      } catch (e) {
+        return jsonResponse({ ok: false, error: e.status ? e.message : 'storage_unavailable' }, e.status || 503);
       }
     }
 
     return new Response('Not found', { status: 404 });
   }
 
-  handleWebSocket(request) {
+  async handleWebSocket(request) {
     const upgrade = request.headers.get('upgrade');
     if (upgrade !== 'websocket') {
       return new Response('Expected WebSocket', { status: 426 });
     }
+    if (this.sessions.length >= 200) return jsonResponse({ ok: false, error: 'room_capacity' }, 429);
+    const url = new URL(request.url);
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
     const sessionId = crypto.randomUUID();
-    const identity = (new URL(request.url).searchParams.get('nick') || 'guest').slice(0, 32);
+    const identity = (url.searchParams.get('nick') || 'guest').slice(0, 32);
+    const silent = url.searchParams.get('silent') === '1';
     const rateKey = request.headers.get('CF-Connecting-IP') || 'anonymous';
     const roomId = this.state.id.toString();
 
@@ -125,22 +253,31 @@ export class ChatRoomDO {
     server.accept();
     const response = new Response(null, { status: 101, webSocket: client });
 
-    const session = { sessionId, identity, rateKey, ws: server, joinedAt: Date.now() };
+    // Silent sessions listen for unread badges only: no join/leave noise to
+    // other users, no presence entry, no history payload.
+    const session = { sessionId, identity, rateKey, ws: server, joinedAt: Date.now(), silent };
     this.sessions.push(session);
-    this.broadcastPresence();
+    if (!silent) this.broadcastPresence();
 
-    // Send initial history (newest last) + a join event
-    try {
-      server.send(JSON.stringify({ type: 'history', room: roomId, messages: this.history }));
-      this.broadcast({
-        type: 'event',
-        event: 'join',
-        id: crypto.randomUUID(),
-        room: roomId,
-        identity,
-        ts: Date.now(),
-      });
-    } catch (e) {}
+    if (!silent) {
+      try {
+        // Fresh from D1 (not the in-memory cache) so a purge or another
+        // device's writes are reflected on the next connection.
+        const rows = await this.env.DB.prepare(
+          'SELECT id, author_name, author_pubkey, body_html, image_url, link_preview_json, topics, ts FROM messages WHERE room_id = ? ORDER BY ts DESC LIMIT ?'
+        ).bind(roomId, HISTORY_LIMIT).all();
+        this.history = (rows.results || []).reverse();
+        server.send(JSON.stringify({ type: 'history', room: roomId, messages: this.history }));
+        this.broadcast({
+          type: 'event',
+          event: 'join',
+          id: crypto.randomUUID(),
+          room: roomId,
+          identity,
+          ts: Date.now(),
+        });
+      } catch (e) {}
+    }
 
     server.addEventListener('message', (event) => {
       this.handleWsMessage(session, event.data || event).catch(() => {
@@ -150,17 +287,19 @@ export class ChatRoomDO {
     server.addEventListener('close', () => {
       try { server.close(1000, 'Closed'); } catch (e) {}
       this.sessions = this.sessions.filter((s) => s.sessionId !== sessionId);
-      this.broadcastPresence();
-      try {
-        this.broadcast({
-          type: 'event',
-          event: 'leave',
-          id: crypto.randomUUID(),
-          room: roomId,
-          identity,
-          ts: Date.now(),
-        });
-      } catch (e) {}
+      if (!silent) {
+        this.broadcastPresence();
+        try {
+          this.broadcast({
+            type: 'event',
+            event: 'leave',
+            id: crypto.randomUUID(),
+            room: roomId,
+            identity,
+            ts: Date.now(),
+          });
+        } catch (e) {}
+      }
     });
     server.addEventListener('error', () => {});
 
@@ -168,6 +307,10 @@ export class ChatRoomDO {
   }
 
   async handleWsMessage(session, raw) {
+    if (typeof raw !== 'string' || new TextEncoder().encode(raw).byteLength > MAX_JSON_BYTES) {
+      session.ws.send(JSON.stringify({ type: 'error', error: 'payload_too_large' }));
+      return;
+    }
     let data;
     try { data = JSON.parse(raw); } catch (e) { return; }
     if (!data || typeof data !== 'object') return;
@@ -184,18 +327,8 @@ export class ChatRoomDO {
     const author = (body.author_name || '').toString().slice(0, 32) || 'guest';
     const pubkey = (body.author_pubkey || '').toString().slice(0, 128) || 'anon';
 
-    rateKey = rateKey || pubkey;
-    for (const [key, entries] of this.messageTimes) {
-      if (!entries.some((t) => now - t < 60000)) this.messageTimes.delete(key);
-    }
-    // Per-user rate limit (12/min per network ID — one spammer no longer
-    // throttles the whole room).
-    let times = this.messageTimes.get(rateKey) || [];
-    times = times.filter((t) => now - t < 60000);
-    if (times.length >= RATE_LIMIT_PER_MIN) return null;
-    times.push(now);
-    this.messageTimes.set(rateKey, times);
-    const bodyHtml = (body.body_html || body.body_text || '').toString().slice(0, 4000);
+    if (!this.allowMutation(rateKey || pubkey)) return null;
+    const bodyHtml = sanitizeBody(body.body_html || body.body_text || '').slice(0, 4000);
     const imageUrl = body.image_url ? String(body.image_url).slice(0, 600) : '';
     const linkPreview = body.link_preview ? JSON.stringify(body.link_preview).slice(0, 4000) : '';
     const topics = (body.topics || '').toString().slice(0, 200);
@@ -207,15 +340,10 @@ export class ChatRoomDO {
       throw Object.assign(new Error('invalid_image'), {status:400});
     }
 
-    // Persist
-    try {
-      await this.env.DB.prepare(
-        'INSERT INTO messages (id, room_id, author_name, author_pubkey, body_html, image_url, link_preview_json, topics, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).bind(id, roomId, author, pubkey, bodyHtml, imageUrl, linkPreview, topics, ts).run();
-    } catch (e) {
-      // An acknowledgement promises durable storage. Never fan out an unsaved post.
-      throw e;
-    }
+    // Persist before acknowledgement or broadcast.
+    await this.env.DB.prepare(
+      'INSERT INTO messages (id, room_id, author_name, author_pubkey, body_html, image_url, link_preview_json, topics, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(id, roomId, author, pubkey, bodyHtml, imageUrl, linkPreview, topics, ts).run();
 
     const msg = { id, room: roomId, author_name: author, author_pubkey: pubkey, body_html: bodyHtml, image_url: imageUrl, link_preview_json: linkPreview, topics, ts };
     this.history.push(msg);
@@ -224,8 +352,24 @@ export class ChatRoomDO {
     return msg;
   }
 
+  allowMutation(rateKey) {
+    const now = Date.now();
+    for (const [key, entries] of this.messageTimes) {
+      if (!entries.some((t) => now - t < 60000)) this.messageTimes.delete(key);
+    }
+    // Per-user rate limit (12/min per network ID — one spammer no longer
+    // throttles the whole room).
+    let times = this.messageTimes.get(rateKey) || [];
+    times = times.filter((t) => now - t < 60000);
+    if (times.length >= RATE_LIMIT_PER_MIN) return false;
+    times.push(now);
+    this.messageTimes.set(rateKey, times);
+    return true;
+  }
+
   broadcastPresence() {
-    this.broadcast({ type: 'presence', members: this.sessions.map((s) => ({ nick: s.identity, role: '' })) });
+    // Silent badge sockets are not members — only real sessions appear.
+    this.broadcast({ type: 'presence', members: this.sessions.filter((s) => !s.silent).map((s) => ({ nick: s.identity, role: '' })) });
   }
 
   broadcast(payload) {

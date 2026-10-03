@@ -17,11 +17,19 @@ database_id = "2f3d42a4-ba2b-4b18-bbfb-f6f251979d8d"
 binding = "UPLOADS"
 bucket_name = "pirchchat-uploads"
 
-# Durable Object — one instance per room
+# Durable Objects — one ChatRoomDO per room + one RateLimiterDO for uploads
 [[durable_objects.bindings]]
 name = "CHAT_ROOM"
 class_name = "ChatRoomDO"
 
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiterDO"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ChatRoomDO"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["RateLimiterDO"]
