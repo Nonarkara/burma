@@ -1,0 +1,298 @@
+/* Pirchchat — research.html (Institutional register).
+   A briefing document, not a product UI: light ground, print-safe,
+   one reading path, generous whitespace. Diagrams obey data-display:
+   bars start at zero, one accent (saffron), source + method + date visible.
+   House invariants hold: zero radius, no gradients, no shadows. */
+
+:root {
+  --paper:         #faf9f7;
+  --chrome:        #e8e3d8;
+  --chrome-dark:   #d4ccba;
+  --ink:           #102a43;
+  --ink-muted:     #486581;
+  --rule:          #8b7d5e;
+  --accent:        #d4a017;
+  --accent-soft:   #f6e9c4;
+  --positive:      #2e7d32;
+  --negative:      #a51931;
+  --border-hair:   1px solid var(--rule);
+  --border-strong: 2px solid var(--ink);
+  --font-display:  'IBM Plex Serif', Georgia, serif;
+  --font-body:     'IBM Plex Sans', 'IBM Plex Sans Thai', system-ui, sans-serif;
+  --font-mono:     'IBM Plex Mono', ui-monospace, monospace;
+  --font-thai:     'IBM Plex Sans Thai', 'Leelawadee UI', sans-serif;
+  --font-burma:    'Noto Sans Myanmar', 'Pyidaungsu', sans-serif;
+}
+
+*, *::before, *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--accent); }
+::selection { background: #f0c800; color: var(--ink); }
+
+.frame {
+  max-width: 980px;
+  margin: 0 auto;
+  border-top: var(--border-strong);
+  border-bottom: var(--border-strong);
+  background: var(--paper);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Bar (tab-like) ===== */
+.bar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--chrome);
+  border-bottom: var(--border-hair);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.bar__dot { width: 8px; height: 8px; background: var(--accent); margin-right: 8px; }
+.bar__spacer { flex: 1; }
+.bar__meta { font-family: var(--font-mono); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
+
+/* ===== Poster header ===== */
+.research {
+  padding: 0;
+  flex: 1;
+}
+.poster {
+  padding: 56px 48px 40px;
+}
+@media (max-width: 720px) { .poster { padding: 32px 20px 24px; } }
+
+.poster__brand {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-muted);
+  margin: 0 0 20px;
+  padding-bottom: 12px;
+  border-bottom: var(--border-hair);
+}
+
+.poster__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(34px, 6vw, 58px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.poster__title-thai {
+  display: block;
+  font-family: var(--font-thai);
+  font-weight: 700;
+  font-size: clamp(22px, 3.6vw, 32px);
+  line-height: 1.4;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.poster__verdict {
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1.5;
+  margin: 20px 0 0;
+  max-width: 620px;
+}
+.poster__verdict strong { color: var(--accent); }
+
+.poster__method {
+  margin: 16px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ink-muted);
+  max-width: 620px;
+}
+
+/* ===== Sections ===== */
+.rule { border: none; border-top: var(--border-hair); margin: 0 48px; }
+@media (max-width: 720px) { .rule { margin: 0 20px; } }
+
+.section {
+  padding: 40px 48px;
+}
+@media (max-width: 720px) { .section { padding: 24px 20px; } }
+
+.section__head { margin: 0 0 20px; }
+.section__no {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+.section__title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 4px 0 4px;
+  line-height: 1.15;
+}
+.section__title-thai {
+  font-family: var(--font-thai);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+.section__sub {
+  font-size: 14px;
+  color: var(--ink-muted);
+  max-width: 640px;
+  margin: 8px 0 0;
+}
+
+/* Thai body text */
+.thai {
+  font-family: var(--font-thai);
+  line-height: 1.8;
+}
+[lang="th"] { font-family: var(--font-thai); line-height: 1.8; }
+
+/* ===== Diagrams ===== */
+.diagram {
+  margin: 20px 0 8px;
+  border-top: var(--chrome-edge, #fff);
+  background: var(--paper);
+  border: var(--border-hair);
+  padding: 12px;
+  overflow-x: auto;
+}
+.diagram svg { display: block; min-width: 640px; width: 100%; height: auto; }
+.diagram__caption {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+/* SVG primitives (shared shape language) */
+.d-box-label { font-family: var(--font-mono); font-size: 11px; font-weight: 500; fill: var(--ink); }
+.d-box-sub { font-family: var(--font-mono); font-size: 9px; fill: var(--ink-muted); }
+.d-col-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; fill: var(--ink); }
+.d-vertex { fill: var(--accent); stroke: none; }
+
+/* ===== Source table ===== */
+.src-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border-top: var(--border-hair);
+  border-bottom: var(--border-hair);
+}
+.src-table th, .src-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: var(--border-hair);
+  vertical-align: top;
+}
+.src-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+  background: var(--chrome);
+}
+.src-table td:first-child { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.src-table .tier-ok {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--chrome-light, #faf9f7);
+  background: var(--positive);
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.src-table .tier-note { font-family: var(--font-mono); font-size: 10px; color: var(--ink-muted); }
+
+/* ===== What needs humans ===== */
+.human-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.human-card {
+  border: var(--border-hair);
+  background: var(--paper);
+  padding: 12px 14px;
+}
+.human-card__title { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+.human-card__body { font-size: 12.5px; color: var(--ink-muted); line-height: 1.55; }
+.human-card__body[lang="th"] { color: var(--ink); }
+
+/* ===== Answer summary (the one idea) ===== */
+.verdict-band {
+  background: var(--accent-soft);
+  border-top: 2px solid var(--accent);
+  border-bottom: 1px solid var(--rule);
+  padding: 20px 24px;
+  margin: 24px 0 0;
+  max-width: 640px;
+}
+.verdict-band p { margin: 0; font-family: var(--font-display); font-size: 17px; line-height: 1.55; }
+.verdict-band p[lang="th"] { font-family: var(--font-thai); font-size: 16px; margin-top: 8px; }
+
+/* ===== Colophon ===== */
+.colophon {
+  padding: 24px 48px 48px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.colophon p { margin: 0 0 6px; max-width: 720px; }
+
+/* ===== Statusbar ===== */
+.statusbar {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 12px;
+  background: var(--chrome);
+  border-top: var(--border-hair);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  gap: 18px;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+}
+.statusbar__spacer { flex: 1; }
+.statusbar__item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+.led { display: inline-block; width: 8px; height: 8px; background: var(--positive); }

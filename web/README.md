@@ -15,6 +15,25 @@ This is the only deployable surface today, at `https://burma-a3k.pages.dev`. The
 - **Map evidence layers** — NASA GIBS MODIS Terra true-color (yesterday, no key), USGS earthquakes M4.5+ 30d (click for depth/time/tsunami flag), click-anywhere weather via Open-Meteo (no key), RainViewer rain. JMA Himawari-9 + NASA FIRMS fires as link-outs under Layers.
 - **Jobs tab (Guide)** — verified job boards (Sabai Job, DOE, JobThai, JobsDB, MAP Foundation), a 6-line good-job checklist, 5 walk-away red flags, per-board Discuss buttons that drop the question into #bkk-burmese.
 
+## Intelligence ingestion (non-scrape, live)
+
+- **`functions/api/news.js`** — live RSS from DVB English + The Irrawaddy (both verified Sept 2026), parsed server-side, geocoded by place keyword (Mae Sot, Myawaddy, Hpakant, Kachin...), deduped, merged with the verified corpus. Tier-labelled per item: `LIVE RSS` chip vs corpus. Feeds down → `mode: 'corpus-only'` (honest fallback).
+- **`functions/api/trends.js`** — GDELT 2.0 media-volume timeline (Myanmar share of global coverage, 14 days, no key). Cached 10 min (GDELT asks 1req/5s). Renders as a dependency-free SVG sparkline in the news pane; hides honestly when unavailable.
+- **Dead stream honesty** — Channel K / 5 Plus / Channel 9 (host 530) and RTM (403) demoted to watch cards; DVB + Thai PBS stay inline (both 200 verified). TV dots start unknown, turn live only on manifest/playing.
+
+## User-centricity mechanics (this round)
+
+- **Chat statusbar** — LED + connection state + live member count in the chat pane footer. Connection state is felt, not found.
+- **Topic strip** — the current room's topic renders Burmese-first under the room tabs (PIRCH topic line).
+- **Unread badges** — silent WebSocket sockets (`?silent=1`, no join noise, no presence entry) count unseen messages on the other rooms; cleared on switch.
+- **MY/EN toggle** — real language switch (statusbar button + identity-modal select, applies live, persists). Burmese-first default per AGENTS.md boundary #3. `data-en`/`data-my` attributes on chrome labels; `data-ul` restores the underline in EN mode.
+- **iOS zoom guard** — inputs ≥16px on touch devices; Burmese typing no longer bounces the layout.
+- **TV on low-end phones** — first 3 streams auto-attach, the rest wait for a tap (data budget). `http://` streams render as watch cards on https pages (mixed content is a browser law, not a bug).
+- **Mobile news→map** — clicking a news item switches to the map tab so the fly is visible.
+- **flashNet restores** — the identity label never keeps a transient status line.
+- **Locate me** — View menu (key L): device location → nearest city. Nothing stored.
+- **Welcome hint** — one-time `/help · /guide · /hotline` system message.
+
 ## Floors
 
 - No build step, no JS framework, no dependencies.
