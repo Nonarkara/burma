@@ -6,9 +6,9 @@
  * alpha; a credentialled auth layer comes in Phase 2.
  */
 
-import { ChatRoomDO } from './chat-room-do.js';
-
-export { ChatRoomDO };
+// Export only the Durable Object class. workerd rejects numeric entry
+// exports such as the session caps (they are not handlers).
+export { ChatRoomDO } from './chat-room-do.js';
 
 const ROOMS = [
   'monastic-youth',
@@ -116,12 +116,14 @@ export default {
       if (!ROOMS.includes(roomId)) {
         return json({ ok: false, error: 'unknown_room' }, 400, ch);
       }
-      await ensureRoom(env, roomId);
+      // The room row is inserted once inside ChatRoomDO and remembered in
+      // DO storage. Do not INSERT OR IGNORE on every connect from here.
       const doId = env.CHAT_ROOM.idFromName(roomId);
       const stub = env.CHAT_ROOM.get(doId);
       // Forward with empty Origin so DO doesn't get confused
       const fwdHeaders = new Headers(request.headers);
       fwdHeaders.delete('Origin');
+      fwdHeaders.set('x-pirchchat-room', roomId);
       const fwd = new Request(new URL((roomMatch[2] ? '/' + roomMatch[2] : '/') + url.search, request.url), {
         method: request.method,
         headers: fwdHeaders,
