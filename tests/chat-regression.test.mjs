@@ -74,7 +74,8 @@ test('topic filter applies to incoming messages',()=>{
 const workerSource=fs.readFileSync('chat-worker/src/chat-room-do.js','utf8');
 const roomUrl='data:text/javascript;base64,'+Buffer.from(workerSource).toString('base64');
 const indexSource=fs.readFileSync('chat-worker/src/index.js','utf8').replace("from './chat-room-do.js'", `from '${roomUrl}'`);
-const {default:worker,ChatRoomDO,MAX_ROOM_SESSIONS,MAX_SESSIONS_PER_IP,RATE_LIMIT_PER_MIN}=await import('data:text/javascript;base64,'+Buffer.from(indexSource).toString('base64'));
+const {ChatRoomDO,MAX_ROOM_SESSIONS,MAX_SESSIONS_PER_IP,RATE_LIMIT_PER_MIN}=await import(roomUrl);
+const {default:worker}=await import('data:text/javascript;base64,'+Buffer.from(indexSource).toString('base64'));
 
 function memoryDb(){
   const queries=[];
@@ -282,6 +283,8 @@ test('worker connect path does not insert the room row itself',async()=>{
     const indexText=fs.readFileSync('chat-worker/src/index.js','utf8');
     assert.equal(indexText.split('await ensureRoom(env, roomId)').length-1,1);
     assert.equal(indexText.includes("fwdHeaders.set('x-pirchchat-room', roomId)"),true);
+    assert.match(indexText,/export \{ ChatRoomDO \} from '\.\/chat-room-do\.js'/);
+    assert.equal(/export \{[^}]*MAX_ROOM_SESSIONS/.test(indexText),false);
   } finally { restore(); }
 });
 

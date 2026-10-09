@@ -6,7 +6,9 @@
  * alpha; a credentialled auth layer comes in Phase 2.
  */
 
-export { ChatRoomDO, MAX_ROOM_SESSIONS, MAX_SESSIONS_PER_IP, RATE_LIMIT_PER_MIN } from './chat-room-do.js';
+// Export only the Durable Object class. workerd rejects numeric entry
+// exports such as the session caps (they are not handlers).
+export { ChatRoomDO } from './chat-room-do.js';
 
 const ROOMS = [
   'monastic-youth',
