@@ -72,12 +72,225 @@ test('topic filter applies to incoming messages',()=>{
 });
 
 const workerSource=fs.readFileSync('chat-worker/src/chat-room-do.js','utf8');
-const {ChatRoomDO}=await import('data:text/javascript;base64,'+Buffer.from(workerSource).toString('base64'));
+const roomUrl='data:text/javascript;base64,'+Buffer.from(workerSource).toString('base64');
+const indexSource=fs.readFileSync('chat-worker/src/index.js','utf8').replace("from './chat-room-do.js'", `from '${roomUrl}'`);
+const {default:worker,ChatRoomDO,MAX_ROOM_SESSIONS,MAX_SESSIONS_PER_IP,RATE_LIMIT_PER_MIN}=await import('data:text/javascript;base64,'+Buffer.from(indexSource).toString('base64'));
+
+function memoryDb(){
+  const queries=[];
+  return {queries,prepare(sql){return {bind(...args){return {
+    async run(){queries.push({sql,args,op:'run'});return {success:true};},
+    async all(){queries.push({sql,args,op:'all'});return {results:[]};},
+  };}};}};
+}
+function memoryCtx(id='do-id'){
+  const sockets=[];
+  const storage=new Map();
+  return {
+    id:{toString:()=>id},
+    storageMap:storage,
+    storage:{
+      async get(key){return storage.has(key)?storage.get(key):undefined;},
+      async put(key,value){storage.set(key,value);},
+    },
+    acceptWebSocket(ws){ws.hibernated=true;sockets.push(ws);},
+    getWebSockets(){return sockets.filter((ws)=>!ws.closed);},
+  };
+}
+class FakeSocket{
+  constructor(){this.sent=[];this.attachment=null;this.closed=false;this.hibernated=false;}
+  accept(){throw new Error('server.accept() pins the Durable Object and bills duration');}
+  addEventListener(){throw new Error('socket listeners do not survive hibernation');}
+  send(data){this.sent.push(String(data));}
+  close(){this.closed=true;}
+  serializeAttachment(value){this.attachment=value;}
+  deserializeAttachment(){return this.attachment;}
+}
+function installWorkersGlobals(){
+  const previous={Response:globalThis.Response,WebSocketPair:globalThis.WebSocketPair};
+  globalThis.WebSocketPair=class WebSocketPair{
+    constructor(){this[0]={role:'client'};this[1]=new FakeSocket();}
+  };
+  globalThis.Response=class WorkersResponse{
+    constructor(body,init={}){
+      this.body=body;
+      this.status=init.status===undefined?200:init.status;
+      this.webSocket=init.webSocket||null;
+      this.headers=new Headers(init.headers||{});
+      this.ok=this.status>=200&&this.status<300;
+    }
+    async json(){return JSON.parse(typeof this.body==='string'?this.body:'{}');}
+    async text(){return typeof this.body==='string'?this.body:'';}
+  };
+  return ()=>{globalThis.Response=previous.Response;globalThis.WebSocketPair=previous.WebSocketPair;};
+}
+function roomInserts(db){
+  return db.queries.filter((q)=>q.sql.includes('INSERT OR IGNORE INTO rooms'));
+}
+function connectRequest(ip,nick='aung'){
+  return new Request('https://do.internal/?nick='+encodeURIComponent(nick),{headers:{
+    upgrade:'websocket','cf-connecting-ip':ip,'x-pirchchat-room':'bkk-burmese',
+  }});
+}
+
 test('failed persistence must never acknowledge or broadcast a message',async()=>{
   const room=new ChatRoomDO({id:{toString:()=> 'isolated-test'}},{DB:{prepare(){return {bind(){return {run(){throw Error('D1 unavailable');}};}};}}});
   let broadcasts=0;room.broadcast=()=>broadcasts++;
   await assert.rejects(room.handlePost({author_name:'test',body_html:'must persist'}));
   assert.equal(broadcasts,0);assert.equal(room.history.length,0);
+});
+
+test('hibernation handlers accept sockets without server.accept()',async()=>{
+  assert.equal(workerSource.includes('server.accept()'),false);
+  assert.equal(workerSource.includes('this.ctx.acceptWebSocket(server)'),true);
+  assert.equal(workerSource.includes('async webSocketMessage('),true);
+  assert.equal(workerSource.includes('async webSocketClose('),true);
+  assert.equal(workerSource.includes('async webSocketError('),true);
+  const restore=installWorkersGlobals();
+  try {
+    const ctx=memoryCtx();
+    const db=memoryDb();
+    const room=new ChatRoomDO(ctx,{DB:db});
+    const res=await room.fetch(connectRequest('203.0.113.10','thiri'));
+    assert.equal(res.status,101);
+    assert.equal(res.webSocket.role,'client');
+    const server=ctx.getWebSockets()[0];
+    assert.equal(server.hibernated,true);
+    assert.equal(server.attachment.identity,'thiri');
+    assert.equal(server.attachment.rateKey,'203.0.113.10');
+    assert.ok(server.sent.some((line)=>JSON.parse(line).type==='history'));
+    await room.webSocketMessage(server,JSON.stringify({type:'message',body_html:'after wake'}));
+    assert.ok(server.sent.some((line)=>{const data=JSON.parse(line);return data.type==='message'&&data.message.body_html==='after wake';}));
+    const woken=new ChatRoomDO(ctx,{DB:db});
+    await woken.webSocketMessage(server,JSON.stringify({type:'message',body_html:'still attached'}));
+    assert.ok(server.sent.some((line)=>{const data=JSON.parse(line);return data.type==='message'&&data.message.body_html==='still attached';}));
+    await woken.webSocketClose(server,1000,'Test complete',true);
+    assert.equal(server.closed,true);
+    assert.equal(ctx.getWebSockets().length,0);
+  } finally { restore(); }
+});
+
+test('a capped connect does not read message history',async()=>{
+  const restore=installWorkersGlobals();
+  try {
+    const ctx=memoryCtx();
+    for (let i=0;i<MAX_SESSIONS_PER_IP;i++) {
+      const ws=new FakeSocket();
+      ws.serializeAttachment({rateKey:'198.51.100.7',identity:'nilar'});
+      ctx.acceptWebSocket(ws);
+    }
+    const db=memoryDb();
+    const room=new ChatRoomDO(ctx,{DB:db});
+    const res=await room.fetch(connectRequest('198.51.100.7','nilar'));
+    assert.equal(res.status,429);
+    assert.equal((await res.json()).error,'ip_session_cap');
+    assert.equal(db.queries.filter((q)=>q.sql.includes('FROM messages')).length,0);
+    assert.equal(roomInserts(db).length,1);
+  } finally { restore(); }
+});
+
+test('session caps are 200 per room and 5 per IP',async()=>{
+  const restore=installWorkersGlobals();
+  try {
+    const ctx=memoryCtx();
+    const room=new ChatRoomDO(ctx,{DB:memoryDb()});
+    for (let i=0;i<MAX_SESSIONS_PER_IP;i++) {
+      const res=await room.fetch(connectRequest('198.51.100.7','nilar'));
+      assert.equal(res.status,101);
+    }
+    const sixth=await room.fetch(connectRequest('198.51.100.7','nilar'));
+    assert.equal(sixth.status,429);
+    assert.equal((await sixth.json()).error,'ip_session_cap');
+    const other=await room.fetch(connectRequest('198.51.100.8','min_thu'));
+    assert.equal(other.status,101);
+    let host=1;
+    while (ctx.getWebSockets().length<MAX_ROOM_SESSIONS) {
+      const res=await room.fetch(connectRequest('203.0.113.'+(host%250), 'guest-'+host));
+      assert.equal(res.status,101);
+      host++;
+    }
+    const full=await room.fetch(connectRequest('198.51.100.9','htun'));
+    assert.equal(full.status,429);
+    assert.equal((await full.json()).error,'room_full');
+    assert.equal(ctx.getWebSockets().length,MAX_ROOM_SESSIONS);
+  } finally { restore(); }
+});
+
+test('room row insert is cached in durable object storage across wakes',async()=>{
+  const restore=installWorkersGlobals();
+  try {
+    const ctx=memoryCtx();
+    const db=memoryDb();
+    const env={DB:db};
+    const room=new ChatRoomDO(ctx,env);
+    const history=()=>room.fetch(new Request('https://do.internal/history?limit=1',{headers:{'x-pirchchat-room':'bkk-burmese'}}));
+    assert.equal((await history()).status,200);
+    assert.equal((await history()).status,200);
+    assert.equal(roomInserts(db).length,1);
+    assert.deepEqual(roomInserts(db)[0].args,['bkk-burmese','#bkk-burmese']);
+    const woken=new ChatRoomDO(ctx,env);
+    assert.equal((await woken.fetch(new Request('https://do.internal/history',{headers:{'x-pirchchat-room':'bkk-burmese'}}))).status,200);
+    assert.equal(roomInserts(db).length,1);
+    assert.equal(ctx.storageMap.get('ensured_room'),'bkk-burmese');
+  } finally { restore(); }
+});
+
+test('message rate window survives hibernation',async()=>{
+  const restore=installWorkersGlobals();
+  try {
+    const ctx=memoryCtx();
+    const db=memoryDb();
+    const env={DB:db};
+    const room=new ChatRoomDO(ctx,env);
+    const res=await room.fetch(connectRequest('203.0.113.20','kyaw'));
+    assert.equal(res.status,101);
+    const server=ctx.getWebSockets()[0];
+    for (let i=0;i<RATE_LIMIT_PER_MIN;i++) {
+      await room.webSocketMessage(server,JSON.stringify({type:'message',body_html:'m'+i}));
+    }
+    await room.webSocketMessage(server,JSON.stringify({type:'message',body_html:'over'}));
+    const errors=()=>server.sent.filter((line)=>JSON.parse(line).error==='rate_limited').length;
+    assert.equal(errors(),1);
+    const woken=new ChatRoomDO(ctx,env);
+    await woken.webSocketMessage(server,JSON.stringify({type:'message',body_html:'still over'}));
+    assert.equal(errors(),2);
+  } finally { restore(); }
+});
+
+test('worker connect path does not insert the room row itself',async()=>{
+  const restore=installWorkersGlobals();
+  try {
+    const ctx=memoryCtx('forwarded-do');
+    const db=memoryDb();
+    const room=new ChatRoomDO(ctx,{DB:db});
+    const env={
+      DB:db,
+      CHAT_ROOM:{
+        idFromName(name){assert.equal(name,'bkk-burmese');return {toString:()=>'forwarded-do'};},
+        get(){return {fetch:(req)=>room.fetch(req)};},
+      },
+    };
+    const hit=()=>worker.fetch(new Request('https://chat.example/api/rooms/bkk-burmese/history?limit=1'),env);
+    const first=await hit();
+    assert.equal(first.status,200);
+    assert.equal((await first.json()).ok,true);
+    await hit();
+    assert.equal(roomInserts(db).length,1);
+    const ws=await worker.fetch(new Request('https://chat.example/api/rooms/bkk-burmese?nick=yamin',{headers:{upgrade:'websocket','cf-connecting-ip':'203.0.113.30'}}),env);
+    assert.equal(ws.status,101);
+    assert.equal(roomInserts(db).length,1);
+    const indexText=fs.readFileSync('chat-worker/src/index.js','utf8');
+    assert.equal(indexText.split('await ensureRoom(env, roomId)').length-1,1);
+    assert.equal(indexText.includes("fwdHeaders.set('x-pirchchat-room', roomId)"),true);
+  } finally { restore(); }
+});
+
+test('wrangler config does not delete a deployed durable object class',()=>{
+  const toml=fs.readFileSync('chat-worker/wrangler.toml','utf8');
+  assert.equal(toml.includes('deleted_classes'),false);
+  assert.match(toml,/tag = "v1"/);
+  assert.match(toml,/new_sqlite_classes = \["ChatRoomDO"\]/);
+  assert.equal(toml.includes('class_name = "RateLimiterDO"'),false);
 });
 
 test('link preview rejects local URLs before fetching',async()=>{

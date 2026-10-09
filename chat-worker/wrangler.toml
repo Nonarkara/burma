@@ -22,6 +22,11 @@ bucket_name = "pirchchat-uploads"
 name = "CHAT_ROOM"
 class_name = "ChatRoomDO"
 
+# Git only has this v1 migration. The deployed Worker may also export
+# RateLimiterDO; that class is not in this repo. Leave this list as it is.
+# Do not add a migration that removes a class which is missing here.
+# Switching sockets to the Hibernation API does not need a new tag.
+# See README.md, "Production class missing from git".
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ChatRoomDO"]
