@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="my">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pirchchat — #monastic-youth</title>
 <meta name="description" content="Persistent public room. Windows 95 chrome. Burmese-language chat.">
-<link rel="stylesheet" href="room.css">
+<link rel="stylesheet" href="room.css?v=20260926-ux">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
@@ -18,39 +18,39 @@
     <span class="titlebar__dot" aria-hidden="true"></span>
     <span class="titlebar__title">Pirchchat — #monastic-youth</span>
     <span class="titlebar__spacer"></span>
-    <button class="titlebar__btn" type="button" aria-label="Minimize" title="Minimize">_</button>
-    <button class="titlebar__btn" type="button" aria-label="Maximize" title="Maximize">▢</button>
+    <button class="titlebar__btn" type="button" aria-label="Minimize" title="Minimize" id="roomMin">_</button>
+    <button class="titlebar__btn" type="button" aria-label="Maximize" title="Maximize" id="roomMax">▢</button>
     <button class="titlebar__btn titlebar__btn--close" type="button" aria-label="Close" title="Close" onclick="window.location='index.html'">×</button>
   </header>
 
   <nav class="menubar" aria-label="Menu">
-    <button type="button" class="menubar__item" data-menu="file"><u>F</u>ile</button>
-    <button type="button" class="menubar__item" data-menu="room"><u>R</u>oom</button>
-    <button type="button" class="menubar__item" data-menu="tools"><u>T</u>ools</button>
-    <button type="button" class="menubar__item" data-menu="options"><u>O</u>ptions</button>
-    <button type="button" class="menubar__item" data-menu="window"><u>W</u>indow</button>
-    <button type="button" class="menubar__item" data-menu="help"><u>H</u>elp</button>
+    <button type="button" class="menubar__item" data-menu="file" data-en="File" data-my="ဖိုင်" data-ul><u>F</u>ile</button>
+    <button type="button" class="menubar__item" data-menu="room" data-en="Room" data-my="ခန်း" data-ul><u>R</u>oom</button>
+    <button type="button" class="menubar__item" data-menu="tools" data-en="Tools" data-my="ကိရိယာ" data-ul><u>T</u>ools</button>
+    <button type="button" class="menubar__item" data-menu="options" data-en="Options" data-my="ရွေးချယ်" data-ul><u>O</u>ptions</button>
+    <button type="button" class="menubar__item" data-menu="window" data-en="Window" data-my="ဝင်းဒိုး" data-ul><u>W</u>indow</button>
+    <button type="button" class="menubar__item" data-menu="help" data-en="Help" data-my="ကူညီ" data-ul><u>H</u>elp</button>
   </nav>
   <div class="dropdown" id="roomMenu" hidden></div>
 
   <div class="toolbar" role="toolbar" aria-label="Toolbar">
-    <button type="button" class="toolbar__btn" data-act="connect" title="Connect / disconnect (toggles status)"><span class="tb-icon">●</span>Connect</button>
-    <button type="button" class="toolbar__btn" data-act="mode" title="Toggle moderated mode"><span class="tb-icon">▤</span>Mode</button>
-    <button type="button" class="toolbar__btn" data-act="channels" title="List all rooms"><span class="tb-icon">⊞</span>Channels</button>
-    <button type="button" class="toolbar__btn" data-act="favorites" title="Star this room as a favorite"><span class="tb-icon">★</span>Favorites</button>
-    <button type="button" class="toolbar__btn" data-act="popup" title="Toggle timestamps"><span class="tb-icon">⊡</span>Popup</button>
-    <button type="button" class="toolbar__btn" data-act="alarm" title="Toggle mention beep"><span class="tb-icon">⏰</span>Alarm</button>
-    <button type="button" class="toolbar__btn" data-act="event" title="Show recent room events"><span class="tb-icon">⌛</span>Event</button>
-    <button type="button" class="toolbar__btn" data-act="engage" title="Insert a greeting template"><span class="tb-icon">◌</span>Engage</button>
-    <button type="button" class="toolbar__btn" data-act="filesend" title="Send images via the dashboard"><span class="tb-icon">⇈</span>File Send</button>
-    <button type="button" class="toolbar__btn" data-act="chat" title="Open the full dashboard chat"><span class="tb-icon">⌗</span>Chat</button>
-    <button type="button" class="toolbar__btn" data-act="push" title="Copy room link"><span class="tb-icon">→</span>Push</button>
+    <button type="button" class="toolbar__btn" data-act="connect" title="Connect / disconnect (toggles status)" data-en="● Connect" data-my="● ချိတ်ဆက်"><span class="tb-icon">●</span>ချိတ်ဆက်</button>
+    <button type="button" class="toolbar__btn" data-act="mode" title="Toggle moderated mode" data-en="▤ Mode" data-my="▤ စည်းကမ်း"><span class="tb-icon">▤</span>စည်းကမ်း</button>
+    <button type="button" class="toolbar__btn" data-act="channels" title="List all rooms" data-en="⊞ Channels" data-my="⊞ ခန်းများ"><span class="tb-icon">⊞</span>ခန်းများ</button>
+    <button type="button" class="toolbar__btn" data-act="favorites" title="Star this room as a favorite" data-en="★ Favorites" data-my="★ အကြိုက်"><span class="tb-icon">★</span>အကြိုက်</button>
+    <button type="button" class="toolbar__btn" data-act="popup" title="Toggle timestamps" data-en="⊡ Popup" data-my="⊡ အချိန်"><span class="tb-icon">⊡</span>အချိန်</button>
+    <button type="button" class="toolbar__btn" data-act="alarm" title="Toggle mention beep" data-en="⏰ Alarm" data-my="⏰ သံ"><span class="tb-icon">⏰</span>သံ</button>
+    <button type="button" class="toolbar__btn" data-act="event" title="Show recent room events" data-en="⌛ Event" data-my="⌛ မှတ်တမ်း"><span class="tb-icon">⌛</span>မှတ်တမ်း</button>
+    <button type="button" class="toolbar__btn" data-act="engage" title="Insert a greeting template" data-en="◌ Engage" data-my="◌ နှုတ်ခွန်း"><span class="tb-icon">◌</span>နှုတ်ခွန်း</button>
+    <button type="button" class="toolbar__btn" data-act="filesend" title="Send images via the dashboard" data-en="⇈ File Send" data-my="⇈ ဖိုင်"><span class="tb-icon">⇈</span>ဖိုင်</button>
+    <button type="button" class="toolbar__btn" data-act="chat" title="Open the full dashboard chat" data-en="⌗ Chat" data-my="⌗ ဒက်ရှ်ဘုတ်"><span class="tb-icon">⌗</span>ဒက်ရှ်ဘုတ်</button>
+    <button type="button" class="toolbar__btn" data-act="push" title="Copy room link" data-en="→ Push" data-my="→ လင့်ကူး"><span class="tb-icon">→</span>လင့်ကူး</button>
   </div>
 
   <div class="linkbar">
     <span class="linkbar__label">irc.pirchchat.org: pirchchat</span>
     <span class="linkbar__sep">·</span>
-    <span class="linkbar__lat">52ms</span>
+    <span class="linkbar__lat">local demo — no server yet</span>
   </div>
 
   <main class="panes">
@@ -83,11 +83,11 @@
           <div class="msg msg--topic"><em>aung_myo</em> sets topic: <span lang="my">မဟာမင်္ဂလာပါ မိဘနာများ — welcome to all. please Burmese-first. need help? ask in channel.</span></div>
           <div class="msg"><span class="ts">14:55</span> <span class="nick">min_thu</span> <span class="body"><span lang="my">မင်္ဂလာပါ</span> everyone. today bkk immigration patrol at 11. ok? anyone got paperwork to renew?</span></div>
           <div class="msg"><span class="ts">14:56</span> <span class="nick">thazin</span> <span class="body">yes got it. thanks for the heads up.</span></div>
-          <div class="msg"><span class="ts">14:58</span> <span class="nick nick--op">aung_myo</span> <span class="body">🚨 <em>if your visa is expiring in the next 30 days — DO NOT leave the channel. message me directly with your name and we talk tonight. no broker. no money.</em></span></div>
+          <div class="msg"><span class="ts">14:58</span> <span class="nick">aung_myo</span> <span class="body">if your visa is expiring in the next 30 days — ask here in the channel. someone will point you to the official desk. no broker, no money.</span></div>
         </section>
 
         <aside class="members" aria-label="Members of #monastic-youth">
-          <header class="members__head">Members</header>
+          <header class="members__head" data-en="Members" data-my="အသင်းသားများ">Members</header>
           <ul class="members__list">
             <li><span class="members__nick members__nick--op">aung_myo</span> <span class="members__tag">@op</span></li>
             <li><span class="members__nick">nilar</span></li>
@@ -106,20 +106,33 @@
   </main>
 
   <form class="composer" id="composer" autocomplete="off">
-    <input type="text" name="msg" id="input" class="composer__input" placeholder="Type a message in Burmese or English…  press Enter to send" aria-label="Message">
-    <button type="submit" class="composer__send">Send</button>
+    <input type="text" name="msg" id="input" class="composer__input" data-ph-en="Type in Burmese or English — Enter to send" data-ph-my="မြန်မာ သို့မဟုတ် အင်္ဂလိပ် ရိုက်ထည့်ပါ — Enter နှိပ်ပါ" placeholder="မြန်မာ သို့မဟုတ် အင်္ဂလိပ် ရိုက်ထည့်ပါ — Enter နှိပ်ပါ" aria-label="Message">
+    <button type="submit" class="composer__send" data-en="Send" data-my="ပို့">ပို့</button>
   </form>
 
+  <!-- ===== WATCH TOGETHER STAGE ===== -->
+  <section class="watch-stage" id="watchStage" hidden aria-label="Watch together">
+    <header class="watch-stage__bar">
+      <span class="titlebar__dot" aria-hidden="true"></span>
+      <h3 class="watch-stage__title">Watch together</h3>
+      <button type="button" class="watch-stage__stop" aria-label="Stop watching">×</button>
+    </header>
+    <div class="watch-stage__body">
+      <video class="watch-stage__video" controls playsinline muted></video>
+      <p class="watch-stage__note">Live Burmese TV — everyone synced to the same channel</p>
+    </div>
+  </section>
+
   <footer class="statusbar" aria-label="Status bar">
-    <span class="statusbar__item"><span class="led led--on" aria-hidden="true"></span>Connected</span>
-    <span class="statusbar__item">7 users</span>
-    <span class="statusbar__item">Burmese · English · Thai</span>
+    <span class="statusbar__item"><span class="led led--on" aria-hidden="true" id="roomLed"></span><span id="roomStatus">Local demo — messages simulated</span></span>
+    <span class="statusbar__item">1 user (you)</span>
+    <button type="button" class="statusbar__item statusbar__lang" id="roomLang" title="Switch interface language / ဘာသာ ပြောင်းရန်">မြန်မာ · English</button><span class="statusbar__item">Thai</span>
     <span class="statusbar__spacer"></span>
-    <span class="statusbar__item">irc.pirchchat.org:6697 · <em>moderated</em></span>
+    <span class="statusbar__item">irc.pirchchat.org:6697 — planned</span>
   </footer>
 
 </div>
 
-<script src="room.js"></script>
+<script src="room.js?v=20260926-ux"></script>
 </body>
 </html>

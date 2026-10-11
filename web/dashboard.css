@@ -422,7 +422,7 @@ html, body {
 .legend__dot--radio { background: var(--server); }
 .legend__dot--tv    { background: var(--positive); }
 .legend__dot--you   { background: var(--positive); }
-.legend__dot--quake { background: var(--negative); border-radius: 9999px !important; }
+.legend__dot--quake { background: var(--negative); }
 
 .pirch-marker--gate {
   background: var(--accent);
@@ -434,7 +434,6 @@ html, body {
 
 .pirch-marker--quake {
   background: var(--negative);
-  border-radius: 9999px !important;
   border: 2px solid var(--paper);
 }
 
@@ -453,7 +452,6 @@ html, body {
 }
 .pirch-marker--radio {
   background: var(--server);
-  border-radius: 9999px !important;
   width: 18px;
   height: 18px;
 }
@@ -714,7 +712,7 @@ html, body {
 .tv-card__watch {
   padding: 10px 12px;
   font-size: 11.5px;
-  color: var(--ink-muted);
+  color: var(--chrome-light);
   background: #1a1a1a;
   flex: 1;
   display: flex;
@@ -1332,7 +1330,7 @@ html, body {
   margin-bottom: 4px;
 }
 
-.modal__field input {
+.modal__field input, .modal__field select {
   display: block;
   width: 100%;
   padding: 6px 8px;
@@ -1345,6 +1343,7 @@ html, body {
   border-right: 1px solid var(--chrome-edge);
   border-bottom: 1px solid var(--chrome-edge);
   box-sizing: border-box;
+  border-radius: 0;
 }
 
 .modal__hint {
@@ -1625,8 +1624,133 @@ html, body {
 .dash__left.is-min .linkbar,
 .dash__left.is-min .menubar { display: none; }
 
+/* ===== Media-volume sparkline (GDELT, dependency-free SVG) ===== */
+
+.spark {
+  padding: 6px 10px 8px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.spark[hidden] { display: none; }
+
+.spark__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.spark__meta {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.spark__bars {
+  background: var(--paper);
+  border-top: 1px solid var(--chrome-edge);
+  border-left: 1px solid var(--chrome-edge);
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 2px;
+}
+
+.spark__bars svg { shape-rendering: crispEdges; }
+
+/* Live-RSS tier chip (honest envelope: live vs corpus) */
+
+.news-item--live { border-left: 3px solid var(--positive); padding-left: 11px; }
+
+.news-item__wire {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--chrome-light);
+  background: var(--positive);
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
 /* /me action lines */
 .msg--action { color: var(--notice); font-style: italic; display: block; }
+
+/* ===== Room topic strip (PIRCH topic line, Burmese-first) ===== */
+
+.room-topic {
+  padding: 5px 10px;
+  background: var(--chrome);
+  border-top: 1px solid var(--ink-muted);
+  border-bottom: 1px dotted var(--ink-muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.room-topic[hidden] { display: none; }
+
+.room-topic [lang="my"] { font-family: var(--font-burma); font-size: 12.5px; color: var(--ink); }
+
+.room-topic__en { font-style: italic; }
+
+/* ===== Unread badge on room tabs ===== */
+
+.menubar__item .badge {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  min-width: 14px;
+  background: var(--negative);
+  color: var(--chrome-light);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ===== Statusbar language toggle ===== */
+
+.statusbar__lang {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  padding: 0;
+}
+
+.statusbar__lang:hover { color: var(--accent); }
+
+/* ===== Keyboard focus (visible, house accent) ===== */
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ===== iOS zoom guard — inputs < 16px auto-zoom on focus and bounce the layout ===== */
+
+@media (max-width: 1024px) {
+  .composer__input,
+  .modal__field input,
+  .modal__field select,
+  .calc-row input {
+    font-size: 16px;
+  }
+}
 
 /* ===== Scrollbars (Win95 chunky) ===== */
 

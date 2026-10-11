@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pirchchat — Dashboard</title>
-<meta name="description" content="A Burmese-language community dashboard. Real-time news, geocoded incidents on a map, persistent rooms. Win95 chrome.">
-<link rel="stylesheet" href="dashboard.css?v=20260925-audit">
+<meta name="description" content="A Burmese-language community dashboard. Live RSS headlines + verified corpus, geocoded incidents on a map, persistent rooms. Win95 chrome.">
+<link rel="stylesheet" href="dashboard.css?v=20260926-ux">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
@@ -17,9 +17,9 @@
 
 <!-- ===== TOP TAB BAR — mobile only, hidden on desktop ===== -->
 <nav class="tabs-top" role="tablist" aria-label="Switch surface (mobile)">
-  <button type="button" class="tabs-top__btn tabs-top__btn--active" data-tab="map" role="tab">မြေပုံ · Map</button>
-  <button type="button" class="tabs-top__btn" data-tab="news" role="tab">သတင်း · News</button>
-  <button type="button" class="tabs-top__btn" data-tab="chat" role="tab">စကားဝိုင်း · Chat</button>
+  <button type="button" class="tabs-top__btn tabs-top__btn--active" data-tab="map" role="tab" data-en="Map · မြေပုံ" data-my="မြေပုံ · Map">မြေပုံ · Map</button>
+  <button type="button" class="tabs-top__btn" data-tab="news" role="tab" data-en="News · သတင်း" data-my="သတင်း · News">သတင်း · News</button>
+  <button type="button" class="tabs-top__btn" data-tab="chat" role="tab" data-en="Chat · စကားဝိုင်း" data-my="စကားဝိုင်း · Chat">စကားဝိုင်း · Chat</button>
   <span class="tabs-top__brand">Pirchchat</span>
 </nav>
 
@@ -60,9 +60,9 @@
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="radio" title="Burmese radio streams (click to play)" data-en="● Radio" data-my="● ရေဒီယို">● Radio</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="tv" title="Burmese TV channels (click for info)" data-en="● TV" data-my="● ရုပ်သံ">● TV</button>
       <button type="button" class="toolbar__btn is-pressed" data-layer-toggle="rain" title="Ground rain radar overlay (RainViewer)" data-en="● Rain" data-my="● မိုး">● Rain</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="himawari" title="Himawari-9 clean IR clouds (JAXA/JMA via GIBS)" data-en="☁ Himawari" data-my="☁ ဆီမွာရီ">☁ Himawari</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="gpmrain" title="GPM IMERG space rain rate (JAXA/NASA)" data-en="☔ Space Rain" data-my="☔ အာကာသမိုး">☔ Space Rain</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="viirsflood" title="NASA VIIRS 1-day flood composite" data-en="🌊 Flood" data-my="🌊 ရေကြီး">🌊 Flood</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="himawari" title="Himawari-9 clean IR clouds (JAXA/JMA via GIBS)" data-en="◔ Himawari" data-my="◔ ဆီမွာရီ">◔ Himawari</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="gpmrain" title="GPM IMERG space rain rate (JAXA/NASA)" data-en="⁂ Space Rain" data-my="⁂ အာကာသမိုး">⁂ Space Rain</button>
+      <button type="button" class="toolbar__btn" data-layer-toggle="viirsflood" title="NASA VIIRS 1-day flood composite" data-en="⌁ Flood" data-my="⌁ ရေကြီး">⌁ Flood</button>
       <button type="button" class="toolbar__btn" data-layer-toggle="nasa" title="NASA Terra true-color, yesterday" data-en="◉ NASA" data-my="◉ NASA">◉ NASA</button>
       <button type="button" class="toolbar__btn" data-layer-toggle="quakes" title="USGS earthquakes M4.5+, last 30 days" data-en="▲ Quakes" data-my="▲ ငလျင်">▲ Quakes</button>
       <button type="button" class="toolbar__btn" data-action="add" title="Drop a manual pin" data-en="＋ Pin" data-my="＋ အမှတ်">＋ Pin</button>
@@ -70,6 +70,7 @@
       <span class="toolbar__sep"></span>
       <button type="button" class="toolbar__btn" data-action="guide" title="Survival guide — visa, clinics, housing, rates" data-en="✎ Guide" data-my="✎ လမ်းညွှန်">✎ Guide</button>
       <button type="button" class="toolbar__btn" data-action="hotlines" title="Human hotlines — 1300, clinics" data-en="＋ Hotlines" data-my="＋ ဟိုတ်လိုင်း">＋ Hotlines</button>
+      <button type="button" class="toolbar__btn" data-action="research" title="Research briefing" data-en="Research" data-my=" risearch">Research</button>
     </div>
 
     <div class="linkbar">
@@ -113,10 +114,10 @@
           <span class="titlebar__dot" aria-hidden="true"></span>
           <h3 id="tvpanel-h" class="tvpanel__title">Burmese TV — live</h3>
           <span class="tvpanel__filters" id="tvpanelFilters">
-            <button type="button" class="tvpanel__filter-btn is-active" data-tv-filter="all">All</button>
-            <button type="button" class="tvpanel__filter-btn" data-tv-filter="news">News</button>
-            <button type="button" class="tvpanel__filter-btn" data-tv-filter="entertainment">Variety</button>
-            <button type="button" class="tvpanel__filter-btn" data-tv-filter="asean">ASEAN</button>
+            <button type="button" class="tvpanel__filter-btn is-active" data-tv-filter="all" data-en="All" data-my="အားလုံး">All</button>
+            <button type="button" class="tvpanel__filter-btn" data-tv-filter="news" data-en="News" data-my="သတင်း">News</button>
+            <button type="button" class="tvpanel__filter-btn" data-tv-filter="entertainment" data-en="Variety" data-my="အပန်း">Variety</button>
+            <button type="button" class="tvpanel__filter-btn" data-tv-filter="asean" data-en="ASEAN" data-my="အာဆီယံ">ASEAN</button>
           </span>
           <span class="tvpanel__hint" id="tvpanelHint">IPTV feeds · Click Unmute on any card for audio</span>
           <span class="tvpanel__spacer"></span>
@@ -132,6 +133,7 @@
     <div class="statusbar" aria-label="Map status bar">
       <span class="statusbar__item"><span class="led led--on" aria-hidden="true"></span><span id="mapStatus">Esri imagery · Asia</span></span>
       <span class="statusbar__spacer"></span>
+      <button type="button" class="statusbar__item statusbar__lang" id="langToggle" title="Switch interface language / ဘာသာ ပြောင်းရန်">မြန်မာ · English</button>
       <span class="statusbar__item">MapLibre + Esri + RainViewer + OpenSky</span>
     </div>
   </aside>
@@ -148,21 +150,28 @@
         <span class="titlebar__meta" id="newsClock">00:00 ICT</span>
       </div>
       <nav class="menubar">
-        <button type="button" class="menubar__item menubar__item--active" data-news-filter="all"><u>A</u>ll</button>
-        <button type="button" class="menubar__item" data-news-filter="visa-jobs"><u>J</u>obs · Visa</button>
-        <button type="button" class="menubar__item" data-news-filter="mm">M<u>y</u>anmar</button>
-        <button type="button" class="menubar__item" data-news-filter="diaspora">Diasp<u>o</u>ra</button>
-        <button type="button" class="menubar__item" data-news-filter="asean">ASEAN</button>
-        <button type="button" class="menubar__item" data-news-filter="world">W<u>orld</u></button>
-        <button type="button" class="menubar__item" data-news-action="guide" title="Survival guide">Guide</button>
-        <button type="button" class="menubar__item" data-news-action="jobs" title="Job boards + good-job checklist">Jobs</button>
-        <button type="button" class="menubar__item" data-news-action="export" title="Download these news items as text">Export</button>
+        <button type="button" class="menubar__item menubar__item--active" data-news-filter="all" data-en="All" data-my="အားလုံး" data-ul><u>A</u>ll</button>
+        <button type="button" class="menubar__item" data-news-filter="visa-jobs" data-en="Jobs · Visa" data-my="အလုပ် · ဗီဇာ" data-ul><u>J</u>obs · Visa</button>
+        <button type="button" class="menubar__item" data-news-filter="mm" data-en="Myanmar" data-my="မြန်မာ" data-ul>M<u>y</u>anmar</button>
+        <button type="button" class="menubar__item" data-news-filter="diaspora" data-en="Diaspora" data-my="နိုင်ငံခြားရောက်" data-ul>Diasp<u>o</u>ra</button>
+        <button type="button" class="menubar__item" data-news-filter="asean" data-en="ASEAN" data-my="အာဆီယံ" data-ul>ASEAN</button>
+        <button type="button" class="menubar__item" data-news-filter="world" data-en="World" data-my="ကမ္ဘာ" data-ul>W<u>orld</u></button>
+        <button type="button" class="menubar__item" data-news-action="guide" title="Survival guide" data-en="Guide" data-my="လမ်းညွှန်">Guide</button>
+        <button type="button" class="menubar__item" data-news-action="jobs" title="Job boards + good-job checklist" data-en="Jobs" data-my="အလုပ်">Jobs</button>
+        <button type="button" class="menubar__item" data-news-action="export" title="Download these news items as text" data-en="Export" data-my="ထုတ်ယူ">Export</button>
       </nav>
       <div class="chipbar" id="sourceChips" role="toolbar" aria-label="Filter by source"></div>
+      <section class="spark" id="sparkWire" hidden aria-label="Myanmar media volume trend">
+        <header class="spark__head">
+          <strong data-en="Media volume — Myanmar coverage" data-my="မြန်မာ သတင်း အဆက်အသွယ် ပမာဏ">Media volume — Myanmar coverage</strong>
+          <span class="spark__meta" id="sparkMeta">GDELT · 14 days</span>
+        </header>
+        <div class="spark__bars" id="sparkBars"></div>
+      </section>
       <section class="action-desk" aria-label="Actionable takeaways and signal desk">
         <div class="action-desk__head"><strong>အချက်ပြ စားပွဲ · Signal desk</strong><span>Rules-based reference · AI synthesis is not connected</span></div>
         <div class="chipbar" id="deskChips" role="toolbar" aria-label="Filter action desk">
-          <button type="button" class="chip chip--active" data-desk="all">All</button><button type="button" class="chip" data-desk="action">Action briefs</button><button type="button" class="chip" data-desk="signal">Signal vs rumor</button><button type="button" class="chip" data-desk="opportunity">ASEAN paths</button>
+          <button type="button" class="chip chip--active" data-desk="all" data-en="All" data-my="အားလုံး">All</button><button type="button" class="chip" data-desk="action" data-en="Action briefs" data-my="လုပ်ငန်းစာ">Action briefs</button><button type="button" class="chip" data-desk="signal" data-en="Signal vs rumor" data-my="အချက်ပြ · သံသယ">Signal vs rumor</button><button type="button" class="chip" data-desk="opportunity" data-en="ASEAN paths" data-my="အာဆီယံလမ်း">ASEAN paths</button>
         </div>
         <div id="actionDeskList" class="action-desk__list"></div>
       </section>
@@ -197,19 +206,19 @@
       <div class="room-topic" id="roomTopic" hidden></div>
 
       <div class="chipbar" id="topicChips" role="toolbar" aria-label="Filter messages by topic">
-        <button type="button" class="chip chip--active" data-topic="all">All</button>
-        <button type="button" class="chip" data-topic="jobs">Jobs</button>
-        <button type="button" class="chip" data-topic="housing">Housing</button>
-        <button type="button" class="chip" data-topic="activities">Activities</button>
-        <button type="button" class="chip" data-topic="learning">Learning</button>
-        <button type="button" class="chip" data-topic="sharing">Sharing</button>
-        <button type="button" class="chip" data-topic="ideas">Ideas</button>
+        <button type="button" class="chip chip--active" data-topic="all" data-en="All" data-my="အားလုံး">All</button>
+        <button type="button" class="chip" data-topic="jobs" data-en="Jobs" data-my="အလုပ်">Jobs</button>
+        <button type="button" class="chip" data-topic="housing" data-en="Housing" data-my="အိုးအိမ်">Housing</button>
+        <button type="button" class="chip" data-topic="activities" data-en="Activities" data-my="လှုပ်ရှား">Activities</button>
+        <button type="button" class="chip" data-topic="learning" data-en="Learning" data-my="သင်ယူ">Learning</button>
+        <button type="button" class="chip" data-topic="sharing" data-en="Sharing" data-my="မျှဝေ">Sharing</button>
+        <button type="button" class="chip" data-topic="ideas" data-en="Ideas" data-my="အကြံ">Ideas</button>
       </div>
 
       <div class="chat__body">
         <section class="messages" id="messages" aria-label="Messages" aria-live="polite"></section>
         <aside class="members" aria-label="Members">
-          <header class="members__head">Members</header>
+          <header class="members__head" data-en="Members" data-my="အသင်းသားများ">Members</header>
           <ul class="members__list" id="memberList"></ul>
         </aside>
       </div>
@@ -257,8 +266,16 @@
       <p class="modal__intro"><strong>Pick a name.</strong> The community stays small by people inviting people.</p>
 
       <label class="modal__field">
-        <span>ပေါ်လာမည့် အမည် · Display name</span>
-        <input type="text" id="identityName" maxlength="32" placeholder="အမည် ရိုက်ထည့်ပါ (Nickname)" autocomplete="off">
+        <span data-en="Display name" data-my="ပေါ်လာမည့် အမည်">ပေါ်လာမည့် အမည် · Display name</span>
+        <input type="text" id="identityName" maxlength="32" data-ph-en="How should others see you? (Nickname)" data-ph-my="အမည် ရိုက်ထည့်ပါ" placeholder="အမည် ရိုက်ထည့်ပါ (Nickname)" autocomplete="off">
+      </label>
+
+      <label class="modal__field">
+        <span data-en="Interface language" data-my="ဘာသာ">ဘာသာ · Interface language</span>
+        <select id="identityLang">
+          <option value="my" selected>မြန်မာ အရင် (Burmese-first)</option>
+          <option value="en">English first (မြန်မာ ဒုတိယ)</option>
+        </select>
       </label>
 
       <div class="modal__rules">
@@ -291,15 +308,15 @@
       <button class="titlebar__btn titlebar__btn--close" type="button" id="guideClose">×</button>
     </div>
     <nav class="menubar" id="guideTabs" aria-label="Guide sections">
-      <button type="button" class="menubar__item menubar__item--active" data-guide="all">All</button>
-      <button type="button" class="menubar__item" data-guide="jobs">Jobs · Visa</button>
-      <button type="button" class="menubar__item" data-guide="sharing">Health</button>
-      <button type="button" class="menubar__item" data-guide="housing">Housing</button>
-      <button type="button" class="menubar__item" data-guide="learning">Learning</button>
-      <button type="button" class="menubar__item" data-guide="ideas">Money</button>
-      <button type="button" class="menubar__item" data-guide="jobs">Jobs</button>
-      <button type="button" class="menubar__item" data-guide="phrases">Phrases</button>
-      <button type="button" class="menubar__item" data-guide="hotlines">Hotlines</button>
+      <button type="button" class="menubar__item menubar__item--active" data-guide="all" data-en="All" data-my="အားလုံး">All</button>
+      <button type="button" class="menubar__item" data-guide="jobs" data-en="Jobs · Visa" data-my="အလုပ် · ဗီဇာ">Jobs · Visa</button>
+      <button type="button" class="menubar__item" data-guide="sharing" data-en="Health" data-my="ကျန်းမာရေး">Health</button>
+      <button type="button" class="menubar__item" data-guide="housing" data-en="Housing" data-my="အိုးအိမ်">Housing</button>
+      <button type="button" class="menubar__item" data-guide="learning" data-en="Learning" data-my="သင်ယူမှု">Learning</button>
+      <button type="button" class="menubar__item" data-guide="ideas" data-en="Money" data-my="ငွေကြေး">Money</button>
+      <button type="button" class="menubar__item" data-guide="jobs" data-en="Jobs" data-my="အလုပ်">Jobs</button>
+      <button type="button" class="menubar__item" data-guide="phrases" data-en="Phrases" data-my="အသုံးအနှုန်း">Phrases</button>
+      <button type="button" class="menubar__item" data-guide="hotlines" data-en="Hotlines" data-my="ဟိုတ်လိုင်း">Hotlines</button>
     </nav>
     <div class="modal__body" id="guideBody"></div>
   </div>
@@ -318,8 +335,8 @@
   </div>
 </div>
 
-<script src="survival.js?v=20260916-audit"></script>
-<script src="data/opportunity-safety.js?v=20260922-c2"></script>
+<script src="survival.js?v=20260926-ux"></script>
+<script src="data/opportunity-safety.js?v=20260926-ux"></script>
 <script src="dashboard.js?v=20260925-audit"></script>
 <script src="chat-client.js?v=20260925-audit"></script>
 <script src="chrome.js?v=20260925-audit"></script>

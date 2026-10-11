@@ -62,8 +62,9 @@ const state = {
   roomVersion: 0,
   sending: false,
   history: [],               // array of full messages, oldest first
-  members: [],                // array of {nick, role}
+  members: [],                // array of {nick, role} from live presence
   topicFilter: 'all',
+  unread: {},                 // roomId -> unseen message count (badge sockets)
   seenMessageIds: new Set(),
 };
 
@@ -80,6 +81,7 @@ window.__pirchchatClient = {
   },
   get identity() { return state.identity; },
   get state() { return state; },
+  watchTogether,
 };
 
 // ===== API calls =====
@@ -140,10 +142,25 @@ function safeLink(value) {
 }
 
 function safeMessageBody(value) {
-  // Existing archives contain escaped text plus occasional span/br formatting.
-  // Strip only that historical formatting; escape everything else, including tags.
-  return String(value || '').replace(/<\/?span(?:\s[^>]*)?>/gi, '').replace(/<br\s*\/?>/gi, '\n')
-    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Same sanitizer as the worker (sanitizeBody): decode entities, strip
+  // tags, re-escape, wrap Burmese runs in our own span. Historical archives
+  // carry escaped text plus occasional span/br formatting — normalized here.
+  const text = String(value || '')
+    .replace(/&#0*39;|'/gi, "'")
+    .replace(/\u0026lt;/gi, '<')
+    .replace(/\u0026gt;/gi, '>')
+    .replace(/\u0026quot;/gi, '"')
+    .replace(/\u0026amp;/gi, '&')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '');
+  const escaped = text
+    .replace(/&/g, '\u0026amp;')
+    .replace(/</g, '\u0026lt;')
+    .replace(/>/g, '\u0026gt;')
+    .replace(/"/g, '\u0026quot;');
+  return escaped
+    .replace(/[\u1000-\u109F][\u1000-\u109F\s]*/g, '<span lang="my">$&</span>')
+    .replace(/\n/g, '<br>');
 }
 
 async function uploadImage(file) {
@@ -167,6 +184,11 @@ async function deleteMessageViaSweep(roomId) {
 
 // ===== WebSocket =====
 
+function roomWsURL(roomId) {
+  const wsOrigin = API_BASE.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+  return wsOrigin + '/api/rooms/' + encodeURIComponent(roomId);
+}
+
 function disconnectWS() {
   clearTimeout(state.reconnectTimer);
   state.reconnectTimer = null;
@@ -178,8 +200,7 @@ function disconnectWS() {
 function connectWS(roomId) {
   disconnectWS();
   if (!roomId || roomId !== state.currentRoom) return;
-  const wsOrigin = API_BASE.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
-  const url = wsOrigin + '/api/rooms/' + encodeURIComponent(roomId) + '?nick=' + encodeURIComponent(state.identity.name || 'guest');
+  const url = roomWsURL(roomId) + '?nick=' + encodeURIComponent(state.identity.name || 'guest');
   const retry = () => {
     state.wsRetry++;
     state.reconnectTimer = setTimeout(() => {
@@ -234,9 +255,14 @@ function handleWsMessage(roomId, data) {
     appendMessageDom(data.message);
     return;
   }
+  if (data.type === 'watch') { renderWatchStage(data.state); return; }
   if (data.type === 'event') {
     if (data.event === 'join' || data.event === 'leave') {
       appendSystemMessage((data.identity || 'anon') + ' has ' + (data.event === 'join' ? 'joined' : 'left') + ' #' + roomId);
+    }
+    if (data.event === 'watch') {
+      renderWatchStage(data.state);
+      return;
     }
     return;
   }
@@ -280,12 +306,64 @@ function renderRoomTitle(room) {
 
 function renderMembers() {
   const ul = document.getElementById('memberList');
-  if (!ul) return;
-  ul.innerHTML = state.members.map((m) => {
-    const cls = m.role === 'op' ? 'members__nick members__nick--op' : (m.role === 'away' ? 'members__nick members__nick--away' : 'members__nick');
-    const tag = m.role === 'op' ? '@op' : (m.role === 'voice' ? '@voice' : (m.role === 'away' ? 'away' : ''));
-    return '<li><span class="' + cls + '">' + escapeHtml(m.nick) + '</span>' + (tag ? '<span class="members__tag">' + escapeHtml(tag) + '</span>' : '') + '</li>';
-  }).join('');
+  if (ul) {
+    ul.innerHTML = state.members.map((m) => {
+      const cls = m.role === 'op' ? 'members__nick members__nick--op' : (m.role === 'away' ? 'members__nick members__nick--away' : 'members__nick');
+      const tag = m.role === 'op' ? '@op' : (m.role === 'voice' ? '@voice' : (m.role === 'away' ? 'away' : ''));
+      return '<li><span class="' + cls + '">' + escapeHtml(m.nick) + '</span>' + (tag ? '<span class="members__tag">' + escapeHtml(tag) + '</span>' : '') + '</li>';
+    }).join('');
+  }
+  const cm = document.getElementById('chatMembers');
+  if (cm) cm.textContent = state.members.length + ' in room';
+}
+
+function renderRoomTopic(room) {
+  const el = document.getElementById('roomTopic');
+  if (!el || !room) return;
+  const local = (window.__pirchRooms || {})[room.id] || {};
+  const my = local.topic_my || '';
+  const en = room.topic || local.topic || '';
+  if (!my && !en) { el.hidden = true; return; }
+  el.innerHTML = (my ? '<span lang="my">' + escapeHtml(my) + '</span>' : '') +
+    (en ? '<span class="room-topic__en">' + escapeHtml(en) + '</span>' : '');
+  el.hidden = false;
+}
+
+// ===== Unread badges (silent sockets on the other rooms) =====
+
+const silentSockets = {};
+
+function openBadgeSockets() {
+  KNOWN_ROOMS.forEach((id) => {
+    if (id === state.currentRoom || silentSockets[id]) return;
+    try {
+      const ws = new WebSocket(roomWsURL(id) + '?silent=1&nick=' + encodeURIComponent(state.identity.name || 'guest'));
+      silentSockets[id] = ws;
+      ws.addEventListener('message', (event) => {
+        let data;
+        try { data = JSON.parse(event.data); } catch (e) { return; }
+        if (data.type === 'message' && data.message && !state.seenMessageIds.has(data.message.id)) {
+          state.unread[id] = (state.unread[id] || 0) + 1;
+          renderBadges();
+        }
+      });
+      ws.addEventListener('close', () => {
+        delete silentSockets[id];
+        if (state.currentRoom !== id) setTimeout(openBadgeSockets, 8000);
+      });
+    } catch (e) { /* badge sockets are best-effort */ }
+  });
+}
+
+function renderBadges() {
+  document.querySelectorAll('button[data-room]').forEach((b) => {
+    const n = state.unread[b.dataset.room] || 0;
+    let badge = b.querySelector('.badge');
+    if (n > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'badge'; b.appendChild(badge); }
+      badge.textContent = n > 9 ? '9+' : String(n);
+    } else if (badge) badge.remove();
+  });
 }
 
 function renderMessages() {
@@ -321,8 +399,65 @@ function renderMessageHtml(m) {
       '</a>';
     } catch (e) {}
   }
-  const nickClass = m.author_name === 'guest' || m.author_pubkey === state.identity.network ? 'nick nick--op' : 'nick';
+  // Saffron = "this is you" (own network ID only). Never a trust signal —
+  // nicknames are unverified and trivially spoofed.
+  const nickClass = m.author_pubkey === state.identity.network ? 'nick nick--op' : 'nick';
   return '<div class="msg"><span class="ts">' + escapeHtml(tsToHHMM(m.ts)) + '</span> <span class="' + nickClass + '">' + topicTag + escapeHtml(m.author_name || 'anon') + '</span> <span class="body">' + bodyText + '</span>' + imgHtml + previewHtml + '</div>';
+}
+
+async function watchTogether(url, name) {
+  const target = url || window.prompt('HTTPS stream or video link');
+  if (!target) return;
+  const safe = safeLink(target);
+  if (!safe || !safe.startsWith('https://')) {
+    appendSystemMessage('A valid HTTPS link is required.');
+    return;
+  }
+  try {
+    const result = await api('/api/rooms/' + encodeURIComponent(state.currentRoom) + '/watch', {
+      method: 'POST', body: JSON.stringify({ url: safe, kind: /\.m3u8(?:\?|$)/i.test(safe) ? 'hls' : 'link', name: name || 'Watch together', by_name: state.identity.name }),
+    });
+    renderWatchStage(result.state);
+    appendSystemMessage('Shared with #' + state.currentRoom + ': ' + safe);
+  } catch (e) { appendSystemMessage('Could not share: ' + e.message); }
+}
+
+function renderWatchStage(watch) {
+  const stage = document.getElementById('watchStage');
+  if (!stage) return;
+  const target = watch && safeLink(watch.url);
+  if (target && target.startsWith('https://')) {
+    const video = stage.querySelector('video');
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+      video.hidden = watch.kind !== 'hls';
+      if (!video.hidden) { video.src = target; video.play().catch(() => {}); }
+    }
+    stage.hidden = false;
+    const title = stage.querySelector('.watch-stage__title');
+    if (title) title.textContent = watch.name || 'Watch together';
+    const stopBtn = stage.querySelector('.watch-stage__stop');
+    if (stopBtn) {
+      stopBtn.onclick = async () => {
+        try {
+          await api('/api/rooms/' + encodeURIComponent(state.currentRoom) + '/watch', { method: 'POST', body: JSON.stringify({ stop: true }) });
+          renderWatchStage(null);
+        } catch (e) { appendSystemMessage('Could not stop: ' + e.message); }
+      };
+    }
+    const note = stage.querySelector('.watch-stage__note');
+    if (note) {
+      note.textContent = '';
+      const link = document.createElement('a');
+      link.href = target; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = 'Open shared video'; note.appendChild(link);
+    }
+  } else {
+    const video = stage.querySelector('video');
+    if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+    stage.hidden = true;
+  }
 }
 
 function appendMessageDom(m) {
@@ -343,12 +478,18 @@ async function switchRoom(roomId) {
   if (!KNOWN_ROOMS.includes(roomId)) return;
   const version = ++state.roomVersion;
   disconnectWS();
+  if (silentSockets[roomId]) {
+    try { silentSockets[roomId].close(); } catch (e) {}
+    delete silentSockets[roomId];
+  }
   state.currentRoom = roomId;
+  renderWatchStage(null);
   state.wsRetry = 0;
   state.history = [];
   state.members = [];
+  state.unread[roomId] = 0;
   state.seenMessageIds = new Set();
-  renderMessages(); renderMembers();
+  renderMessages(); renderMembers(); renderBadges();
   renderRoomTitle({id:roomId, title:'#' + roomId});
   document.querySelectorAll('button[data-room]').forEach((b) => {
     b.classList.toggle('menubar__item--active', b.dataset.room === roomId);
@@ -356,7 +497,8 @@ async function switchRoom(roomId) {
   const rooms = await loadRooms();
   if (version !== state.roomVersion) return;
   const room = rooms.find((r) => r.id === roomId);
-  if (room) renderRoomTitle(room);
+  if (room) { renderRoomTitle(room); renderRoomTopic(room); }
+  else renderRoomTopic({ id: roomId, topic: '' });
   try {
     const hist = await loadHistory(roomId, 50);
     if (version !== state.roomVersion) return;
@@ -368,6 +510,7 @@ async function switchRoom(roomId) {
     appendSystemMessage(e.message);
   }
   connectWS(roomId);
+  openBadgeSockets();
 }
 
 // ===== Composer =====
@@ -403,8 +546,6 @@ async function handleCommand(raw) {
   if (cmd === 'nick' && arg) {
     const name = arg.slice(0, 32);
     window.__pirchchatClient.setIdentity(name);
-    const label = document.getElementById('chatUserLabel');
-    if (label) label.textContent = name + ' @ ' + state.identity.network;
     appendSystemMessage('You are now known as ' + name + '.');
     return true;
   }
@@ -432,6 +573,7 @@ async function handleCommand(raw) {
     else appendSystemMessage('Hotlines: Thailand 1300 (24h) · Burmese health hotline (Bangkok) · Mae Tao Clinic Mae Sot.');
     return true;
   }
+  if (cmd === 'watch') { watchTogether(); return true; }
   if (cmd === 'export') {
     const lines = state.history.map((m) => {
       const d = new Date(m.ts || Date.now());
@@ -495,7 +637,7 @@ async function handleSubmit(event) {
       window.__pendingAttachment = null;
       const fi = document.getElementById('fileInput');
       if (fi) fi.value = '';
-      if (input) input.placeholder = 'Type a Burmese or English message…  URLs become preview cards';
+      if (input) resetPlaceholder(input);
     }
   } catch (e) {
     appendSystemMessage('Not sent to #' + roomId + ': ' + (e.message || e) + '. Your draft is still here.');
@@ -527,10 +669,22 @@ function handleFile(event) {
   reader.readAsDataURL(file);
 }
 
+function resetPlaceholder(input) {
+  if (!input) return;
+  const my = input.dataset.phMy, en = input.dataset.phEn;
+  input.placeholder = (window.__pirchLang === 'my' && my) ? my : (en || my || '');
+}
+
 function flashNet(text) {
   const el = document.getElementById('chatUserLabel');
   if (!el) return;
-  el.textContent = (state.identity.name || 'guest') + ' · ' + text;
+  const name = state.identity.name || 'guest';
+  el.textContent = name + ' · ' + text;
+  // Restore the identity label — a status line must never stick.
+  clearTimeout(flashNet.t);
+  flashNet.t = setTimeout(() => {
+    el.textContent = name + ' · unverified nickname';
+  }, 2400);
 }
 
 function renderQuest() {
@@ -580,9 +734,17 @@ function wire() {
     });
   });
 
-  // Identity — set titlebar from network id
+  // Identity — titlebar shows the nickname; the network ID is not displayed.
   const label = document.getElementById('chatUserLabel');
-  if (label) label.textContent = (state.identity.name || 'guest') + ' @ ' + state.identity.network;
+  if (label) label.textContent = (state.identity.name || 'guest') + ' · unverified nickname';
+
+  // One-time welcome: the three commands that matter.
+  try {
+    if (!localStorage.getItem('pirchchat.welcomed')) {
+      localStorage.setItem('pirchchat.welcomed', '1');
+      setTimeout(() => appendSystemMessage('Type /help for commands · /guide for the survival guide · /hotline for human help.'), 1400);
+    }
+  } catch (e) {}
 
   // Source chips still exist in DOM. Wire them via existing handler module (dashboard.js body).
 

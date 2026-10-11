@@ -48,6 +48,30 @@
   var alarmOn = false;
   var events = [];
 
+  /* ---------- language (Burmese-first default) ---------- */
+  var lang = 'my';
+  try { lang = localStorage.getItem('pirchchat.lang') || 'my'; } catch (e) {}
+  if (lang !== 'en') lang = 'my';
+
+  function applyLangRoom() {
+    try { localStorage.setItem('pirchchat.lang', lang); } catch (e) {}
+    var tagged = document.querySelectorAll('[data-en]');
+    Array.prototype.forEach.call(tagged, function (el) {
+      var en = el.getAttribute('data-en');
+      var my = el.getAttribute('data-my');
+      var txt = lang === 'my' ? (my || en) : (en || my);
+      if (!txt) return;
+      if (el.hasAttribute('data-ul') && lang === 'en' && txt.length > 1) {
+        el.innerHTML = '<u>' + escapeHtml(txt.charAt(0)) + '</u>' + escapeHtml(txt.slice(1));
+      } else {
+        el.textContent = txt;
+      }
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ph-en]'), function (el) {
+      el.placeholder = lang === 'my' ? (el.getAttribute('data-ph-my') || el.getAttribute('data-ph-en')) : el.getAttribute('data-ph-en');
+    });
+  }
+
   function logEvent(text) {
     events.push(timeNow() + ' ' + text);
     if (events.length > 60) events = events.slice(-60);
@@ -59,20 +83,23 @@
   }
 
   function setStatus(text) {
-    var bars = statusbar();
-    if (bars && bars[0]) bars[0].textContent = text;
+    var el = document.getElementById('roomStatus');
+    if (el) el.textContent = text;
+    var led = document.getElementById('roomLed');
+    if (led) led.className = text.indexOf('disconnected') !== -1 ? 'led' : 'led led--on';
   }
 
-  function appendUserMessage(who, body) {
+  function appendUserMessage(who, body, sim) {
     var msg = document.createElement('div');
-    msg.className = 'msg';
+    msg.className = 'msg' + (sim ? ' msg--sim' : '');
     msg.innerHTML =
       '<span class="ts"' + (showTs ? '' : ' hidden') + '>' + escapeHtml(timeNow()) + '</span> ' +
       '<span class="nick">' + escapeHtml(who) + '</span> ' +
+      (sim ? '<span class="members__tag">demo</span> ' : '') +
       '<span class="body">' + escapeHtml(body) + '</span>';
     messagesEl.appendChild(msg);
     scrollToBottom();
-    if (alarmOn && body.toLowerCase().indexOf(nick.toLowerCase()) !== -1) beep();
+    if (alarmOn && !sim && body.toLowerCase().indexOf(nick.toLowerCase()) !== -1) beep();
   }
 
   function appendAction(who, body) {
@@ -119,7 +146,9 @@
         nick = arg.slice(0, 24);
         try { localStorage.setItem('pirchchat.room.nick', nick); } catch (e) {}
         appendServerMessage('You are now known as ' + nick + '.');
-        setStatus('Connected as ' + nick);
+        var linkLabel = document.querySelector('.linkbar__label');
+  if (linkLabel) linkLabel.textContent = 'local demo · ' + nick;
+  setStatus('Local demo — messages simulated');
       } else if (cmd === 'me' && arg) {
         appendAction(nick, arg);
       } else if (cmd === 'clear') {
@@ -154,7 +183,7 @@
         if (act === 'connect') {
           connected = !connected;
           b.classList.toggle('is-pressed', connected);
-          setStatus(connected ? 'Connected as ' + nick : 'Disconnected');
+          setStatus(connected ? 'Local demo — typing is local' : 'Local demo — disconnected');
           appendServerMessage(connected ? '— ' + nick + ' has joined #monastic-youth' : '— disconnected. Press Connect to rejoin.');
           logEvent(connected ? 'join' : 'leave');
         } else if (act === 'mode') {
@@ -231,6 +260,10 @@
       ['Toggle timestamps', function () { document.querySelector('.toolbar__btn[data-act="popup"]').click(); }],
       ['Toggle mention beep', function () { document.querySelector('.toolbar__btn[data-act="alarm"]').click(); }],
       ['Toggle connect', function () { document.querySelector('.toolbar__btn[data-act="connect"]').click(); }],
+      ['မြန်မာ / English labels', function () {
+        lang = lang === 'my' ? 'en' : 'my';
+        applyLangRoom();
+      }],
     ],
     window: [
       ['Fullscreen room', function () {
@@ -293,7 +326,7 @@
     if (seedIndex >= seeds.length) return;
     if (connected) {
       var s = seeds[seedIndex++];
-      appendUserMessage(s[0], s[1]);
+      appendUserMessage(s[0], s[1], true);
     }
     if (seedIndex < seeds.length) {
       setTimeout(seedTick, 12000 + Math.random() * 14000);
@@ -301,9 +334,30 @@
   }
   setTimeout(seedTick, 8000);
 
+  /* ---------- titlebar window controls (were dead) ---------- */
+  var win = document.getElementById('monastic-youth');
+  var minB = document.getElementById('roomMin');
+  var maxB = document.getElementById('roomMax');
+  if (minB && win) minB.addEventListener('click', function () {
+    win.classList.toggle('is-min');
+    setStatus(win.classList.contains('is-min') ? 'Minimized — click ▢ to restore' : 'Local demo — messages simulated');
+  });
+  if (maxB && win) maxB.addEventListener('click', function () {
+    if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+    else if (win.requestFullscreen) win.requestFullscreen().catch(function () {});
+  });
+
   wireToolbar();
   wireMenus();
-  setStatus('Connected as ' + nick);
+  applyLangRoom();
+  var langBtn = document.getElementById('roomLang');
+  if (langBtn) langBtn.addEventListener('click', function () {
+    lang = lang === 'my' ? 'en' : 'my';
+    applyLangRoom();
+  });
+  var linkLabel = document.querySelector('.linkbar__label');
+  if (linkLabel) linkLabel.textContent = 'local demo · ' + nick;
+  setStatus('Local demo — messages simulated');
   logEvent('room opened');
   scrollToBottom();
 })();

@@ -136,7 +136,7 @@ function renderRadioMarkers() {
     if (!lat || !lng) return;
     const el = document.createElement('div');
     el.className = 'pirch-marker pirch-marker--radio';
-    el.title = s.name + (s.codec ? ' · ' + s.codec : '') + (s.bitrate ? ' · ' + s.bitrate + 'kbps' : '');
+    el.title = s.name + (s.codec ? ' · ' + s.codec : '') + (s.bitrate ? ' · ' + s.bitrate + 'kbps' : '') + (s.geo ? '' : ' · position approximate');
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       openRadioModal(s);
@@ -242,8 +242,8 @@ const BURMESE_TV_LIVE = [
     id: 'channelk',
     name: 'Channel K',
     category: 'Entertainment',
-    hls: 'https://mmtvs.exliatycl.online/channelk/stream.m3u8',
-    note: 'Youth & Entertainment channel',
+    watch: 'https://www.facebook.com/channelkmyanmar',
+    note: 'Stream host down (checked Sept 2026) — watch via portal',
     fallback: 'https://www.facebook.com/channelkmyanmar',
     source: 'IPTV-ORG / MM Streams',
   },
@@ -251,8 +251,8 @@ const BURMESE_TV_LIVE = [
     id: '5plus',
     name: '5 Plus',
     category: 'Variety',
-    hls: 'https://mmtvs.exliatycl.online/5plus/stream.m3u8',
-    note: 'News & Variety 720p',
+    watch: 'https://www.facebook.com/5pluschannel',
+    note: 'Stream host down (checked Sept 2026) — watch via portal',
     fallback: 'https://www.facebook.com/5pluschannel',
     source: 'IPTV-ORG / MM Streams',
   },
@@ -260,8 +260,8 @@ const BURMESE_TV_LIVE = [
     id: 'channel9',
     name: 'Channel 9',
     category: 'General',
-    hls: 'https://mmtvs.exliatycl.online/channel9/stream.m3u8',
-    note: 'General broadcast & diaspora',
+    watch: 'https://www.facebook.com/channel9myanmar',
+    note: 'Stream host down (checked Sept 2026) — watch via portal',
     fallback: 'https://www.facebook.com/channel9myanmar',
     source: 'IPTV-ORG / MM Streams',
   },
@@ -278,10 +278,10 @@ const BURMESE_TV_LIVE = [
     id: 'rtmasean',
     name: 'RTM ASEAN',
     category: 'ASEAN',
-    hls: 'https://d25tgymtnqzu8s.cloudfront.net/event/smil:event1/chunklist_b2596000_slENG.m3u8',
-    note: 'ASEAN regional news stream',
+    watch: 'https://rtmklik.rtm.gov.my/',
+    note: 'Stream blocked (checked Sept 2026) — watch via portal',
     fallback: 'https://rtmklik.rtm.gov.my/',
-    source: 'RTM CloudFront CDN',
+    source: 'RTM portal',
   },
   {
     id: 'fortunetv',
@@ -346,15 +346,27 @@ function buildTvPanel() {
     list = list.filter((ch) => ch.category.toLowerCase() === cat);
   }
 
+  // Low-end phones: 10 simultaneous HLS buffers blow the data budget.
+  // Auto-attach the first 3; the rest wait for a tap.
+  const isSmall = window.innerWidth < 900;
+  const httpsPage = location.protocol === 'https:';
+  let attached = 0;
+
   list.forEach((ch) => {
     const card = document.createElement('div');
     card.className = 'tv-card';
     card.id = 'tv-card-' + ch.id;
 
-    if (ch.hls) {
+    // Mixed content: an http:// stream never plays on an https page. Render
+    // it as a watch card instead of a dead player.
+    const playable = ch.hls && !(httpsPage && ch.hls.startsWith('http:'));
+
+    if (playable) {
+      const lazy = isSmall && attached >= 3;
+      if (!lazy) attached++;
       card.innerHTML =
         '<header class="tv-card__bar">' +
-          '<span class="dot dot--live" aria-hidden="true"></span>' +
+          '<span class="dot dot--muted" aria-hidden="true"></span>' +
           '<span class="tv-card__name" title="' + escapeHtml(ch.name + ' · ' + ch.note) + '">' + escapeHtml(ch.name) + '</span>' +
           '<button type="button" class="tv-card__mute" data-mute-for="' + escapeHtml(ch.id) + '">Unmute</button>' +
         '</header>' +
@@ -367,21 +379,30 @@ function buildTvPanel() {
       const video = card.querySelector('video');
       const fb = card.querySelector('.tv-card__fallback');
       const muteBtn = card.querySelector('.tv-card__mute');
-      video.muted = true; // start muted for browser autoplay policies
-      let hlsInstance = null;
 
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = ch.hls;
-        video.play().catch(() => {});
-      } else if (window.Hls && window.Hls.isSupported()) {
+      const attach = () => {
+        video.muted = true; // start muted for browser autoplay policies
+        const dotEl = card.querySelector('.tv-card__bar .dot');
+        if (dotEl) dotEl.className = 'dot dot--muted';
+        let hlsInstance = null;
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = ch.hls;
+          video.addEventListener('playing', () => {
+            const dotEl2 = card.querySelector('.tv-card__bar .dot');
+            if (dotEl2) dotEl2.className = 'dot dot--live';
+          }, { once: true });
+          video.play().catch(() => {});
+        } else if (window.Hls && window.Hls.isSupported()) {
         hlsInstance = new window.Hls({ maxBufferLength: 15, enableWorker: true });
         hlsInstance.loadSource(ch.hls);
         hlsInstance.attachMedia(video);
         hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
+          if (dotEl) dotEl.className = 'dot dot--live';
           video.play().catch(() => {});
         });
         hlsInstance.on(window.Hls.Events.ERROR, (_, data) => {
           if (data && data.fatal) {
+            if (dotEl) dotEl.className = 'dot dot--muted';
             if (fb) {
               fb.style.display = 'block';
               fb.innerHTML = 'Stream standby · <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">portal ↗</a>';
@@ -399,17 +420,34 @@ function buildTvPanel() {
             }
           }
         });
+        } else if (fb) {
+          fb.style.display = 'block';
+          fb.innerHTML = 'HLS unsupported · <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">portal ↗</a>';
+        }
+        const existing = tvPlayers.find((p) => p.id === ch.id);
+        if (existing) existing.hls = hlsInstance;
+        else tvPlayers.push({ id: ch.id, video, hls: hlsInstance, ch });
+      };
+
+      if (lazy) {
+        fb.style.display = 'flex';
+        fb.innerHTML = 'Tap to load — saves data<br><a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">portal ↗</a>';
+        card.addEventListener('click', () => {
+          fb.style.display = 'none';
+          attach();
+        }, { once: true });
+      } else {
+        attach();
       }
 
       if (muteBtn) {
-        muteBtn.addEventListener('click', () => {
+        muteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
           video.muted = !video.muted;
           muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
           if (!video.muted) video.play().catch(() => {});
         });
       }
-
-      tvPlayers.push({ id: ch.id, video, hls: hlsInstance, ch });
     } else {
       card.innerHTML =
         '<header class="tv-card__bar">' +
@@ -420,13 +458,13 @@ function buildTvPanel() {
         '<div class="tv-card__watch">' +
           '<p>' + escapeHtml(ch.note) + '</p>' +
           '<a class="tv-card__go" href="' + escapeHtml(ch.watch) + '" target="_blank" rel="noopener">Watch Live Stream ↗</a>' +
+          '<button type="button" class="tv-card__watch-together" data-room="' + escapeHtml(ch.id) + '" title="Watch together with this room">Watch together</button>' +
         '</div>';
       row.appendChild(card);
     }
   });
 
   const muteAll = document.getElementById('tvpanelMuteAll');
-  const unmuteAll = document.getElementById('tvpanelUnmuteAll');
   const hint = document.getElementById('tvpanelHint');
   if (hint) hint.textContent = 'IPTV live feeds · Click Unmute on any card for audio';
   if (muteAll) {
@@ -440,6 +478,19 @@ function buildTvPanel() {
       });
     };
   }
+  const togetherBtns = document.querySelectorAll('.tv-card__watch-together');
+  if (togetherBtns.length > 0) {
+    togetherBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const channel = list.find((ch) => ch.id === btn.dataset.room);
+        if (channel && window.__pirchchatClient) {
+          window.__pirchchatClient.watchTogether(channel.hls || channel.watch, channel.name);
+        }
+      });
+    });
+  }
+
+  const unmuteAll = document.getElementById('tvpanelUnmuteAll');
   if (unmuteAll) {
     unmuteAll.onclick = () => {
       tvPlayers.forEach((p) => {
@@ -474,9 +525,6 @@ function startChatStatusIndicator() {
       statusEl.style.color = 'var(--ink-muted)';
       if (ledEl) ledEl.className = 'led';
     }
-    if (membersEl && conn && Array.isArray(conn.members)) {
-      membersEl.textContent = conn.members.length + (conn.members.length === 1 ? ' member' : ' members');
-    }
   }, 2000);
 }
 
@@ -484,6 +532,7 @@ const ROOMS = {
   'monastic-youth': {
     title: '#monastic-youth',
     topic: 'Monastic education, novice monks, transitioning out, Burmese diaspora in Mae Sot and Chiang Mai. Open to anyone passing through.',
+    topic_my: 'ဘုန်းတော်ကြီးကျောင်း ပညာရေး၊ သာမဏေ၊ အသွင်ကူးပြောင်းရေး၊ မဲဆောက်နှင့် ချင်းမိုင် မြန်မာများ။ လူတိုင်း ဝင်ရောက်နိုင်သည်။',
     members: [
       { nick: 'aung_myo', op: true },
       { nick: 'nilar' },
@@ -505,12 +554,14 @@ const ROOMS = {
       { ts: '14:40', nick: 'aung_myo', op: true, topic: 'sharing', body_html: 'reminder: please use Bur-Myan where you can.' },
       { type: 'mode', body_html: 'aung_myo sets +m (moderated)' },
       { ts: '14:55', nick: 'min_thu', topic: 'ideas', body_html: '<span lang="my">မင်္ဂလာပါ</span>. today bkk immigration patrol at 11. ok?' },
-      { ts: '14:58', nick: 'aung_myo', op: true, topic: 'sharing', body_html: '🚨 if your visa is expiring in 30 days — DO NOT leave the channel.' },
+      // Seeded operator-DM copy is a social-engineering vector for this audience — keep it honest.
+      { ts: '14:58', nick: 'aung_myo', op: true, topic: 'sharing', body_html: 'if your visa is expiring in 30 days — ask here in the channel. someone will point you to the official desk. no broker, no money.' },
     ],
   },
   'bkk-burmese': {
     title: '#bkk-burmese',
     topic: 'Bangkok diaspora. Housing, paperwork, food, work, school, language. Burmese-first.',
+    topic_my: 'ဘန်ကောက် မြန်မာများ။ အိုးအိမ်၊ စာရွက်၊ အစားအသောက်၊ အလုပ်၊ ကျောင်း။ မြန်မာစကား အရင်။',
     members: [
       { nick: 'admin', op: true },
       { nick: 'yamin' },
@@ -528,6 +579,7 @@ const ROOMS = {
   'cm-burmese': {
     title: '#cm-burmese',
     topic: 'Chiang Mai diaspora. Lanna, language exchange, weekend meetups.',
+    topic_my: 'ချင်းမိုင် မြန်မာများ။ ဘာသာစကား လဲလှယ်ရေး၊ ရုံးသွင် တွေ့ဆုံရေး။',
     members: [
       { nick: 'admin', op: true },
       { nick: 'thazin', voice: true },
@@ -543,6 +595,7 @@ const ROOMS = {
   'digest-today': {
     title: '#digest-today',
     topic: 'Today\'s Burmese-language news digest. Auto-posted 06:00 ICT. Discussion welcome.',
+    topic_my: 'ယနေ့ မြန်မာဘာသာ သတင်းအကျဉ်းချုပ်။ နေ့တိုင်း ၀၆:၀၀ ICT။ ဆွေးနွေးကြည့်ပါ။',
     members: [
       { nick: 'digest-bot', op: true, status: '@bot' },
       { nick: 'aung_myo' },
@@ -557,6 +610,7 @@ const ROOMS = {
   'listening-club': {
     title: '#listening-club',
     topic: 'What people are saying across Burmese-language sources. Surfaced trends only.',
+    topic_my: 'မြန်မာဘာသာ အရင်းအမြစ်များတွင် လူများ ဘာပြောနေကြသလဲ။ ပေါ်လာသော လမ်းကြောင်းများသာ။',
     members: [
       { nick: 'listening-bot', op: true, status: '@bot' },
       { nick: 'thiri' },
@@ -569,9 +623,8 @@ const ROOMS = {
   },
 };
 
-// =====================================================
-// STATE
-// =====================================================
+window.__pirchRooms = ROOMS;
+window.__pirchCities = CITIES;
 
 const state = {
   identity: null,
@@ -628,27 +681,6 @@ function saveIdentity(identity) {
   catch (e) { /* ignore */ }
 }
 
-function fakeIp() {
-  // Demo only. A real deployment would record the network ID at the
-  // /functions/api/identity.js endpoint and bind it to the email.
-  const a = 10 + Math.floor(Math.random() * 240);
-  const b = Math.floor(Math.random() * 256);
-  const c = Math.floor(Math.random() * 256);
-  return a + '.' + b + '.' + c + '.xx';
-}
-
-function networkId() {
-  // Persistent per-browser ID. Used for the "we remember the network ID"
-  // rule from the identity modal. Demo-grade.
-  let id = null;
-  try { id = localStorage.getItem('pirchchat.net'); } catch (e) { /* ignore */ }
-  if (!id) {
-    id = 'user_' + Math.random().toString(36).slice(2, 10);
-    try { localStorage.setItem('pirchchat.net', id); } catch (e) { /* ignore */ }
-  }
-  return id;
-}
-
 function showIdentityModal() {
   const modal = $('#identityModal');
   if (modal) modal.hidden = false;
@@ -664,7 +696,7 @@ function hideIdentityModal() {
 function applyIdentity(identity) {
   state.identity = identity;
   const label = $('#chatUserLabel');
-  if (label) label.textContent = identity.name + '@pirchchat · ' + identity.network;
+  if (label) label.textContent = identity.name + ' · unverified nickname';
 }
 
 // =====================================================
@@ -1327,14 +1359,51 @@ async function loadNews() {
     renderNews();
     refreshMarkers();
     const agoEl = $('#newsAgo');
-    if (agoEl) agoEl.textContent = 'September 2026 · unverified';
+    if (agoEl) agoEl.textContent = (data.corpusDate || 'corpus') + ' · ' + (data.mode || 'corpus') + (data.liveCount ? ' · ' + data.liveCount + ' live' : '');
     const lr = $('#mapLastRefresh');
-    if (lr) lr.textContent = 'Static news examples · September 2026';
+    if (lr) lr.textContent = (data.mode === 'live' || data.mode === 'live+corpus' || data.mode === 'partial-live+corpus' ? 'live wire + corpus' : 'corpus only') + ' · fetched ' + timeNow();
   } catch (e) {
     if (requestId !== newsRequest) return;
     const listEl = $('#newsList');
     if (listEl) listEl.innerHTML = '<div class="news-item" style="color:var(--negative)">news failed: ' + escapeHtml(String(e.message || e)) + '</div>';
   }
+}
+
+// ---------- Media-volume sparkline (GDELT, 14 days) ----------
+// Dependency-free SVG bars. Labelled: source, metric, age (honest envelope).
+// Hides entirely when the endpoint is unavailable — honest absence.
+async function loadTrends() {
+  const el = $('#sparkWire');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/trends', { cache: 'no-store' });
+    if (!res.ok) throw new Error('trends http ' + res.status);
+    const j = await res.json();
+    if (!j.ok || !j.series || !j.series.length) throw new Error('no series');
+    renderSpark(j.series);
+    const meta = $('#sparkMeta');
+    if (meta) meta.textContent = 'GDELT · ' + j.spanDays + ' days · updated ' + timeNow();
+    el.hidden = false;
+  } catch (e) {
+    if (el) el.hidden = true; // honest absence — no fake trend
+  }
+}
+
+function renderSpark(series) {
+  const el = document.getElementById('sparkBars');
+  if (!el || !series || !series.length) return;
+  const max = Math.max(...series.map((d) => d.value), 0.0001);
+  const H = 42;
+  const n = series.length;
+  let svg = '<svg viewBox="0 0 100 ' + H + '" preserveAspectRatio="none" style="width:100%;height:' + H + 'px;display:block" role="img" aria-label="Daily media volume, ' + n + ' days">';
+  series.forEach((d, i) => {
+    const h = Math.max(1.5, (d.value / max) * (H - 2));
+    const x = (i * (100 / n)).toFixed(2);
+    const w = Math.max(0.6, (100 / n) - 0.8).toFixed(2);
+    svg += '<rect x="' + x + '" y="' + (H - h).toFixed(2) + '" width="' + w + '" height="' + h.toFixed(2) + '" fill="#d4a017"><title>' + escapeHtml(d.date + ' · ' + d.value.toFixed(3)) + '</title></rect>';
+  });
+  svg += '</svg>';
+  el.innerHTML = svg;
 }
 
 function buildSourceChips() {
@@ -1390,9 +1459,10 @@ function renderNews() {
         ((it.digest_my && it.digest_my.trim()) ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.digest_my) + '</div>' : '') +
         '</div>' : '';
     return (
-      '<article class="news-item" data-id="' + escapeHtml(it.id) + '">' +
+      '<article class="news-item' + (it.tier === 'live-wire' ? ' news-item--live' : '') + '" data-id="' + escapeHtml(it.id) + '">' +
         '<div class="news-item__head">' +
           '<span class="news-item__ts">' + escapeHtml(ago(it.ts)) + '</span>' +
+          (it.tier === 'live-wire' ? '<span class="news-item__wire">LIVE RSS</span>' : '') +
           '<span class="news-item__src">' + escapeHtml(it.sourceLabel || it.source || '') + '</span>' +
           '<span class="news-item__loc">' + escapeHtml((it.location && it.location.place) || '') + '</span>' +
         '</div>' +
@@ -1433,6 +1503,9 @@ function renderActionDesk() {
 
 function focusOnItem(item) {
   if (!map || !item.location) return;
+  // On mobile the map lives in its own tab — make the fly visible.
+  const tab = document.body.getAttribute('data-tab');
+  if (tab && tab !== 'map') setActiveTab('map');
   $$('.news-item').forEach((el) => el.classList.toggle('is-selected', el.dataset.id === item.id));
   map.flyTo({ center: [item.location.lng, item.location.lat], zoom: Math.max(map.getZoom(), 9), essential: true });
   openIncidentModal(item);
@@ -1469,81 +1542,9 @@ function openIncidentModal(item) {
 }
 
 // =====================================================
-// CHAT
+// CHAT — rendering is owned by chat-client.js (window.__pirchchatClient).
+// This module only exposes ROOMS (topics) and CITIES for it.
 // =====================================================
-
-let currentRoom = 'monastic-youth';
-
-function renderRoom(roomId) {
-  currentRoom = roomId;
-  $$('button[data-room]').forEach((b) => b.classList.toggle('menubar__item--active', b.dataset.room === roomId));
-  $('#chatRoomTitle').textContent = ROOMS[roomId].title;
-  renderMessages();
-  renderMembers();
-}
-
-function renderMessages() {
-  const room = ROOMS[currentRoom];
-  const wrap = $('#messages');
-  if (!wrap || !room) return;
-  let msgs = room.seed;
-  if (state.chatTopic !== 'all') msgs = msgs.filter((m) => (m.topic || '') === state.chatTopic);
-  if (!msgs.length) {
-    wrap.innerHTML = '<div class="msg msg--topic"><em>No messages with topic "' + escapeHtml(state.chatTopic) + '" in this room.</em></div>';
-    wrap.scrollTop = wrap.scrollHeight;
-    return;
-  }
-  wrap.innerHTML = msgs.map((m) => {
-    if (m.type === 'topic') return '<div class="msg msg--topic">' + (m.body_html || '') + '</div>';
-    if (m.type === 'mode') return '<div class="msg msg--mode">— ' + (m.body_html || '') + '</div>';
-    if (m.type === 'server') return '<div class="msg msg--server">— ' + escapeHtml(m.body_text || '') + '</div>';
-    const nickClass = m.op ? 'nick nick--op' : 'nick';
-    const topicTag = m.topic ? '<span class="msg__topic-tag">' + escapeHtml(m.topic) + '</span>' : '';
-    return '<div class="msg"><span class="ts">' + escapeHtml(m.ts || timeNow()) + '</span> <span class="' + nickClass + '">' + topicTag + escapeHtml(m.nick || '') + '</span> <span class="body">' + (m.body_html || escapeHtml(m.body_text || '')) + '</span></div>';
-  }).join('');
-  wrap.scrollTop = wrap.scrollHeight;
-}
-
-function renderMembers() {
-  const room = ROOMS[currentRoom];
-  const ul = $('#memberList');
-  if (!ul || !room) return;
-  ul.innerHTML = room.members.map((m) => {
-    const cls = m.op ? 'members__nick members__nick--op' : (m.away ? 'members__nick members__nick--away' : 'members__nick');
-    const tag = m.op ? '@op' : (m.voice ? '@voice' : (m.away ? 'away' : (m.status ? '@' + m.status : '')));
-    return '<li><span class="' + cls + '">' + escapeHtml(m.nick) + '</span>' + (tag ? '<span class="members__tag">' + escapeHtml(tag) + '</span>' : '') + '</li>';
-  }).join('');
-}
-
-function appendUserMessage(text, opts) {
-  opts = opts || {};
-  const wrap = $('#messages');
-  if (!wrap) return;
-  const net = state.identity ? state.identity.network : 'guest';
-  const nick = state.identity ? state.identity.name : 'guest';
-  const html =
-    '<div class="msg"><span class="ts">' + escapeHtml(timeNow()) + '</span> <span class="nick nick--op">' + escapeHtml(nick) + ' <span style="opacity:0.5;font-size:9px">@' + escapeHtml(net) + '</span></span> <span class="body">' + escapeHtml(text) + '</span></div>';
-  wrap.insertAdjacentHTML('beforeend', html);
-  if (opts.imageDataUrl) {
-    wrap.insertAdjacentHTML('beforeend', '<img class="msg__img" src="' + escapeHtml(opts.imageDataUrl) + '" alt="attachment">');
-  }
-  if (opts.preview) {
-    const p = opts.preview;
-    wrap.insertAdjacentHTML('beforeend',
-      '<a class="preview" href="' + escapeHtml(p.url) + '" target="_blank" rel="noopener">' +
-        '<span class="preview__title" data-preview-title>' + escapeHtml(p.title || p.url) + '</span>' +
-        '<span class="preview__desc" data-preview-desc>' + escapeHtml(p.description || '') + '</span>' +
-        '<span class="preview__host">' + escapeHtml(p.host || '') + '</span>' +
-      '</a>'
-    );
-  }
-  wrap.scrollTop = wrap.scrollHeight;
-}
-
-function detectFirstUrl(text) {
-  const m = text.match(/https?:\/\/\S+/);
-  return m ? m[0] : null;
-}
 
 // =====================================================
 // CLOCK
@@ -1567,11 +1568,19 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   $('#identitySubmit').addEventListener('click', () => {
     const nameEl = $('#identityName');
+    const langEl = $('#identityLang');
     const name = (nameEl && nameEl.value || '').trim() || 'guest';
     const id = window.__pirchchatClient.setIdentity(name);
     state.identity = id;
     applyIdentity(id);
+    // Language choice applies live and persists (Burmese-first default).
+    if (langEl && window.__pirchApplyLang) window.__pirchApplyLang(langEl.value);
     hideIdentityModal();
+  });
+
+  $('#identityLang') && $('#identityLang').addEventListener('change', () => {
+    const langEl = $('#identityLang');
+    if (langEl && window.__pirchApplyLang) window.__pirchApplyLang(langEl.value);
   });
 
   $('#identitySkip').addEventListener('click', hideIdentityModal);
@@ -1619,6 +1628,9 @@ document.addEventListener('DOMContentLoaded', function () {
   loadRadioStations();
   renderTvMarkers();
 
+  // Research briefing
+  if (a === 'research') window.location = 'research.html';
+
   // Live TV panel — always-visible Burmese IPTV feeds at the bottom of the map.
   buildTvPanel();
 
@@ -1639,6 +1651,8 @@ document.addEventListener('DOMContentLoaded', function () {
   renderActionDesk();
   loadNews();
   setInterval(loadNews, 120000);
+  loadTrends();
+  setInterval(loadTrends, 600000);
 
   // Chat (room tabs, topic chips, composer, file attach) is owned by chat-client.js.
   // Identity modal here only writes the network ID + name; chat-client.js reads it.

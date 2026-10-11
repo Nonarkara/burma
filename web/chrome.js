@@ -49,6 +49,49 @@ function beep() {
 window.__pirchBeep = beep;
 window.__pirchSoundOn = () => soundOn;
 
+// ---------- language (Burmese-first default — AGENTS.md boundary #3) ----------
+// data-en / data-my on labeled chrome; data-ul = underline first char in EN mode.
+function applyLang(lang) {
+  const use = lang === 'en' ? 'en' : 'my';
+  window.__pirchLang = use;
+  try { localStorage.setItem('pirchchat.lang', use); } catch (e) {}
+  $$('[data-en]').forEach((el) => {
+    const en = el.dataset.en, my = el.dataset.my;
+    const txt = use === 'my' ? (my || en) : (en || my);
+    if (!txt) return;
+    if (el.hasAttribute('data-ul') && use === 'en' && txt.length > 1) {
+      el.innerHTML = '<u>' + esc(txt.charAt(0)) + '</u>' + esc(txt.slice(1));
+    } else {
+      el.textContent = txt;
+    }
+  });
+  $$('[data-ph-en]').forEach((el) => {
+    el.placeholder = use === 'my' ? (el.dataset.phMy || el.dataset.phEn) : el.dataset.phEn;
+  });
+}
+window.__pirchApplyLang = applyLang;
+
+// ---------- locate me (device location, nothing stored) ----------
+function locateMe() {
+  if (!navigator.geolocation) { flashLeft('Geolocation unavailable — pin manually instead.'); return; }
+  flashLeft('Locating…');
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    if (!window.__pirchMap) { flashLeft('Map not ready.'); return; }
+    window.__pirchMap.flyTo({ center: [lng, lat], zoom: 12, essential: true });
+    const cities = window.__pirchCities || [];
+    let nearest = null, best = Infinity;
+    cities.forEach((c) => {
+      const d = (c.lat - lat) * (c.lat - lat) + (c.lng - lng) * (c.lng - lng);
+      if (d < best) { best = d; nearest = c; }
+    });
+    openIncident('You are here',
+      '<h3>' + lat.toFixed(4) + ', ' + lng.toFixed(4) + '</h3>' +
+      (nearest ? '<p>Nearest city: <strong>' + esc(nearest.name) + '</strong> (' + esc(nearest.note) + ')</p>' : '') +
+      '<p>Nothing is stored. This is your device location — the map does not remember it.</p>');
+  }, () => flashLeft('Location denied — drop a pin manually instead.'), { timeout: 8000 });
+}
+
 // ---------- dropdown menus ----------
 const MENUS = {
   file: [
@@ -62,6 +105,7 @@ const MENUS = {
   view: [
     { label: 'Cycle basemap (sat/streets/dark/topo)', key: 'B', fn: cycleBasemap },
     { label: 'Fit all markers', key: 'F', fn: () => clickToolbar('[data-action="fit"]') },
+    { label: 'Locate me (nearest city)', key: 'L', fn: locateMe },
     { label: 'Go to: Bangkok', key: '', fn: () => flyTo(100.5018, 13.7563, 10, 'Bangkok') },
     { label: 'Go to: Chiang Mai', key: '', fn: () => flyTo(98.9853, 18.7883, 10, 'Chiang Mai') },
     { label: 'Go to: Mae Sot', key: '', fn: () => flyTo(98.5473, 16.7456, 10, 'Mae Sot') },
@@ -90,6 +134,7 @@ const MENUS = {
     { label: 'Phrasebook…', key: '', fn: () => openGuide('phrases') },
     { label: 'Human hotlines…', key: '', fn: () => openGuide('hotlines') },
     { label: 'Kyat–baht calculator…', key: '', fn: () => openGuide('ideas') },
+    { label: 'Research…', key: '', fn: () => window.location = 'research.html' },
     { sep: true },
     { label: 'Toggle sound (mention beep)', key: '', fn: toggleSound },
     { label: 'Ground rules…', key: '', fn: openRules },
@@ -166,8 +211,8 @@ function openRules() {
   openIncident('Ground rules',
     '<h3>Ground rules</h3>' +
     '<p>Be useful to the room. No spam. No politics of personal grievance.</p>' +
-    '<p>Burmese first, English second. Real names or persistent handles — not throwaways.</p>' +
-    '<p>We remember the network ID, not the literal IP. Switching identities will be detected.</p>' +
+    '<p>Burmese first, English second. Use a nickname. Do not share names, contact details or precise locations.</p>' +
+    '<p>We remember the network ID on this browser. <strong>Nicknames are not verified</strong> — do not trust a name alone, and never send money because a nickname asked.</p>' +
     '<p>No PII collected by default. Profile creation is opt-in.</p>');
 }
 
@@ -403,14 +448,28 @@ document.addEventListener('DOMContentLoaded', function () {
   const chb = $('#crisisHotlines');
   if (chb) chb.addEventListener('click', () => openGuide('hotlines'));
 
-  // Keyboard shortcuts: g guide, b basemap, f fit
+  // Keyboard shortcuts: g guide, b basemap, f fit, w weather, l locate
   document.addEventListener('keydown', (e) => {
-    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
     if (e.key === 'g' || e.key === 'G') openGuide('all');
     if (e.key === 'b' || e.key === 'B') cycleBasemap();
     if (e.key === 'f' || e.key === 'F') clickToolbar('[data-action="fit"]');
     if (e.key === 'w' || e.key === 'W') clickToolbar('[data-action="wx"]');
+    if (e.key === 'l' || e.key === 'L') locateMe();
   });
+
+  // Language toggle — statusbar button; identity modal select applies live too.
+  const lt = $('#langToggle');
+  if (lt) lt.addEventListener('click', () => {
+    const next = window.__pirchLang === 'en' ? 'my' : 'en';
+    applyLang(next);
+    flashLeft('Interface: ' + (next === 'my' ? 'Burmese-first' : 'English-first'));
+  });
+
+  // Apply stored language (default Burmese-first) once chrome is wired.
+  let storedLang = 'my';
+  try { storedLang = localStorage.getItem('pirchchat.lang') || 'my'; } catch (e) {}
+  applyLang(storedLang);
 
   // Mention beep on incoming WS messages
   const origAppend = window.__pirchchatClient;
