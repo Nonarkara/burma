@@ -7,7 +7,7 @@ import { webcrypto } from 'node:crypto';
 function client(fetchImpl = async () => ({ok:true,json:async()=>({rooms:[],messages:[]})})) {
   const elements = new Map();
   const el = (id) => {
-    if (!elements.has(id)) elements.set(id,{value:'',textContent:'',innerHTML:'',placeholder:'',children:[],querySelector(){return null;},appendChild(n){this.children.push(n);},classList:{toggle(){},add(){},remove(){}}});
+    if (!elements.has(id)) elements.set(id,{value:'',textContent:'',innerHTML:'',placeholder:'',children:[],focus(){},querySelector(){return null;},appendChild(n){this.children.push(n);},classList:{toggle(){},add(){},remove(){}}});
     return elements.get(id);
   };
   const timers = new Map(); let timerId=0;
@@ -21,7 +21,7 @@ function client(fetchImpl = async () => ({ok:true,json:async()=>({rooms:[],messa
   const context = {window:{},document:{readyState:'loading',addEventListener(){},querySelectorAll(){return [];},querySelector(){return null;},getElementById:el,createElement(){return {firstChild:{},set innerHTML(v){this.firstChild={html:v};}};}},
     localStorage:{getItem(){return null;},setItem(){}},crypto:webcrypto,URL,location:{protocol:'https:'},WebSocket:Socket,fetch:fetchImpl,console,
     setTimeout(fn){timers.set(++timerId,fn);return timerId;},clearTimeout(id){timers.delete(id);},AbortSignal,FormData,Blob};
-  const source=fs.readFileSync('web/chat-client.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testApi={state,connectWS,handleWsMessage,switchRoom,handleSubmit,renderMessageHtml,appendMessageDom};})();');
+  const source=fs.readFileSync('web/chat-client.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testApi={state,connectWS,handleWsMessage,switchRoom,handleSubmit,renderMessageHtml,appendMessageDom,buildCommunityDraft,prepareCommunityDraft};})();');
   vm.runInNewContext(source,context);
   return {...context.window.testApi,window:context.window,el,timers,Socket};
 }
@@ -69,6 +69,33 @@ test('untrusted HTML and javascript preview URLs cannot become executable markup
 test('topic filter applies to incoming messages',()=>{
   const c=client();c.state.topicFilter='jobs';c.appendMessageDom({topics:'housing',body_html:'other topic'});
   assert.equal(c.el('messages').children.length,0);
+});
+
+test('preparing a community contribution preserves the existing draft and never sends',()=>{
+  let requests=0;
+  const c=client(async()=>{requests++;});
+  c.el('input').value='Already writing';
+  assert.equal(c.prepareCommunityDraft('offer','English practice',''),true);
+  assert.ok(c.el('input').value.startsWith('Already writing | '));
+  assert.ok(c.el('input').value.includes('English practice'));
+  assert.equal(requests,0);
+});
+
+test('opportunity drafts require a safe original source and disclose unverified status',()=>{
+  const c=client();
+  for(const source of ['', 'javascript:alert(1)', 'https://user:pass@example.org/']) {
+    assert.throws(()=>c.buildCommunityDraft('opportunity','A course',source,'en'));
+  }
+  const draft=c.buildCommunityDraft('opportunity','Eligibility unknown','https://provider.example.org/apply','en');
+  assert.ok(draft.includes('not verified'));
+  assert.ok(draft.includes('Original source: https://provider.example.org/apply'));
+});
+
+test('invalid community drafts cannot replace the composer',()=>{
+  const c=client();c.el('input').value='Keep me';
+  assert.throws(()=>c.prepareCommunityDraft('opportunity','A course','javascript:bad'));
+  assert.equal(c.el('input').value,'Keep me');
+  assert.throws(()=>c.buildCommunityDraft('offer',' '.repeat(20),'','en'));
 });
 
 const workerSource=fs.readFileSync('chat-worker/src/chat-room-do.js','utf8');

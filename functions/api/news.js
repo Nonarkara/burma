@@ -1,8 +1,8 @@
 // Cloudflare Pages Function — news aggregation endpoint.
 // NON-SCRAPE: live RSS feeds from independent Myanmar-focused broadcasters
 // (DVB English, The Irrawaddy — both verified Sept 2026), parsed server-side,
-// geocoded by keyword, merged with the verified corpus. If a feed is down,
-// the corpus stands alone and the response says so (mode: 'corpus-only').
+// geocoded by keyword (inferred, not verified locations). Illustrative data
+// remains accessible only with demo=1; a feed failure never becomes fake news.
 // No HTML scraping, no Myanmar-state sources, no PII.
 
 import { CURATED_NEWS } from '../data/news.js';
@@ -90,6 +90,7 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const filterRegion = url.searchParams.get('region') || 'all';
   const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit')) || 50, 100));
+  const demonstration = url.searchParams.get('demo') === '1';
 
   // Live wire — both feeds in parallel, 4s cap each, best-effort.
   let live = [];
@@ -106,7 +107,7 @@ export async function onRequestGet(context) {
     for (const r of results) {
       if (r.status === 'fulfilled') { feedsOk++; live = live.concat(r.value); }
     }
-  } catch (e) { /* corpus fallback below */ }
+  } catch (e) { /* Return unavailable rather than illustrative replacements. */ }
 
   // Dedupe live by normalized title.
   const seen = new Set();
@@ -117,11 +118,11 @@ export async function onRequestGet(context) {
     return true;
   });
 
-  // Merge with the verified corpus (tier-labelled, never mixed silently).
-  const corpus = CURATED_NEWS.map((it) => ({ ...it, tier: 'corpus-sept-2026' }));
-  let items = live.concat(corpus);
+  // Preserve illustrative material for explicit demos, never as real news.
+  const corpus = CURATED_NEWS.map((it) => ({ ...it, tier: 'demonstration', verification: 'illustrative-not-verified' }));
+  let items = demonstration ? corpus : live;
 
-  const mode = feedsOk ? (feedsOk === FEEDS.length ? 'live+corpus' : 'partial-live+corpus') : 'corpus-only';
+  const mode = demonstration ? 'demonstration' : !live.length ? 'unavailable' : feedsOk === FEEDS.length ? 'live' : 'partial-live';
 
   if (filterRegion !== 'all') {
     items = items.filter((it) => filterRegion === 'visa-jobs'
@@ -144,7 +145,7 @@ export async function onRequestGet(context) {
       mode,
       liveCount: live.length,
       feedsOk,
-      corpusDate: '2026-09-14',
+      corpusDate: demonstration ? '2026-09-14' : null,
       count: items.length,
       generatedAt: new Date().toISOString(),
       items,

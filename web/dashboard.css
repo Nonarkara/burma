@@ -1016,6 +1016,21 @@ html, body {
 .micro-panel__choice, .micro-panel button { border:1px solid var(--ink); border-radius:0; background:var(--paper); color:var(--ink); padding:4px 7px; text-align:left; font:inherit; }
 .micro-panel__choice:hover, .micro-panel button:hover { background:var(--accent-soft); }
 .micro-panel__meta { font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); }
+.community-guide { border-bottom:1px solid var(--rule); background:var(--paper); font-family:var(--font-burma); font-size:15px; line-height:1.8; }
+.community-guide summary { padding:8px 12px; min-height:44px; cursor:pointer; color:var(--ink); }
+.community-guide[open] { max-height:35vh; overflow:auto; }
+.community-guide p, .community-guide ul { margin:8px 12px; }
+.community-guide ul { padding-left:22px; }
+.community-guide__notice { border-top:1px solid var(--rule); padding-top:8px; color:var(--ink-muted); }
+.community-draft { display:grid; gap:8px; font-size:16px; line-height:1.8; }
+.community-draft input, .community-draft select, .community-draft textarea { box-sizing:border-box; width:100%; min-width:0; min-height:44px; padding:6px; border:1px solid var(--rule); background:var(--paper); color:var(--ink); font:inherit; }
+.community-draft button { min-height:44px; background:var(--accent-soft); }
+.community-draft p { font-size:14px; }
+.community-guide summary:focus-visible, .community-draft :focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+#exchangePanel { max-height:45vh; padding:10px 12px; }
+.community-actions { padding:5px 12px; background:var(--chrome); border-bottom:1px solid var(--rule); }
+#exchangeToggle { min-height:44px; width:100%; white-space:normal; padding:5px 8px; border:1px solid var(--rule); background:var(--accent-soft); color:var(--ink); font:16px/1.7 var(--font-burma); cursor:pointer; }
+#exchangeToggle:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
 .pirch-marker--support { width:14px; height:14px; box-sizing:border-box; background:var(--positive); border:2px solid var(--ink); }
 
 @media (max-width: 720px) {

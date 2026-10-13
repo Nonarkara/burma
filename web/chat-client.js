@@ -701,10 +701,85 @@ function renderQuest() {
   panel.querySelector('#questRestart').addEventListener('click', () => { questAnswers = []; renderQuest(); });
 }
 
+function buildCommunityDraft(intent, detail, source, lang) {
+  const labels = {
+    offer: ['I can offer', 'ကမ်းလှမ်းလိုသည်'],
+    ask: ['I am looking for', 'ရှာဖွေနေသည်'],
+    opportunity: ['Opportunity · member-shared, not verified', 'အခွင့်အလမ်း · အသင်းဝင်မျှဝေမှု၊ အတည်မပြုရသေး'],
+    thanks: ['I appreciate', 'ကျေးဇူးတင်လိုသည်'],
+  };
+  const my = lang !== 'en';
+  const text = String(detail || '').trim();
+  if (!labels[intent] || !text || text.length > 300) {
+    throw new Error(my ? 'အကြောင်းအရာ အတိုချုပ် ထည့်ပါ။ စာလုံး ၃၀၀ အထိ ဖြစ်ရမည်။' : 'Add a short detail, up to 300 characters.');
+  }
+  let draft = labels[intent][my ? 1 : 0] + ': ' + text;
+  if (intent === 'opportunity') {
+    let url;
+    try {
+      url = new URL(String(source || '').trim());
+      if (url.protocol !== 'https:' || url.username || url.password || url.href.length > 1000) throw new Error();
+    } catch {
+      throw new Error(my ? 'မူရင်းရင်းမြစ်၏ HTTPS လင့် ထည့်ပါ။' : 'Add the original source as an HTTPS link.');
+    }
+    draft += '\n' + (my ? 'မူရင်းရင်းမြစ်: ' : 'Original source: ') + url.href;
+  }
+  return draft;
+}
+
+function prepareCommunityDraft(intent, detail, source) {
+  const draft = buildCommunityDraft(intent, detail, source, window.__pirchLang);
+  const input = document.getElementById('input');
+  if (!input) return false;
+  // Keep anything already written. Preparing a draft never sends a message.
+  const inlineDraft = draft.replace(/\n/g, ' · ');
+  input.value = input.value.trim() ? input.value + ' | ' + inlineDraft : inlineDraft;
+  input.focus();
+  return true;
+}
+
 function renderExchange() {
   const panel = document.getElementById('exchangePanel'); if (!panel) return;
-  panel.innerHTML = '<h3>အရည်အချင်း · အရင်းအမြစ် ဖလှယ်</h3><p>မပို့ရသေးသော စာကြမ်းသာ ဖြစ်သည်။ ကိုယ်ရေးအချက်အလက်၊ ဖုန်းနံပါတ်၊ နေရာအတိအကျ မထည့်ပါနှင့်။</p><div class="micro-panel__choices"><button type="button" data-exchange="I can teach">I can teach: Graphic design / English / other</button><button type="button" data-exchange="I am looking for">I am looking for: apprenticeship / room leads / other</button></div><label>အကြောင်းအရာ <input id="exchangeText" maxlength="160" placeholder="short, non-identifying detail"></label><p class="micro-panel__meta">This prepares the chat composer; it never posts automatically.</p>';
-  panel.querySelectorAll('[data-exchange]').forEach((button) => button.addEventListener('click', () => { const input = document.getElementById('input'); const detail = document.getElementById('exchangeText'); if (input) { input.value = button.dataset.exchange + ': ' + (detail && detail.value || ''); input.focus(); } }));
+  panel.innerHTML = `
+    <h3 data-en="Support one another" data-my="အချင်းချင်း ကူညီကြမည်">အချင်းချင်း ကူညီကြမည်</h3>
+    <p data-en="Prepare a draft for the room you are in. Review it in the composer before choosing Send." data-my="လက်ရှိအခန်းအတွက် စာကြမ်းပြင်ပါ။ မပို့မီ စာရေးကွက်တွင် ပြန်စစ်ပါ။">လက်ရှိအခန်းအတွက် စာကြမ်းပြင်ပါ။ မပို့မီ စာရေးကွက်တွင် ပြန်စစ်ပါ။</p>
+    <form id="communityDraftForm" class="community-draft">
+      <label for="communityIntent" data-en="What would you like to share?" data-my="ဘာကို မျှဝေလိုပါသလဲ။">ဘာကို မျှဝေလိုပါသလဲ။</label>
+      <select id="communityIntent">
+        <option value="offer" data-en="Offer a skill, time or resource" data-my="အရည်အချင်း၊ အချိန်၊ အရင်းအမြစ် ကမ်းလှမ်းမည်">အရည်အချင်း၊ အချိန်၊ အရင်းအမြစ် ကမ်းလှမ်းမည်</option>
+        <option value="ask" data-en="Ask for help or learning" data-my="အကူအညီ သို့မဟုတ် သင်ယူမှု ရှာမည်">အကူအညီ သို့မဟုတ် သင်ယူမှု ရှာမည်</option>
+        <option value="opportunity" data-en="Share an opportunity with its source" data-my="ရင်းမြစ်နှင့်အတူ အခွင့်အလမ်း မျှဝေမည်">ရင်းမြစ်နှင့်အတူ အခွင့်အလမ်း မျှဝေမည်</option>
+        <option value="thanks" data-en="Appreciate someone's contribution" data-my="ပံ့ပိုးမှုအတွက် ကျေးဇူးတင်မည်">ပံ့ပိုးမှုအတွက် ကျေးဇူးတင်မည်</option>
+      </select>
+      <label for="exchangeText" data-en="A short detail · no personal information" data-my="အကြောင်းအရာ အတိုချုပ် · ကိုယ်ရေးအချက်အလက် မထည့်ပါနှင့်">အကြောင်းအရာ အတိုချုပ် · ကိုယ်ရေးအချက်အလက် မထည့်ပါနှင့်</label>
+      <textarea id="exchangeText" required maxlength="300" rows="2" aria-describedby="communityPrivacy"></textarea>
+      <div id="communitySourceField" hidden>
+        <label for="communitySource" data-en="Original source · HTTPS link" data-my="မူရင်းရင်းမြစ် · HTTPS လင့်">မူရင်းရင်းမြစ် · HTTPS လင့်</label>
+        <input id="communitySource" type="url" maxlength="1000" aria-describedby="communityOpportunityNote">
+        <p id="communityOpportunityNote" data-en="Include who can apply, known costs and the deadline in your detail. Say when a fact is unknown. Adding a link does not verify an opportunity." data-my="မည်သူ လျှောက်နိုင်သည်၊ သိရှိထားသော ကုန်ကျစရိတ်နှင့် နောက်ဆုံးရက်ကို ဖော်ပြပါ။ မသိသောအချက်ကို မသိဟု ပြောပါ။ လင့်ထည့်ခြင်းသည် အခွင့်အလမ်းကို အတည်ပြုခြင်း မဟုတ်ပါ။">မည်သူ လျှောက်နိုင်သည်၊ သိရှိထားသော ကုန်ကျစရိတ်နှင့် နောက်ဆုံးရက်ကို ဖော်ပြပါ။ မသိသောအချက်ကို မသိဟု ပြောပါ။ လင့်ထည့်ခြင်းသည် အခွင့်အလမ်းကို အတည်ပြုခြင်း မဟုတ်ပါ။</p>
+      </div>
+      <p id="communityPrivacy" data-en="Public room. No phone numbers, documents or exact home addresses. Ask before naming or photographing someone." data-my="အများမြင်နိုင်သော အခန်းဖြစ်သည်။ ဖုန်းနံပါတ်၊ စာရွက်စာတမ်းနှင့် အိမ်လိပ်စာအတိအကျ မထည့်ပါနှင့်။ သူတစ်ပါး၏ အမည် သို့မဟုတ် ဓာတ်ပုံ မသုံးမီ ခွင့်တောင်းပါ။">အများမြင်နိုင်သော အခန်းဖြစ်သည်။ ဖုန်းနံပါတ်၊ စာရွက်စာတမ်းနှင့် အိမ်လိပ်စာအတိအကျ မထည့်ပါနှင့်။ သူတစ်ပါး၏ အမည် သို့မဟုတ် ဓာတ်ပုံ မသုံးမီ ခွင့်တောင်းပါ။</p>
+      <button type="submit" data-en="Prepare draft · does not send" data-my="စာကြမ်းပြင်မည် · မပို့သေးပါ">စာကြမ်းပြင်မည် · မပို့သေးပါ</button>
+      <p id="communityDraftStatus" role="status" aria-live="polite"></p>
+    </form>`;
+  const intent = panel.querySelector('#communityIntent');
+  const source = panel.querySelector('#communitySource');
+  intent.addEventListener('change', () => {
+    const opportunity = intent.value === 'opportunity';
+    panel.querySelector('#communitySourceField').hidden = !opportunity;
+    source.required = opportunity;
+  });
+  panel.querySelector('#communityDraftForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const status = panel.querySelector('#communityDraftStatus');
+    try {
+      const prepared = prepareCommunityDraft(intent.value, panel.querySelector('#exchangeText').value, source.value);
+      status.dataset.en = prepared ? 'Draft ready in the composer. Nothing has been sent.' : '';
+      status.dataset.my = prepared ? 'စာရေးကွက်တွင် စာကြမ်းအသင့်ဖြစ်သည်။ မပို့ရသေးပါ။' : '';
+      status.textContent = window.__pirchLang === 'en' ? status.dataset.en : status.dataset.my;
+    } catch (e) { delete status.dataset.en; delete status.dataset.my; status.textContent = e.message; }
+  });
+  if (window.__pirchApplyLang) window.__pirchApplyLang(window.__pirchLang);
 }
 
 // ===== Wiring =====
@@ -721,8 +796,8 @@ function wire() {
   const fi = document.getElementById('fileInput');
   if (fi) fi.addEventListener('change', handleFile);
   const quest = document.getElementById('questToggle'); const exchange = document.getElementById('exchangeToggle');
-  if (quest) quest.addEventListener('click', () => { const panel = document.getElementById('questPanel'); const other = document.getElementById('exchangePanel'); if (!panel) return; panel.hidden = !panel.hidden; if (!panel.hidden) { if (other) other.hidden = true; renderQuest(); } });
-  if (exchange) exchange.addEventListener('click', () => { const panel = document.getElementById('exchangePanel'); const other = document.getElementById('questPanel'); if (!panel) return; panel.hidden = !panel.hidden; if (!panel.hidden) { if (other) other.hidden = true; renderExchange(); } });
+  if (quest) quest.addEventListener('click', () => { const panel = document.getElementById('questPanel'); const other = document.getElementById('exchangePanel'); if (!panel) return; panel.hidden = !panel.hidden; if (!panel.hidden) { if (other) other.hidden = true; if (exchange) exchange.setAttribute('aria-expanded', 'false'); renderQuest(); } });
+  if (exchange) exchange.addEventListener('click', () => { const panel = document.getElementById('exchangePanel'); const other = document.getElementById('questPanel'); if (!panel) return; panel.hidden = !panel.hidden; exchange.setAttribute('aria-expanded', String(!panel.hidden)); if (!panel.hidden) { if (other) other.hidden = true; if (!panel.querySelector('#communityDraftForm')) renderExchange(); } });
 
   // Topic chips
   document.querySelectorAll('#topicChips .chip').forEach((b) => {

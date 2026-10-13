@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pirchchat — Dashboard</title>
-<meta name="description" content="A Burmese-language community dashboard. Live RSS headlines + verified corpus, geocoded incidents on a map, persistent rooms. Win95 chrome.">
+<meta name="description" content="A Burmese-language community in Thailand. Public rooms, mutual support, source-linked opportunities, RSS headlines and a world map.">
 <link rel="stylesheet" href="dashboard.css?v=20260926-ux">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,7 +70,7 @@
       <span class="toolbar__sep"></span>
       <button type="button" class="toolbar__btn" data-action="guide" title="Survival guide — visa, clinics, housing, rates" data-en="✎ Guide" data-my="✎ လမ်းညွှန်">✎ Guide</button>
       <button type="button" class="toolbar__btn" data-action="hotlines" title="Human hotlines — 1300, clinics" data-en="＋ Hotlines" data-my="＋ ဟိုတ်လိုင်း">＋ Hotlines</button>
-      <button type="button" class="toolbar__btn" data-action="research" title="Research briefing" data-en="Research" data-my=" risearch">Research</button>
+      <button type="button" class="toolbar__btn" data-action="research" title="Research briefing" data-en="Research" data-my="လေ့လာချက်">လေ့လာချက်</button>
     </div>
 
     <div class="linkbar">
@@ -199,11 +199,25 @@
         <button type="button" class="menubar__item" data-room="digest-today">Diges<u>t</u>-today</button>
         <button type="button" class="menubar__item" data-room="listening-club">L<u>i</u>stening-club</button>
         <button type="button" class="menubar__item" id="questToggle">၃ မိနစ် Quest</button>
-        <button type="button" class="menubar__item" id="exchangeToggle">ဖလှယ်</button>
         <button type="button" class="menubar__item" id="chatHelp" title="Chat commands and ground rules">?</button>
       </nav>
 
       <div class="room-topic" id="roomTopic" hidden></div>
+
+      <details class="community-guide">
+        <summary data-en="Our community · How to take part" data-my="ကျွန်ုပ်တို့၏ အသိုင်းအဝိုင်း · ပါဝင်ရန်">ကျွန်ုပ်တို့၏ အသိုင်းအဝိုင်း · ပါဝင်ရန်</summary>
+        <p data-en="A place for people from Myanmar in Thailand to understand, appreciate and support one another. Different backgrounds and beliefs are welcome." data-my="ထိုင်းနိုင်ငံရှိ မြန်မာပြည်မှ လူများ အချင်းချင်း နားလည်၊ တန်ဖိုးထား၊ ကူညီနိုင်ရန် နေရာဖြစ်သည်။ မတူညီသော နောက်ခံနှင့် ယုံကြည်ချက်များကို ကြိုဆိုသည်။">ထိုင်းနိုင်ငံရှိ မြန်မာပြည်မှ လူများ အချင်းချင်း နားလည်၊ တန်ဖိုးထား၊ ကူညီနိုင်ရန် နေရာဖြစ်သည်။ မတူညီသော နောက်ခံနှင့် ယုံကြည်ချက်များကို ကြိုဆိုသည်။</p>
+        <ul>
+          <li data-en="Listen before judging. Ask before sharing someone else's story or photo." data-my="မဆုံးဖြတ်မီ နားထောင်ပါ။ သူတစ်ပါး၏ အကြောင်း သို့မဟုတ် ဓာတ်ပုံ မမျှဝေမီ ခွင့်ပြုချက်တောင်းပါ။">မဆုံးဖြတ်မီ နားထောင်ပါ။ သူတစ်ပါး၏ အကြောင်း သို့မဟုတ် ဓာတ်ပုံ မမျှဝေမီ ခွင့်ပြုချက်တောင်းပါ။</li>
+          <li data-en="Offer what you can; ask for what you need. No pressure to give money, documents or personal details." data-my="မိမိတတ်နိုင်သည့်အရာကို ကမ်းလှမ်းပြီး လိုအပ်သည့်အရာကို မေးမြန်းပါ။ ငွေ၊ စာရွက်စာတမ်းနှင့် ကိုယ်ရေးအချက်အလက် ပေးရန် မဖိအားပေးပါနှင့်။">မိမိတတ်နိုင်သည့်အရာကို ကမ်းလှမ်းပြီး လိုအပ်သည့်အရာကို မေးမြန်းပါ။ ငွေ၊ စာရွက်စာတမ်းနှင့် ကိုယ်ရေးအချက်အလက် ပေးရန် မဖိအားပေးပါနှင့်။</li>
+          <li data-en="For opportunities, share the original source and what is still uncertain. Correct mistakes openly and respectfully." data-my="အခွင့်အလမ်းများအတွက် မူရင်းရင်းမြစ်နှင့် မသေချာသေးသောအချက်များကို ဖော်ပြပါ။ အမှားများကို ပွင့်လင်းစွာ၊ လေးစားစွာ ပြင်ဆင်ပါ။">အခွင့်အလမ်းများအတွက် မူရင်းရင်းမြစ်နှင့် မသေချာသေးသောအချက်များကို ဖော်ပြပါ။ အမှားများကို ပွင့်လင်းစွာ၊ လေးစားစွာ ပြင်ဆင်ပါ။</li>
+        </ul>
+        <p class="community-guide__notice" data-en="These rooms are public. Sent messages are saved and others may copy them. Nicknames are not verified identities. Do not post passports, phone numbers, exact home addresses or another person's private information. A staffed reporting service is not available yet." data-my="ဤအခန်းများသည် အများမြင်နိုင်သည်။ ပို့ထားသောစာများကို သိမ်းထားပြီး အခြားသူများက ကူးယူနိုင်သည်။ အမည်ပြောင်များသည် အတည်ပြုထားသော ကိုယ်ပိုင်အထောက်အထား မဟုတ်ပါ။ နိုင်ငံကူးလက်မှတ်၊ ဖုန်းနံပါတ်၊ အိမ်လိပ်စာအတိအကျနှင့် သူတစ်ပါး၏ ကိုယ်ရေးအချက်အလက် မတင်ပါနှင့်။ တာဝန်ခံလက်ခံသည့် တိုင်ကြားရေးဝန်ဆောင်မှု မရှိသေးပါ။">ဤအခန်းများသည် အများမြင်နိုင်သည်။ ပို့ထားသောစာများကို သိမ်းထားပြီး အခြားသူများက ကူးယူနိုင်သည်။ အမည်ပြောင်များသည် အတည်ပြုထားသော ကိုယ်ပိုင်အထောက်အထား မဟုတ်ပါ။ နိုင်ငံကူးလက်မှတ်၊ ဖုန်းနံပါတ်၊ အိမ်လိပ်စာအတိအကျနှင့် သူတစ်ပါး၏ ကိုယ်ရေးအချက်အလက် မတင်ပါနှင့်။ တာဝန်ခံလက်ခံသည့် တိုင်ကြားရေးဝန်ဆောင်မှု မရှိသေးပါ။</p>
+      </details>
+
+      <div class="community-actions">
+        <button type="button" id="exchangeToggle" aria-expanded="false" aria-controls="exchangePanel" data-en="Offer · Ask · Appreciate" data-my="ကမ်းလှမ်း · မေးမြန်း · ကျေးဇူးတင်">ကမ်းလှမ်း · မေးမြန်း · ကျေးဇူးတင်</button>
+      </div>
 
       <div class="chipbar" id="topicChips" role="toolbar" aria-label="Filter messages by topic">
         <button type="button" class="chip chip--active" data-topic="all" data-en="All" data-my="အားလုံး">All</button>

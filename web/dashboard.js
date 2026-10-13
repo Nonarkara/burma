@@ -1359,9 +1359,9 @@ async function loadNews() {
     renderNews();
     refreshMarkers();
     const agoEl = $('#newsAgo');
-    if (agoEl) agoEl.textContent = (data.corpusDate || 'corpus') + ' · ' + (data.mode || 'corpus') + (data.liveCount ? ' · ' + data.liveCount + ' live' : '');
+    if (agoEl) agoEl.textContent = (data.mode === 'unavailable' ? 'Live headlines unavailable · no sample replacements' : (data.mode || 'unavailable')) + (data.liveCount ? ' · ' + data.liveCount + ' live' : '');
     const lr = $('#mapLastRefresh');
-    if (lr) lr.textContent = (data.mode === 'live' || data.mode === 'live+corpus' || data.mode === 'partial-live+corpus' ? 'live wire + corpus' : 'corpus only') + ' · fetched ' + timeNow();
+    if (lr) lr.textContent = (data.mode === 'live' || data.mode === 'partial-live' ? 'RSS headlines · location inferred' : 'Live headlines unavailable') + ' · fetched ' + timeNow();
   } catch (e) {
     if (requestId !== newsRequest) return;
     const listEl = $('#newsList');
@@ -1629,7 +1629,8 @@ document.addEventListener('DOMContentLoaded', function () {
   renderTvMarkers();
 
   // Research briefing
-  if (a === 'research') window.location = 'research.html';
+  const researchButton = document.querySelector('[data-action="research"]');
+  if (researchButton) researchButton.addEventListener('click', () => { window.location.href = 'research.html'; });
 
   // Live TV panel — always-visible Burmese IPTV feeds at the bottom of the map.
   buildTvPanel();
