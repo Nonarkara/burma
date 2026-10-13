@@ -240,6 +240,91 @@ export default {
       }
     }
 
+    // /api/moderation/bans (GET — public read of active bans).
+    // Bans are public so the community can see who has been removed and why.
+    // No PII beyond pubkey + reason text, which the mod wrote themselves.
+    if (path === '/api/moderation/bans' && request.method === 'GET') {
+      try {
+        await env.DB.prepare('CREATE TABLE IF NOT EXISTS bans (pubkey TEXT PRIMARY KEY, reason TEXT, banned_by TEXT NOT NULL, banned_at INTEGER NOT NULL, expires_at INTEGER)').run();
+        const rows = await env.DB.prepare(
+          'SELECT pubkey, reason, banned_by, banned_at, expires_at FROM bans WHERE expires_at IS NULL OR expires_at > ? ORDER BY banned_at DESC'
+        ).bind(Date.now()).all();
+        return json({ ok: true, bans: rows.results || [] }, 200, ch);
+      } catch (e) {
+        return json({ ok: false, error: 'storage_unavailable' }, 503, ch);
+      }
+    }
+
+    // /api/moderation/ban (POST — mod applies a ban).
+    // Auth: caller must be in env.MODS (comma-separated pubkey list) AND
+    // present a matching X-Pirchchat-Identity header. Mod actions are
+    // appended to mod_log so the community can audit who did what.
+    if (path === '/api/moderation/ban' && request.method === 'POST') {
+      const modList = String(env.MODS || '').split(',').map((v) => v.trim()).filter(Boolean);
+      const caller = request.headers.get('X-Pirchchat-Identity') || '';
+      if (!modList.length) return json({ ok: false, error: 'no_mods_configured' }, 503, ch);
+      if (!modList.includes(caller)) return json({ ok: false, error: 'not_a_mod' }, 403, ch);
+      try {
+        const bytes = await readLimitedBody(request.clone(), 1024);
+        const body = JSON.parse(new TextDecoder().decode(bytes));
+        const target = String(body.pubkey || '').slice(0, 128);
+        if (!target) return json({ ok: false, error: 'missing_pubkey' }, 400, ch);
+        if (!/^user_[a-z0-9_-]+$/.test(target) && !/^mod_[a-z0-9_-]+$/.test(target)) {
+          return json({ ok: false, error: 'invalid_pubkey_shape' }, 400, ch);
+        }
+        const reason = String(body.reason || '').slice(0, 500);
+        const expiresAt = body.expires_at && Number.isFinite(body.expires_at) ? Math.floor(body.expires_at) : null;
+        await env.DB.prepare('CREATE TABLE IF NOT EXISTS bans (pubkey TEXT PRIMARY KEY, reason TEXT, banned_by TEXT NOT NULL, banned_at INTEGER NOT NULL, expires_at INTEGER)').run();
+        await env.DB.prepare('CREATE TABLE IF NOT EXISTS mod_log (id TEXT PRIMARY KEY, ts INTEGER NOT NULL, mod_pubkey TEXT NOT NULL, action TEXT NOT NULL, target TEXT, room_id TEXT, note TEXT)').run();
+        const ts = Date.now();
+        await env.DB.prepare(
+          'INSERT OR REPLACE INTO bans (pubkey, reason, banned_by, banned_at, expires_at) VALUES (?, ?, ?, ?, ?)'
+        ).bind(target, reason, caller, ts, expiresAt).run();
+        await env.DB.prepare(
+          'INSERT INTO mod_log (id, ts, mod_pubkey, action, target, room_id, note) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(crypto.randomUUID(), ts, caller, 'ban', target, String(body.room_id || ''), reason).run();
+        return json({ ok: true, pubkey: target, banned_at: ts, expires_at: expiresAt }, 200, ch);
+      } catch (e) {
+        return json({ ok: false, error: e.status ? e.message : 'storage_unavailable' }, e.status || 503, ch);
+      }
+    }
+
+    // /api/moderation/unban (POST — mod lifts a ban).
+    if (path === '/api/moderation/unban' && request.method === 'POST') {
+      const modList = String(env.MODS || '').split(',').map((v) => v.trim()).filter(Boolean);
+      const caller = request.headers.get('X-Pirchchat-Identity') || '';
+      if (!modList.length) return json({ ok: false, error: 'no_mods_configured' }, 503, ch);
+      if (!modList.includes(caller)) return json({ ok: false, error: 'not_a_mod' }, 403, ch);
+      try {
+        const bytes = await readLimitedBody(request.clone(), 1024);
+        const body = JSON.parse(new TextDecoder().decode(bytes));
+        const target = String(body.pubkey || '').slice(0, 128);
+        if (!target) return json({ ok: false, error: 'missing_pubkey' }, 400, ch);
+        await env.DB.prepare('DELETE FROM bans WHERE pubkey = ?').bind(target).run();
+        const ts = Date.now();
+        await env.DB.prepare('CREATE TABLE IF NOT EXISTS mod_log (id TEXT PRIMARY KEY, ts INTEGER NOT NULL, mod_pubkey TEXT NOT NULL, action TEXT NOT NULL, target TEXT, room_id TEXT, note TEXT)').run();
+        await env.DB.prepare(
+          'INSERT INTO mod_log (id, ts, mod_pubkey, action, target, room_id, note) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(crypto.randomUUID(), ts, caller, 'unban', target, String(body.room_id || ''), String(body.reason || '')).run();
+        return json({ ok: true, pubkey: target, unbanned_at: ts }, 200, ch);
+      } catch (e) {
+        return json({ ok: false, error: e.status ? e.message : 'storage_unavailable' }, e.status || 503, ch);
+      }
+    }
+
+    // /api/moderation/log (GET — public audit trail).
+    if (path === '/api/moderation/log' && request.method === 'GET') {
+      try {
+        await env.DB.prepare('CREATE TABLE IF NOT EXISTS mod_log (id TEXT PRIMARY KEY, ts INTEGER NOT NULL, mod_pubkey TEXT NOT NULL, action TEXT NOT NULL, target TEXT, room_id TEXT, note TEXT)').run();
+        const rows = await env.DB.prepare(
+          'SELECT ts, mod_pubkey, action, target, room_id, note FROM mod_log ORDER BY ts DESC LIMIT 100'
+        ).all();
+        return json({ ok: true, log: rows.results || [] }, 200, ch);
+      } catch (e) {
+        return json({ ok: false, error: 'storage_unavailable' }, 503, ch);
+      }
+    }
+
     return json({ ok: false, error: 'not_found', path }, 404, ch);
   },
 };

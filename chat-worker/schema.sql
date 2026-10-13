@@ -61,3 +61,30 @@ CREATE TABLE IF NOT EXISTS pinned_locations (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pins_ts ON pinned_locations(ts DESC);
+
+-- Bans — pubkey-level blocks managed by human moderators.
+-- A mod pubkey records who applied the ban; reason is plain text, not
+-- structured, so a native reviewer can keep it short and unambiguous.
+CREATE TABLE IF NOT EXISTS bans (
+  pubkey      TEXT PRIMARY KEY,
+  reason      TEXT,
+  banned_by   TEXT NOT NULL,
+  banned_at   INTEGER NOT NULL,
+  expires_at  INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_bans_expires ON bans(expires_at);
+
+-- Moderation log — append-only audit trail. Every ban / unban / room
+-- action is recorded so the community can see who did what.
+CREATE TABLE IF NOT EXISTS mod_log (
+  id          TEXT PRIMARY KEY,
+  ts          INTEGER NOT NULL,
+  mod_pubkey  TEXT NOT NULL,
+  action      TEXT NOT NULL,
+  target      TEXT,
+  room_id     TEXT,
+  note        TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_mod_log_ts ON mod_log(ts DESC);

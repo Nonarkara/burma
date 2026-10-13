@@ -137,6 +137,10 @@ export class ChatRoomDO {
     if (path === '/message' && request.method === 'POST') {
       try {
         const body = await readJson(request);
+        const identity = String(body.author_pubkey || request.headers.get('x-pirchchat-identity') || '').slice(0, 128);
+        if (identity && (await this.isBanned(identity))) {
+          return jsonResponse({ ok: false, error: 'banned' }, 403);
+        }
         const msg = await this.handlePost(body, request.headers.get('CF-Connecting-IP') || request.headers.get('x-pirchchat-identity') || 'anonymous');
         if (!msg) return jsonResponse({ ok: false, error: 'rate_limited' }, 429);
         return jsonResponse({ ok: true, id: msg.id, ts: msg.ts, message: msg });
@@ -365,6 +369,29 @@ export class ChatRoomDO {
     times.push(now);
     this.messageTimes.set(rateKey, times);
     return true;
+  }
+
+  // Moderation ban list. Cached per-instance for 30 s so message
+  // rate doesn't translate to a D1 query per keystroke.
+  async isBanned(pubkey) {
+    if (!pubkey) return false;
+    const now = Date.now();
+    if (this._banCacheAt && now - this._banCacheAt < 30000 && this._banCache) {
+      return this._banCache.has(pubkey);
+    }
+    try {
+      const rows = await this.env.DB.prepare(
+        'SELECT pubkey, expires_at FROM bans WHERE pubkey = ?'
+      ).bind(pubkey).all();
+      const active = (rows.results || []).some((r) => !r.expires_at || r.expires_at > now);
+      if (!this._banCache) this._banCache = new Set();
+      if (active) this._banCache.add(pubkey);
+      this._banCacheAt = now;
+      return active;
+    } catch (e) {
+      // Fail open: if the bans table isn't reachable, do not block messages.
+      return false;
+    }
   }
 
   broadcastPresence() {
