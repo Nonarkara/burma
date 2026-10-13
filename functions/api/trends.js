@@ -35,12 +35,16 @@ export async function onRequestGet() {
   let res;
   try {
     res = await fetch(GDELT, {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(20000),
       headers: { 'user-agent': 'Pirchchat/0.1 (+burma.nonarkara.org)' },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: 'upstream_timeout' }), {
-      status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60'),
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'upstream_timeout',
+      hint: 'GDELT did not respond within 20 s. Sparkline is hidden.',
+    }), {
+      status: 502, headers: baseHeaders('public, max-age=300, s-maxage=1800'),
     });
   }
 
