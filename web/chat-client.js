@@ -8,6 +8,7 @@ const API_BASE = location.hostname === 'localhost' || location.hostname === '127
   ? 'http://127.0.0.1:8797' : 'https://pirchchat-chat.drnon.workers.dev';
 
 const KNOWN_ROOMS = ['monastic-youth', 'bkk-burmese', 'cm-burmese', 'digest-today', 'listening-club'];
+const ROOM_BUTTON_SELECTOR = '.chat nav[aria-label="Rooms"] button[data-room]';
 
 const MICRO_QUEST = [
   {prompt:'ဆေးခန်းတစ်ခုတွင် စာရင်းပစ္စည်း မကိုက်ညီပါ။ သင် ပထမဆုံး ဘာလုပ်မလဲ။', choices:[['လက်ရှိစာရင်းကို စစ်ပြီး အမှားပုံစံကို မှတ်တမ်းတင်မည်','systems'],['အဖွဲ့ဝင်များကို ခေါ်ပြီး လက်ရှိအလုပ်စဉ်ကို နားထောင်မည်','collaboration'],['ပစ္စည်းကို အမျိုးအစားခွဲပြီး အရေအတွက် ပြန်တွက်မည်','analysis']]},
@@ -356,7 +357,7 @@ function openBadgeSockets() {
 }
 
 function renderBadges() {
-  document.querySelectorAll('button[data-room]').forEach((b) => {
+  document.querySelectorAll(ROOM_BUTTON_SELECTOR).forEach((b) => {
     const n = state.unread[b.dataset.room] || 0;
     let badge = b.querySelector('.badge');
     if (n > 0) {
@@ -491,7 +492,7 @@ async function switchRoom(roomId) {
   state.seenMessageIds = new Set();
   renderMessages(); renderMembers(); renderBadges();
   renderRoomTitle({id:roomId, title:'#' + roomId});
-  document.querySelectorAll('button[data-room]').forEach((b) => {
+  document.querySelectorAll(ROOM_BUTTON_SELECTOR).forEach((b) => {
     b.classList.toggle('menubar__item--active', b.dataset.room === roomId);
   });
   const rooms = await loadRooms();
@@ -824,7 +825,7 @@ function wire() {
   // Source chips still exist in DOM. Wire them via existing handler module (dashboard.js body).
 
   // Default to first room.
-  const firstRoom = document.querySelector('button[data-room]');
+  const firstRoom = document.querySelector(ROOM_BUTTON_SELECTOR);
   switchRoom(firstRoom ? firstRoom.dataset.room : 'monastic-youth');
 }
 

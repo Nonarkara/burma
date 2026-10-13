@@ -7,7 +7,7 @@ import { webcrypto } from 'node:crypto';
 function client(fetchImpl = async () => ({ok:true,json:async()=>({rooms:[],messages:[]})})) {
   const elements = new Map();
   const el = (id) => {
-    if (!elements.has(id)) elements.set(id,{value:'',textContent:'',innerHTML:'',placeholder:'',children:[],focus(){},querySelector(){return null;},appendChild(n){this.children.push(n);},classList:{toggle(){},add(){},remove(){}}});
+    if (!elements.has(id)) elements.set(id,{value:'',textContent:'',innerHTML:'',placeholder:'',children:[],focus(){},addEventListener(){},querySelector(){return null;},appendChild(n){this.children.push(n);},classList:{toggle(){},add(){},remove(){}}});
     return elements.get(id);
   };
   const timers = new Map(); let timerId=0;
@@ -21,9 +21,9 @@ function client(fetchImpl = async () => ({ok:true,json:async()=>({rooms:[],messa
   const context = {window:{},document:{readyState:'loading',addEventListener(){},querySelectorAll(){return [];},querySelector(){return null;},getElementById:el,createElement(){return {firstChild:{},set innerHTML(v){this.firstChild={html:v};}};}},
     localStorage:{getItem(){return null;},setItem(){}},crypto:webcrypto,URL,location:{protocol:'https:'},WebSocket:Socket,fetch:fetchImpl,console,
     setTimeout(fn){timers.set(++timerId,fn);return timerId;},clearTimeout(id){timers.delete(id);},AbortSignal,FormData,Blob};
-  const source=fs.readFileSync('web/chat-client.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testApi={state,connectWS,handleWsMessage,switchRoom,handleSubmit,renderMessageHtml,appendMessageDom,buildCommunityDraft,prepareCommunityDraft};})();');
+  const source=fs.readFileSync('web/chat-client.js','utf8').replace(/\}\)\(\);\s*$/, 'window.testApi={state,connectWS,handleWsMessage,switchRoom,handleSubmit,renderMessageHtml,appendMessageDom,buildCommunityDraft,prepareCommunityDraft,wire};})();');
   vm.runInNewContext(source,context);
-  return {...context.window.testApi,window:context.window,el,timers,Socket};
+  return {...context.window.testApi,window:context.window,document:context.document,el,timers,Socket};
 }
 
 test('retired socket cannot reconnect or mix messages into the new room',()=>{
@@ -31,6 +31,19 @@ test('retired socket cannot reconnect or mix messages into the new room',()=>{
   const old=c.Socket.all[0];c.state.currentRoom='bkk-burmese';c.connectWS('bkk-burmese');
   old.emit('message',{data:JSON.stringify({type:'message',message:{id:'old',body_html:'old room'}})});
   assert.equal(c.timers.size,0);assert.equal(c.state.history.length,0);
+});
+
+test('TV watch buttons appearing before room navigation cannot prevent chat initialization',async()=>{
+  const c=client();
+  c.document.querySelector=(selector)=> {
+    if(selector==='button[data-room]') return {dataset:{room:'channelk'}};
+    if(selector==='.chat nav[aria-label="Rooms"] button[data-room]') return {dataset:{room:'monastic-youth'}};
+    return null;
+  };
+  c.wire();
+  await new Promise(setImmediate);
+  assert.equal(c.state.currentRoom,'monastic-youth');
+  assert.equal(c.Socket.all.filter((s)=>!s.url.includes('silent=1')).length,1);
 });
 
 test('out-of-order room fetch cannot replace the newest room',async()=>{

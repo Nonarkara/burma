@@ -17,6 +17,7 @@ The useful community loop is: arrive → understand the room → offer or ask �
 - The contribution entry is outside the horizontally scrolling room navigation so it remains discoverable on a small phone.
 - Illustrative news records are preserved through the explicit `demo=1` API mode; they no longer mix into the live feed or replace headlines during an outage.
 - A dashboard startup error caused by an out-of-scope research-button variable was repaired, restoring downstream TV/news and connection-status initialization.
+- Room navigation now has its own selector: TV watch buttons can no longer be mistaken for the first chat room during startup.
 
 These are aids to real conversation, not a new database of people's needs. There is no automated matching, credential collection, ranking of members, private messaging, or staffed reporting service represented by this increment. Burmese copy remains a draft pending native review.
 
@@ -42,6 +43,6 @@ The [Burmese-in-Thailand knowledge base](knowledge-base/README.md) documents wor
 
 ## Validation
 
-26 automated regression checks cover preserved drafts, no automatic send, invalid opportunity sources, unverified labels, illustrative-news isolation, chat isolation and existing backend security controls. Browser walkthroughs cover small-screen discoverability and source-linked draft preparation. Local integration covers two-client delivery, durable history, room isolation and upload/CDN behaviour. No public test post is needed for this release.
+27 automated regression checks cover preserved drafts, no automatic send, invalid opportunity sources, unverified labels, illustrative-news isolation, TV/chat control isolation, chat isolation and existing backend security controls. Browser walkthroughs cover small-screen discoverability and source-linked draft preparation. Local integration covers two-client delivery, durable history, room isolation and upload/CDN behaviour. No public test post is needed for this release.
 
 Before expanding the pilot: native Burmese wording review; physical iOS Safari, Android Chrome and low-end Android checks; real participant walkthroughs; confirmed community hosts; private report process; current referral arrangements; and retention/consent review. Measure whether people can contribute and find a useful response, not simply whether they spend longer in the app.

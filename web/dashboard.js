@@ -1492,7 +1492,7 @@ function renderNews() {
 const ACTION_DESK = [
   {kind:'action', badge:'REFERENCE', title:'Thai paperwork: make a source checklist first', text:'Eligibility, cost and deadline are not confirmed by this static corpus. Check the official Thai channel and a trusted support organisation before paying anyone.', source:'Thailand Immigration Bureau', url:'https://www.immigration.go.th/', reviewed:'2026-09-22'},
   {kind:'signal', badge:'UNVERIFIED', title:'Border-closure and amnesty posts', text:'Do not treat forwarded posts as a travel instruction. This desk has no live border feed and does not mark this claim Verified or Debunked without a dated primary source.', source:'Reference policy', url:'https://www.immigration.go.th/', reviewed:'2026-09-22'},
-  {kind:'opportunity', badge:'OPEN PROGRAMME', title:'ASEAN Ahead · digital skills pathway', text:'ASEAN Foundation announced a two-year youth workforce programme in February 2026. Read the official programme page for eligibility and current enrolment information.', source:'ASEAN Foundation', url:'https://aseanfoundation.org/advancing-future-skills-for-asean-youth-workforce-asean-foundation-and-linkedin-launch-asean-ahead-programme/', reviewed:'2026-09-22'}
+  {kind:'opportunity', badge:'ANNOUNCEMENT', title:'ASEAN Ahead · digital skills pathway', text:'ASEAN Foundation announced a two-year youth workforce programme in February 2026. Current enrolment is not confirmed. Read the official programme page for eligibility and application information.', source:'ASEAN Foundation', url:'https://aseanfoundation.org/advancing-future-skills-for-asean-youth-workforce-asean-foundation-and-linkedin-launch-asean-ahead-programme/', reviewed:'2026-09-22'}
 ];
 
 function renderActionDesk() {
