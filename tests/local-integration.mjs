@@ -21,10 +21,11 @@ try {
   const history=await (await fetch(url+'/history?limit=1')).json();assert.equal(history.messages.length,1);assert.equal(history.messages[0].id,ack.id);
   const other=await (await fetch(base+'/api/rooms/digest-today/history')).json();assert.ok(!other.messages.some(m=>m.id===ack.id));
   const empty=await fetch(url+'/message',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(empty.status,400);
+  const site={Origin:'https://burma-a3k.pages.dev'};
   const fd=new FormData();fd.append('file',new Blob(['<svg onload="alert(1)"></svg>'],{type:'image/svg+xml'}),'bad.svg');
-  assert.equal((await fetch(base+'/api/upload',{method:'POST',body:fd})).status,415);
+  assert.equal((await fetch(base+'/api/upload',{method:'POST',headers:site,body:fd})).status,415);
   const image=new FormData();image.append('file',new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF9sAAAAASUVORK5CYII=','base64')],{type:'image/png'}),'local.png');
-  const uploaded=await (await fetch(base+'/api/upload',{method:'POST',body:image})).json();assert.ok(uploaded.url.startsWith(base+'/cdn/'));
+  const uploaded=await (await fetch(base+'/api/upload',{method:'POST',headers:site,body:image})).json();assert.ok(uploaded.url.startsWith(base+'/cdn/'));
   const imageRes=await fetch(uploaded.url);assert.equal(imageRes.status,200);assert.equal(imageRes.headers.get('content-type'),'image/png');
   console.log('PASS: two-client fan-out, persistent reload, room isolation, limit forwarding, empty-message rejection, SVG rejection, R2 upload/CDN');
 } finally {a.ws.close(1000, 'Test complete');b.ws.close(1000, 'Test complete');}
