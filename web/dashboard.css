@@ -16,7 +16,7 @@
   --negative:      #a51931;
   --notice:        #b45309;
   --server:        #1d4e89;
-  --paper:         #ffffff;
+  --paper:         #faf9f7;
   --font-system:   'Noto Sans Myanmar', 'Pyidaungsu', 'Myanmar Text', sans-serif;
   --font-mono:     'IBM Plex Mono', 'Courier New', monospace;
   --font-burma:    'Noto Sans Myanmar', 'Pyidaungsu', sans-serif;
@@ -1009,6 +1009,7 @@ html, body {
 .desk-card__meta { display:flex; gap:6px; margin-bottom:3px; font-family:var(--font-mono); font-size:9px; color:var(--ink-muted); }
 .desk-badge { border:1px solid var(--ink); padding:0 3px; color:var(--ink); background:var(--accent-soft); }
 .desk-badge--unverified { background:var(--chrome); }
+.desk-verification { font-size:8px; color:var(--ink-muted); margin-left:4px; white-space:nowrap; }
 .micro-panel { border-top: 1px solid var(--ink); background:var(--chrome); padding:8px 12px; max-height:250px; overflow:auto; font-family:var(--font-burma); font-size:13px; }
 .micro-panel h3 { margin:0 0 5px; font-size:15px; }
 .micro-panel p { margin:4px 0; }
