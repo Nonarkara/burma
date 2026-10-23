@@ -258,8 +258,9 @@ Profile inference: British-accent English consistent with SIM Singapore + Harbou
 
 ---
 
-## 14. Status (2026-09-15)
+## 14. Status (2026-10-23)
 
+### Shipped and verified live
 - [x] Boundaries set
 - [x] Stack pinned
 - [x] Directory layout sketched
@@ -271,16 +272,24 @@ Profile inference: British-accent English consistent with SIM Singapore + Harbou
 - [x] PIRCH98 DNA translated (`docs/PIRCH-AESTHETIC.md`)
 - [x] The Lounge theme CSS drafted (`docs/pirch-theme.css`)
 - [x] Sabai Job audit + 3 integration shapes (`docs/SABAI-AUDIT.md`)
+- [x] **Hosting picked** — Cloudflare Workers (chat + DO + D1 + R2) + Cloudflare Pages (static + Functions). Divergence from the Hetzner/The Lounge plan: Surface 1 Rooms runs on `ChatRoomDO` instead. Hetzner CX22 option retired unless scale demands it.
+- [x] **Domain** — `burma.nonarkara.org` (live) + `pirchchat-chat.drnon.workers.dev`. `pirchchat.org` not purchased.
+- [x] **Surface 1 (Rooms) live** — 5 rooms, WebSocket fan-out, history from D1, unread badges via silent sockets, per-user rate limits, upload rate limits via `RateLimiterDO`, moderation ban list + audit log. Verified end-to-end on production 2026-10-23.
+- [x] **Digest (partial)** — live RSS ingest (DVB English + Irrawaddy, verified Sept 2026, NON-SCRAPE), demo corpus strictly gated behind `demo=1`, honest modes (`live` / `partial-live` / `unavailable`).
+- [x] **Listening (map evidence)** — NASA GIBS, USGS quakes, Open-Meteo click-wx, Himawari-9, GPM IMERG, VIIRS flood, RainViewer, FIRMS link-outs. GDELT 14-day media-volume spark with honest backoff.
+- [x] **Watch-together** — room-wide watch state in DO + D1 (`watch_state`), WebSocket broadcast, video stage in chat, TV-card buttons. Full lifecycle verified on production 2026-10-23.
+- [x] **Research brief** — `web/research.html` (institutional register, Thai/Eng): open-data verdict, source table, coverage matrix, cost bars, human-gap cards.
+- [x] **Honest health probes** — Pages `/api/health` + worker `/api/health`; every failure path returns a JSON envelope (no raw edge 502s, no SPA-fallback lies).
+- [x] **Security hardening verified live** — entity-bypass XSS killed at source (server + client sanitizer), 5 security headers on Pages (`_headers`), rate limits, upload type/size caps, `invalid_watch_url` guard.
+
+### Still open
 - [ ] Counter-proposal to Si Thu Maung (drafted but not sent)
 - [ ] Sanctions opinion (Thai-side only, low urgency)
 - [ ] Atlas data source agreements (ILO, depa, UNESCO Bangkok, ASEAN Skills)
-- [ ] Hosting picked (per-surface)
-- [ ] Domain picked
-- [ ] Surface 1 (Rooms) deployed to Hetzner CX22
-- [ ] Surface 2 (Digest) Burmese NLP pipeline built
-- [ ] Surface 3 (Listening) data ingestion sources confirmed (Thai-side diaspora + diaspora social)
-- [ ] Surface 4 (Atlas) PMTiles archive built
-- [ ] Surface 5 (Career Navigator) quest authoring template imported from TKCX
+- [ ] Digest: Burmese-language NLP pipeline (current feeds are English-language)
+- [ ] Listening: Thai-side diaspora + diaspora social ingestion sources
+- [ ] Atlas: PMTiles archive build
+- [ ] Career Navigator: quest authoring template imported from TKCX
 - [ ] AI mentor pipeline safety review
 - [ ] Burmese-native cultural check (1-2 reviewers) on all surfaces
 

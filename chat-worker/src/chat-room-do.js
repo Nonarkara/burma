@@ -96,6 +96,10 @@ export class ChatRoomDO {
     if (this.starting) return this.starting;
     this.starting = (async () => {
     try {
+      // Schema once per DO lifetime — watch_state lives alongside messages.
+      await this.env.DB.prepare(
+        'CREATE TABLE IF NOT EXISTS watch_state (room_id TEXT PRIMARY KEY, url TEXT, kind TEXT, name TEXT, by_name TEXT, by_pubkey TEXT, ts TEXT)'
+      ).run();
       // Preload recent messages from D1.
       const roomId = this.state.id.toString();
       const rows = await this.env.DB.prepare(
@@ -183,10 +187,6 @@ export class ChatRoomDO {
     // ---- watch-together endpoints ----
     if (path === '/watch' && request.method === 'GET') {
       try {
-        // Ensure table exists
-        await this.env.DB.prepare(
-          'CREATE TABLE IF NOT EXISTS watch_state (room_id TEXT PRIMARY KEY, url TEXT, kind TEXT, name TEXT, by_name TEXT, by_pubkey TEXT, ts TEXT)'
-        ).run();
         const row = await this.env.DB.prepare(
           'SELECT url, kind, name, by_name, by_pubkey, ts FROM watch_state WHERE room_id = ?'
         ).bind(roomId).first();
@@ -201,10 +201,6 @@ export class ChatRoomDO {
         const body = await readJson(request);
         if (body.stop !== true) publicWatchUrl(body.url);
         if (!this.allowMutation(request.headers.get('CF-Connecting-IP') || 'anonymous')) return jsonResponse({ ok: false, error: 'rate_limited' }, 429);
-        // Ensure table exists
-        await this.env.DB.prepare(
-          'CREATE TABLE IF NOT EXISTS watch_state (room_id TEXT PRIMARY KEY, url TEXT, kind TEXT, name TEXT, by_name TEXT, by_pubkey TEXT, ts TEXT)'
-        ).run();
         const stop = body.stop === true;
         if (stop) {
           // Clear watch state
