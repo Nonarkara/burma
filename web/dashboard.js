@@ -1450,10 +1450,12 @@ function renderNews() {
   listEl.innerHTML = items.map((it) => {
     const titleMy = (it.title_my && it.title_my.trim())
       ? '<div class="news-item__title news-item__title--my" lang="my">' + escapeHtml(it.title_my) + '</div>' : '';
-    const titleEn = '<div class="news-item__title">' + escapeHtml(it.title_en || '') + '</div>';
+    const titleEn = (it.title_en && it.title_en.trim())
+      ? '<div class="news-item__title">' + escapeHtml(it.title_en) + '</div>' : '';
     const bodyMy = (it.body_my && it.body_my.trim())
       ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.body_my) + '</div>' : '';
-    const bodyEn = '<div class="news-item__body">' + escapeHtml(it.body_en || '') + '</div>';
+    const bodyEn = (it.body_en && it.body_en.trim())
+      ? '<div class="news-item__body">' + escapeHtml(it.body_en) + '</div>' : '';
     const digestEn = (it.digest_en && it.digest_en.trim())
       ? '<div class="news-item__digest"><span class="news-item__digest-label">Draft annotation · unreviewed</span><div class="news-item__digest-en">' + escapeHtml(it.digest_en) + '</div>' +
         ((it.digest_my && it.digest_my.trim()) ? '<div class="news-item__body news-item__body--my" lang="my">' + escapeHtml(it.digest_my) + '</div>' : '') +
