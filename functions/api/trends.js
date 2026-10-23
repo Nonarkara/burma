@@ -55,7 +55,17 @@ export async function onRequestGet() {
     });
   }
 
-  const text = await res.text();
+  let text;
+  try {
+    text = await res.text();
+  } catch (e) {
+    // Body stream broke mid-read — same discipline as every other path:
+    // JSON envelope + hold, never a raw edge error.
+    holdUntil = now + 60 * 1000;
+    return new Response(JSON.stringify({ ok: false, error: 'gdelt_body_error' }), {
+      status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60'),
+    });
+  }
   if (text.trim().toLowerCase().startsWith('please limit requests')) {
     holdUntil = now + 5 * 60 * 1000;
     return new Response(JSON.stringify({ ok: false, error: 'gdelt_rate_limited' }), {
