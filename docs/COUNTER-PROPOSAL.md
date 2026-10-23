@@ -2,7 +2,7 @@
 
 **To:** Si Thu Maung, Co-Founder & CSO, Sabai Job; AI Master Trainer, ASEAN Youth Organization; Executive Program Director, HARBOUR.SPACE@UTCC
 **From:** Dr Non Arkaraprasertkul, Axiom Decision Systems
-**Date:** 2026-09-15
+**Date:** 2026-10-23 (updated from the 2026-09-15 draft — infra and Phase 1 facts changed; position unchanged)
 **Re:** Reply to your TKCX-Youth AI Career & Skills Discovery Navigator pilot proposal
 
 ---
@@ -21,11 +21,13 @@ We are calling the community platform **Pirchchat**. The internal codename is **
 
 Five surfaces under one roof:
 
-1. **Rooms** — old-school IRC-style persistent public rooms. Deployed on Hetzner Singapore via The Lounge (MIT). Burmese-speaking IRC operators. PWA-installable on mobile.
-2. **Digest** — Dr Non's news digest algorithm, ported to Burmese-language sources. Posted daily at 06:00 ICT in `#digest-today`.
-3. **Listening** — social listening trends from Burmese-language sources globally. Aggregated only. No PII. Surfaced in `#listening-club`.
+1. **Rooms** — old-school IRC-style persistent public rooms. Live since October on Cloudflare Workers (Durable Objects + WebSocket fan-out, D1 history, moderation ban list). Burmese-speaking operators. PWA-installable on mobile. Also live: room-wide watch-together — everyone in a room tunes to the same Burmese TV stream while chatting.
+2. **Digest** — live RSS ingest already running in production: DVB English, The Irrawaddy English, and The Irrawaddy's Burmese edition (ဧရာဝတ), parsed server-side with honest live/partial/unavailable modes. Dr Non's digest algorithm ports on top; Burmese-native reviewer budget is the remaining need (review packet ready).
+3. **Listening** — social listening trends from Burmese-language sources globally. Aggregated only. No PII. Live map-evidence layers already running: NASA GIBS, USGS quakes, Open-Meteo, Himawari-9, GPM IMERG, VIIRS flood.
 4. **Atlas** — world map of where Burmese are talking from. Diaspora density. Migration corridors. Source map. MapLibre + PMTiles + Esri imagery, same stack as the BKK and HCMC atlases.
 5. **Career Navigator** — your original TKCX-Youth proposal, surviving as this surface. Quest engine, AI mentor, training + scholarship + jobs atlas. Embedded as a `#career-navigator` room and a guided web flow.
+
+The platform is live today at `burma.nonarkara.org` with five rooms and real traffic — this is not a mockup.
 
 Aesthetic: 16-bit / Chicago design language. Win95 / System 7-9 era visual register, flattened for 2026. Sharp edges. No shadows. No gradients. Limited palette. Burmese script natural throughout. This is not a Sabai-style app.
 
@@ -52,7 +54,7 @@ We do not recommend Option C (parallel projects that share only a brand). Duplic
 - Go / no-go decision authority on Axiom surface deliverables.
 
 Axiom does not provide:
-- The Burmese NLP pipeline. Dr Non's digest was English. Burmese-language requires its own reviewer budget and pipeline.
+- The Burmese NLP pipeline beyond what already runs: the live ingest of Burmese-language feeds is built and shipping. The remaining need is native reviewer budget and the editorial layer — the review packet is ready for your reviewers on day one.
 - Employer / scholarship / network relationships. Those are GovTech's surface.
 - The verified placement of 100 youth in 60 days. That KPI is Sabai's surface, not Axiom's.
 
@@ -104,9 +106,9 @@ If the state-level pitch does not happen, the platform:
 
 ## 9. Cost — Axiom surface only
 
-- Infra (Hetzner + Vercel + Cloudflare + domain): ฿5,000 to ฿8,000 per year.
-- Burmese reviewers, one or two: ฿30,000 per year stipend each.
-- Burmese NLP pipeline, port of Dr Non's digest algorithm: ฿100,000 one-time development.
+- Infra (Cloudflare Workers + Pages + D1 + R2, domain): ~฿2,000 to ฿4,000 per year at current traffic — cheaper than the 2026-09-15 draft estimated, because Hetzner and Vercel fell out of the architecture.
+- Burmese reviewers, one or two: ฿30,000 per year stipend each. The review packet is written and waiting for them.
+- Burmese digest editorial layer (human review of the live ingest): covered by the reviewer stipend above.
 
 GovTech surface costs are yours to model. Total pilot cost is yours to project.
 
@@ -114,14 +116,14 @@ GovTech surface costs are yours to model. Total pilot cost is yours to project.
 
 1. **Get Min Myat Swan Pyae on a call.** Tell him what is in Sections 2, 3, and 7 above. The Sabai ↔ Pirchchat architecture is a three-way conversation, not two.
 2. **Send Axiom the Sabai deep-link spec** if it exists, or schedule a 30-minute walk-through of the current Sabai Job API surface.
-3. **Three working sessions before Phase 1 begins (Oct 1):**
+3. **Three working sessions before the Phase 2 build (Nov 2026):**
    - Session 1: confirm Sabai ↔ Pirchchat architecture is Option B.
    - Session 2: review Axiom's quest authoring template against your Burmese scenario list.
-   - Session 3: sanctions opinion scoping and Burmese reviewer recruitment.
-4. **Phase 1 begins Oct 1** with closed-alpha Rooms deployment on Hetzner Singapore.
+   - Session 3: sanctions opinion scoping and Burmese reviewer recruitment — the review packet is ready to hand them.
+4. **Phase 1 already shipped** (October 2026): five rooms live on Cloudflare, live three-feed digest including the Irrawaddy Burmese edition, map-evidence listening layers, watch-together. Closed alpha is open. Phase 2 is the Career Navigator and the Atlas.
 
 — Dr Non
 
 ---
 
-*Drafted 2026-09-15. Reply to the TKCX-Youth proposal. To be sent via Si Thu Maung's preferred channel (LinkedIn, Telegram, or in person at EDA).*
+*Drafted 2026-09-15, updated 2026-10-23 to reflect shipped reality (infra moved to Cloudflare; Phase 1 live; Burmese digest pipeline running). Reply to the TKCX-Youth proposal. To be sent via Si Thu Maung's preferred channel (LinkedIn, Telegram, or in person at EDA).*
