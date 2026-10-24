@@ -174,7 +174,7 @@ async function uploadImage(file) {
     body: fd,
   });
   const data = await res.json();
-  if (!data.ok) throw new Error(data.error || 'upload failed');
+  if (!data.ok) throw new Error(data.message || data.error || 'upload failed');
   return resolveImageUrl(data.url);
 }
 

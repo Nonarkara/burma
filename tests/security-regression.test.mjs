@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const sourceUrl = (source) => 'data:text/javascript;base64,' + Buffer.from(source).toString('base64');
+const limitsUrl = sourceUrl(fs.readFileSync('chat-worker/src/limits.js', 'utf8'));
 const roomUrl = sourceUrl(fs.readFileSync('chat-worker/src/chat-room-do.js', 'utf8'));
-const limiterUrl = sourceUrl(fs.readFileSync('chat-worker/src/rate-limiter-do.js', 'utf8'));
+const limiterUrl = sourceUrl(fs.readFileSync('chat-worker/src/rate-limiter-do.js', 'utf8').replaceAll("'./limits.js'", JSON.stringify(limitsUrl)));
 const { ChatRoomDO, readLimitedBody } = await import(roomUrl);
 const { RateLimiterDO } = await import(limiterUrl);
 const workerSource = fs.readFileSync('chat-worker/src/index.js', 'utf8')
-  .replace("'./chat-room-do.js'", JSON.stringify(roomUrl))
-  .replace("'./rate-limiter-do.js'", JSON.stringify(limiterUrl));
+  .replaceAll("'./chat-room-do.js'", JSON.stringify(roomUrl))
+  .replaceAll("'./rate-limiter-do.js'", JSON.stringify(limiterUrl))
+  .replaceAll("'./limits.js'", JSON.stringify(limitsUrl));
 const { default: worker } = await import(sourceUrl(workerSource));
 const { onRequestGet: preview } = await import(sourceUrl(fs.readFileSync('functions/api/preview.js', 'utf8')));
 
@@ -79,7 +81,11 @@ test('unexpected browser origins are rejected before storage or DO access', asyn
 });
 
 test('uploads fail closed when the durable limiter is unavailable', async () => {
-  const result = await worker.fetch(post('api/upload', {}), {});
+  const result = await worker.fetch(new Request('https://worker.test/api/upload', {
+    method: 'POST',
+    headers: { Origin: 'https://burma-a3k.pages.dev', 'content-type': 'application/json' },
+    body: '{}',
+  }), {});
   assert.equal(result.status, 503);
   assert.equal((await result.json()).error, 'rate_limiter_unavailable');
 });
@@ -87,8 +93,11 @@ test('uploads fail closed when the durable limiter is unavailable', async () => 
 test('declared image MIME cannot disguise HTML as an image', async () => {
   const form = new FormData();
   form.append('file', new Blob(['<html>not a PNG</html>'], { type: 'image/png' }), 'fake.png');
-  const env = { RATE_LIMITER: { idFromName: () => 'id', get: () => ({ fetch: async () => new Response('', { status: 200 }) }) } };
-  const result = await worker.fetch(new Request('https://worker.test/api/upload', { method: 'POST', body: form }), env);
+  const draft = new Request('https://worker.test/api/upload', { method: 'POST', body: form });
+  const headers = new Headers(draft.headers);
+  headers.set('Origin', 'https://burma-a3k.pages.dev');
+  const env = { RATE_LIMITER: { idFromName: () => 'id', get: () => ({ fetch: async () => Response.json({ ok: true }) }) } };
+  const result = await worker.fetch(new Request(draft, { headers }), env);
   assert.equal(result.status, 415);
   assert.equal((await result.json()).error, 'invalid_image_content');
 });
@@ -119,22 +128,38 @@ test('preview validates redirect destinations and strips unsafe OpenGraph images
   } finally { globalThis.fetch = original; }
 });
 
-test('durable upload counters enforce the budget atomically and expire inactive keys', async () => {
+test('durable upload counters enforce the admit budget atomically and expire stale keys', async () => {
   const data = new Map(); let alarm = null; let queue = Promise.resolve();
   const storage = {
-    get: async (key) => structuredClone(data.get(key)), put: async (key, value) => data.set(key, structuredClone(value)),
+    get: async (key) => data.has(key) ? structuredClone(data.get(key)) : undefined,
+    put: async (key, value) => data.set(key, structuredClone(value)),
     getAlarm: async () => alarm, setAlarm: async (value) => { alarm = value; },
-    list: async ({ startAfter }) => new Map([...data].filter(([key]) => !startAfter || key > startAfter).slice(0, 128)),
+    list: async ({ prefix, startAfter }) => new Map([...data].filter(([key]) => (!prefix || key.startsWith(prefix)) && (!startAfter || key > startAfter)).slice(0, 128)),
     delete: async (key) => data.delete(key),
-    transaction(fn) { const result = queue.then(() => fn(storage)); queue = result.catch(() => {}); return result; },
   };
-  const limiter = new RateLimiterDO({ storage }, {});
-  const request = new Request('https://limiter/?key=test&max=2');
-  const results = await Promise.all(Array.from({ length: 5 }, () => limiter.fetch(request)));
-  assert.equal(results.filter((r) => r.status === 200).length, 2);
+  const limiter = new RateLimiterDO({
+    storage,
+    blockConcurrencyWhile(fn) { const result = queue.then(() => fn()); queue = result.catch(() => {}); return result; },
+  });
+  const body = JSON.stringify({
+    ip: 'abc123',
+    now: Date.parse('2026-10-13T05:00:00.000Z'),
+    phase: 'admit',
+    limits: { perIpPerMinute: 2, perIpPerDay: 20, globalPerDay: 100 },
+  });
+  const results = await Promise.all(Array.from({ length: 5 }, () => limiter.fetch(new Request('https://limiter.internal/consume', { method: 'POST', body }))));
+  const decisions = await Promise.all(results.map((r) => r.json()));
+  assert.equal(decisions.filter((d) => d.ok).length, 2);
+  assert.equal(decisions.filter((d) => d.reason === 'per_minute').length, 3);
   assert.ok(alarm);
-  data.set('t:expired', [Date.now() - 3600001]);
+  assert.equal(JSON.stringify(decisions[0]).includes('abc123'), false);
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const pick = (type) => parts.find((part) => part.type === type).value;
+  data.set('ip:abc123', Object.assign({}, data.get('ip:abc123'), { day: `${pick('year')}-${pick('month')}-${pick('day')}` }));
+  data.set('t:legacy', [1]);
+  data.set('ip:stale', { day: '2020-01-01', dayCount: 1, tokens: 0, updatedAt: 1 });
   await limiter.alarm();
-  assert.equal(data.has('t:expired'), false);
-  assert.equal(data.has('t:test'), true);
+  assert.equal(data.has('t:legacy'), false);
+  assert.equal(data.has('ip:stale'), false);
+  assert.equal(data.has('ip:abc123'), true);
 });
