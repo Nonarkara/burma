@@ -327,4 +327,78 @@ export default {
 
     return json({ ok: false, error: 'not_found', path }, 404, ch);
   },
+
+  // Digest auto-post — 06:00 ICT daily (cron 23:00 UTC in wrangler.toml).
+  // Posts top headlines from the live Pages news API into #digest-today as
+  // digest-bot. Titles verbatim from the feeds — no AI summarization, ever.
+  // Once per day, enforced by a D1 check against the last digest-bot post.
+  // A feed failure skips the day honestly — never a fabricated digest.
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(postDailyDigest(env).then(
+      (r) => console.log('[digest]', JSON.stringify(r)),
+      (e) => console.log('[digest] failed:', String(e && e.message || e)),
+    ));
+  },
 };
+
+const NEWS_API = 'https://burma.nonarkara.org/api/news';
+const DIGEST_ROOM = 'digest-today';
+const DIGEST_WINDOW_MS = 20 * 60 * 60 * 1000; // one post per day (20h guard)
+
+function buildDigestBody(data) {
+  const items = (data && Array.isArray(data.items)) ? data.items : [];
+  if (!items.length || data.mode === 'unavailable') return null; // honest absence
+  // Burmese-first picks: 2 Burmese + 3 English, newest first within each.
+  const my = items.filter((i) => i.lang === 'my').slice(0, 2);
+  const en = items.filter((i) => i.lang !== 'my').slice(0, 3);
+  const picks = [...my, ...en];
+  if (!picks.length) return null;
+  const lines = picks.map((i) => {
+    const src = i.lang === 'my' ? 'ဧရာဝတ' : (i.sourceShort || i.source || '');
+    const title = String(i.title_my || i.title_en || '').slice(0, 110);
+    const place = (i.location && i.location.place && i.location.place !== 'Myanmar — region')
+      ? ' — ' + i.location.place : '';
+    return '• [' + src + '] ' + title + place;
+  });
+  const dateStr = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10); // ICT date
+  return [
+    'နေ့စဉ် သတင်းစဉ် · Daily digest — ' + dateStr + ' ICT',
+    lines.join('\n'),
+    'Full list: https://burma.nonarkara.org/dashboard',
+    'Live RSS (' + (data.mode || '') + ', ' + (data.feedsOk || 0) + '/3 feeds). Titles verbatim — no AI summary. Not for travel, health, work or legal decisions.',
+  ].join('\n');
+}
+
+async function postDailyDigest(env) {
+  // Dedupe: digest-bot posts at most once per day.
+  const roomId = env.CHAT_ROOM.idFromName(DIGEST_ROOM).toString();
+  const recent = await env.DB.prepare(
+    'SELECT id FROM messages WHERE room_id = ? AND author_pubkey = ? AND ts > ? LIMIT 1'
+  ).bind(roomId, 'digest-bot', Date.now() - DIGEST_WINDOW_MS).first();
+  if (recent) return { ok: true, skipped: 'already_posted_today' };
+
+  let data;
+  try {
+    const res = await fetch(NEWS_API + '?limit=40', {
+      signal: AbortSignal.timeout(15000),
+      headers: { 'user-agent': 'Pirchchat digest bot (+burma.nonarkara.org)' },
+    });
+    if (!res.ok) return { ok: false, error: 'news_http_' + res.status };
+    data = await res.json();
+  } catch (e) {
+    return { ok: false, error: 'news_fetch_failed' };
+  }
+  const body = buildDigestBody(data);
+  if (!body) return { ok: true, skipped: 'no_items' };
+
+  await ensureRoom(env, DIGEST_ROOM);
+  const stub = env.CHAT_ROOM.get(env.CHAT_ROOM.idFromName(DIGEST_ROOM));
+  // Direct DO call — goes through handlePost (sanitizer, rate limits, D1).
+  const post = await stub.fetch(new URL('https://do/message'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'CF-Connecting-IP': 'digest-cron' },
+    body: JSON.stringify({ author_name: 'digest-bot', author_pubkey: 'digest-bot', body_html: body }),
+  });
+  if (!post.ok) return { ok: false, error: 'post_failed_' + post.status };
+  return { ok: true, posted: true };
+}

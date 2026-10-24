@@ -3,6 +3,10 @@ main = "src/index.js"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["web_socket_auto_reply_to_close"]
 
+# Daily digest auto-post — 23:00 UTC = 06:00 ICT, into #digest-today.
+[triggers]
+crons = ["0 23 * * *"]
+
 [observability.logs]
 enabled = true
 
