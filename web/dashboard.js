@@ -1161,7 +1161,7 @@ async function toggleQuakes() {
 function openQuakeModal(f) {
   const p = f.properties || {};
   const coords = (f.geometry && f.geometry.coordinates) || [0, 0, 0];
-  const t = p.time ? new Date(p.time).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' }) + ' MMT' : '—';
+  const t = p.time ? new Date(p.time).toLocaleString('en-GB', { timeZone: 'Asia/Yangon' }) + ' MMT' : '—';
   openIncidentModal({
     title_en: 'M' + (p.mag != null ? Number(p.mag).toFixed(1) : '?') + ' — ' + (p.place || 'unknown'),
     title_my: '',
