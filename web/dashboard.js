@@ -21,7 +21,7 @@ const timeNow = () => {
 const timeNowICT = () => {
   const d = new Date();
   return d.toLocaleString('en-GB', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Yangon',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Bangkok',
   }) + ' ICT';
 };
 
@@ -1161,7 +1161,7 @@ async function toggleQuakes() {
 function openQuakeModal(f) {
   const p = f.properties || {};
   const coords = (f.geometry && f.geometry.coordinates) || [0, 0, 0];
-  const t = p.time ? new Date(p.time).toLocaleString('en-GB', { timeZone: 'Asia/Yangon' }) + ' MMT' : '—';
+  const t = p.time ? new Date(p.time).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok' }) + ' MMT' : '—';
   openIncidentModal({
     title_en: 'M' + (p.mag != null ? Number(p.mag).toFixed(1) : '?') + ' — ' + (p.place || 'unknown'),
     title_my: '',
@@ -1614,6 +1614,13 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   $('#identitySkip').addEventListener('click', hideIdentityModal);
+
+  // Desktop reading mode keeps chat connected and restores the original split.
+  const newsExpand = $('#newsExpand');
+  if (newsExpand) newsExpand.addEventListener('click', () => {
+    const expanded = $('.dash__right').classList.toggle('is-reading-news');
+    newsExpand.setAttribute('aria-pressed', String(expanded));
+  });
 
   // Mobile tabs
   $$('.tabs-top__btn').forEach((b) => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));

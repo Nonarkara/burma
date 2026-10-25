@@ -1864,3 +1864,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   .messages { min-width: 0; border-right: none; }
   .chat .titlebar__meta { max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* Long opportunity references need a reading surface, not a smaller type size. */
+.news__expand { width:auto; min-width:24px; padding:2px 6px; white-space:normal; }
+.news__restore-label { display:none; }
+@media (min-width:921px) {
+  .dash__right.is-reading-news .news { flex:1 1 0; min-height:0; }
+  .dash__right.is-reading-news .chat { display:none; }
+  .is-reading-news .news__expand-label { display:none; }
+  .is-reading-news .news__restore-label { display:inline; }
+}
+@media (max-width:920px) { .news__expand { display:none; } }

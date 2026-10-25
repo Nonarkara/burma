@@ -75,3 +75,7 @@ Native Burmese review, physical iOS/Android checks, partner confirmation, permis
 ## Release verification
 
 Deployed 25 October 2026: Pages `56d6d994.burma-a3k.pages.dev`; chat Worker version `32450078-de84-4683-83a7-687b937a4540`. Canonical `/dashboard`, `/dashboard.js` and `/dashboard.css` bytes match the committed files. Canonical `/api/news` returned `live`, five available sources, 47 headlines and five separate provider references. Browser inspection confirmed the HRDF canonical URLs and Burmese provider-reference cards. All 51 automated tests pass. Independent source/layout review was completed; native Burmese copy review and physical iOS/Android/low-end device checks remain pending. No public test messages were posted for this release.
+
+### Reading usability follow-up
+
+Added a Burmese/English desktop Expand news / Restore split control. At 1024×900, the scrollable reading area grows from 229px to 782px, retaining the 512px map and every opportunity field/link. Restore returns chat to the original split without replacing its DOM or connection. The mobile surface remains full-height and hides the redundant desktop control. The ICT display now uses Asia/Bangkok instead of Asia/Yangon (a 30-minute error). Automated suite: 51 passing. Native Burmese and physical-device review remain pending.
