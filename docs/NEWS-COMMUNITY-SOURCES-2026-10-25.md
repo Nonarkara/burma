@@ -71,3 +71,7 @@ Success should mean that a member finds something relevant, understands whether 
 No new HTML crawler or social-listening collector is claimed as shipped. For a future permitted page adapter: store a bounded raw institutional-announcement snapshot before parsing, use conditional requests, run slowly, and stop on blocks or markup failures. Retain source date, fetch date, parser version and correction history. Avoid personal case records and retain only what is needed for the public announcement index.
 
 Native Burmese review, physical iOS/Android checks, partner confirmation, permissions for broader reuse, and community editorial operation remain necessary. Automated status means source reachability, never “the claim is true.”
+
+## Release verification
+
+Deployed 25 October 2026: Pages `56d6d994.burma-a3k.pages.dev`; chat Worker version `32450078-de84-4683-83a7-687b937a4540`. Canonical `/dashboard`, `/dashboard.js` and `/dashboard.css` bytes match the committed files. Canonical `/api/news` returned `live`, five available sources, 47 headlines and five separate provider references. Browser inspection confirmed the HRDF canonical URLs and Burmese provider-reference cards. All 51 automated tests pass. Independent source/layout review was completed; native Burmese copy review and physical iOS/Android/low-end device checks remain pending. No public test messages were posted for this release.
