@@ -178,3 +178,7 @@ Reviewer name (optional) · date · sections reviewed:
 - [ ] F — UI labels walk-through
 
 *Corrections go into the code exactly as the reviewer writes them, with the reviewer recorded as the source. Nothing gets paraphrased. If the reviewer's correction changes meaning, the English changes with it.*
+# Community news addendum — 25 October 2026
+
+Native review is pending for the new provider-reference copy in `functions/data/community-briefs.js` and source-status labels in `web/dashboard.js` / `web/dashboard.html`. Review the Tak place name, education terminology, dates/timezone, eligibility and the distinction between a project record and an application call. The fifth connector total includes two new English-language sources (HRDF and Prachatai); their original headlines are not presented as Burmese translations. The source checks do not establish referral partnerships or independent fact verification. See `docs/NEWS-COMMUNITY-SOURCES-2026-10-25.md` for primary sources and caveats.
+

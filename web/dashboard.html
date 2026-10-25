@@ -161,6 +161,12 @@
         <button type="button" class="menubar__item" data-news-action="export" title="Download these news items as text" data-en="Export" data-my="ထုတ်ယူ">Export</button>
       </nav>
       <div class="chipbar" id="sourceChips" role="toolbar" aria-label="Filter by source"></div>
+      <div class="news__body">
+      <details class="news-provenance">
+        <summary><span data-en="Source availability" data-my="ရင်းမြစ် ရရှိနိုင်မှု">ရင်းမြစ် ရရှိနိုင်မှု</span> · <span id="newsSourceStatus">—</span></summary>
+        <p data-en="Feed reachability and newest publication date. A reachable source is not independent fact-checking." data-my="ရင်းမြစ် ရရှိမှုနှင့် နောက်ဆုံးထုတ်ဝေရက် ဖြစ်သည်။ ရင်းမြစ် ရရှိခြင်းသည် သီးခြားအချက်အလက် အတည်ပြုခြင်း မဟုတ်ပါ။">ရင်းမြစ် ရရှိမှုနှင့် နောက်ဆုံးထုတ်ဝေရက် ဖြစ်သည်။ ရင်းမြစ် ရရှိခြင်းသည် သီးခြားအချက်အလက် အတည်ပြုခြင်း မဟုတ်ပါ။</p>
+        <ul id="newsSourceList"></ul>
+      </details>
       <section class="spark" id="sparkWire" hidden aria-label="Myanmar media volume trend">
         <header class="spark__head">
           <strong data-en="Media volume — Myanmar coverage" data-my="မြန်မာ သတင်း အဆက်အသွယ် ပမာဏ">Media volume — Myanmar coverage</strong>
@@ -168,15 +174,16 @@
         </header>
         <div class="spark__bars" id="sparkBars"></div>
       </section>
-      <section class="action-desk" aria-label="Actionable takeaways and signal desk">
-        <div class="action-desk__head"><strong>အချက်ပြ စားပွဲ · Signal desk</strong><span>Rules-based reference · AI synthesis is not connected</span></div>
+      <details class="action-desk" aria-label="Community opportunities and source checks">
+        <summary class="action-desk__head"><strong data-en="Learning, opportunities and source checks" data-my="သင်ယူမှု၊ အခွင့်အလမ်းနှင့် ရင်းမြစ်စစ်ဆေးချက်">သင်ယူမှု၊ အခွင့်အလမ်းနှင့် ရင်းမြစ်စစ်ဆေးချက်</strong></summary>
         <div class="chipbar" id="deskChips" role="toolbar" aria-label="Filter action desk">
-          <button type="button" class="chip chip--active" data-desk="all" data-en="All" data-my="အားလုံး">All</button><button type="button" class="chip" data-desk="action" data-en="Action briefs" data-my="လုပ်ငန်းစာ">Action briefs</button><button type="button" class="chip" data-desk="signal" data-en="Signal vs rumor" data-my="အချက်ပြ · သံသယ">Signal vs rumor</button><button type="button" class="chip" data-desk="opportunity" data-en="ASEAN paths" data-my="အာဆီယံလမ်း">ASEAN paths</button>
+          <button type="button" class="chip chip--active" data-desk="all" data-en="All" data-my="အားလုံး">All</button><button type="button" class="chip" data-desk="action" data-en="Action briefs" data-my="လုပ်ငန်းစာ">Action briefs</button><button type="button" class="chip" data-desk="signal" data-en="Signal vs rumor" data-my="အချက်ပြ · သံသယ">Signal vs rumor</button><button type="button" class="chip" data-desk="opportunity" data-en="Learning · opportunities" data-my="သင်ယူမှု · အခွင့်အလမ်း">Learning · opportunities</button>
         </div>
         <div id="actionDeskList" class="action-desk__list"></div>
-      </section>
+      </details>
       <p class="news-provenance" data-en="Publisher RSS · not independently verified. Map locations are inferred. Check the original source before making decisions." data-my="သတင်းဌာန၏ RSS ဖြစ်သည်။ သီးခြားအတည်မပြုရသေးပါ။ မြေပုံနေရာများကို ခန့်မှန်းထားသည်။ ဆုံးဖြတ်ချက် မချမီ မူရင်းရင်းမြစ်ကို စစ်ဆေးပါ။">သတင်းဌာန၏ RSS ဖြစ်သည်။ သီးခြားအတည်မပြုရသေးပါ။ မြေပုံနေရာများကို ခန့်မှန်းထားသည်။ ဆုံးဖြတ်ချက် မချမီ မူရင်းရင်းမြစ်ကို စစ်ဆေးပါ။</p>
       <div class="news__list" id="newsList" aria-live="polite" aria-label="News examples"></div>
+      </div>
       <div class="statusbar">
         <span class="statusbar__item"><span class="led led--on" aria-hidden="true"></span><span id="newsCount">0 items</span></span>
         <span class="statusbar__spacer"></span>

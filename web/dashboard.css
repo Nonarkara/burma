@@ -830,6 +830,14 @@ html, body {
   background: var(--paper);
 }
 
+.news__body { flex:1; min-height:0; overflow-y:auto; }
+.news__body .news__list { overflow:visible; }
+.news__body details > summary { cursor:pointer; padding:7px 0; font:14px/1.8 var(--font-burma); }
+.news__body summary:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+.news__body .desk-card { font:14px/1.8 var(--font-burma); }
+.news__body .desk-card__meta { flex-wrap:wrap; font-size:11px; }
+.news__body .desk-verification { white-space:normal; font-size:11px; }
+
 .news-item {
   padding: 10px 14px 12px;
   border-bottom: 1px solid var(--rule);

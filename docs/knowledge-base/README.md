@@ -5,6 +5,7 @@ Research date: 2 October 2026. Owner: Pirchchat / A-Lin-Ein. Scope: public, Thai
 - [Community and service bible](BURMESE-IN-THAILAND.md): evidence, everyday tasks, service boundaries, and research gaps.
 - [Source register](SOURCES.md): primary sources, dates, and what each source can and cannot substantiate.
 - [Design core and implementation plan](../BURMESE-THAILAND-UX-PLAN.md): proposed interface, audit findings, and acceptance criteria.
+- [Community news sources, 25 October 2026](../NEWS-COMMUNITY-SOURCES-2026-10-25.md): tested feeds, access limitations, concrete 2027 leads and the ingestion contract.
 
 ## How to use this knowledge
 

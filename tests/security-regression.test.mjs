@@ -10,7 +10,7 @@ const { RateLimiterDO } = await import(limiterUrl);
 const workerSource = fs.readFileSync('chat-worker/src/index.js', 'utf8')
   .replace("'./chat-room-do.js'", JSON.stringify(roomUrl))
   .replace("'./rate-limiter-do.js'", JSON.stringify(limiterUrl));
-const { default: worker } = await import(sourceUrl(workerSource));
+const { default: worker, buildDigestBody } = await import(sourceUrl(workerSource + '\nexport { buildDigestBody };'));
 const { onRequestGet: preview } = await import(sourceUrl(fs.readFileSync('functions/api/preview.js', 'utf8')));
 
 function room() {
@@ -24,6 +24,13 @@ function room() {
   return { instance, calls };
 }
 const post = (path, body) => new Request('https://worker.test/' + path, { method: 'POST', body: JSON.stringify(body) });
+
+test('scheduled digest reports the actual source count and publisher label', () => {
+  const body = buildDigestBody({ mode: 'partial-live', feedsOk: 4, sourceCount: 5, items: [{ lang: 'my', sourceShort: 'Test publisher', title_my: 'သတင်း' }] });
+  assert.ok(body.includes('4/5 feeds'));
+  assert.ok(body.includes('[Test publisher]'));
+  assert.equal(buildDigestBody({ mode: 'unavailable', items: [] }), null);
+});
 
 test('streamed body limits cannot be bypassed with missing or understated Content-Length', async () => {
   for (const headers of [{}, { 'content-length': '1' }]) {

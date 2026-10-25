@@ -1,0 +1,191 @@
+{
+  "checkedAt": "2026-10-25",
+  "userAgent": "Pirchchat/0.2 (+https://burma.nonarkara.org/research)",
+  "discovery": [
+    {
+      "id": "hrdf",
+      "home": "https://hrdfoundation.org/?lang=en",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [
+        {
+          "url": "https://hrdfoundation.org/?feed=rss2&#038;lang=en",
+          "final": "https://hrdfoundation.org/?feed=rss2",
+          "status": 200,
+          "type": "application/rss+xml; charset=UTF-8",
+          "items": 10,
+          "bytes": 417319
+        },
+        {
+          "url": "https://hrdfoundation.org/?feed=comments-rss2&#038;lang=en",
+          "final": "https://hrdfoundation.org/?feed=comments-rss2",
+          "status": 200,
+          "type": "application/rss+xml; charset=UTF-8",
+          "items": 0,
+          "bytes": 759,
+          "decision": "not a news source; never ingest comments"
+        }
+      ],
+      "homeStatus": 200,
+      "homeFinal": "https://hrdfoundation.org/?lang=en"
+    },
+    {
+      "id": "maetao",
+      "home": "https://maetaoclinic.org/",
+      "robotsStatus": 403,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [],
+      "homeStatus": 403,
+      "homeFinal": "https://maetaoclinic.org/"
+    },
+    {
+      "id": "prachatai",
+      "home": "https://prachataienglish.com/",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [
+        {
+          "url": "https://prachataienglish.com/rss.xml",
+          "final": "https://prachataienglish.com/rss.xml",
+          "status": 0,
+          "type": null,
+          "items": 0,
+          "bytes": 45,
+          "decision": "not enabled: empty or unavailable"
+        }
+      ],
+      "homeStatus": 200,
+      "homeFinal": "https://prachataienglish.com/"
+    },
+    {
+      "id": "asean",
+      "home": "https://aseanfoundation.org/",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [],
+      "homeStatus": 200,
+      "homeFinal": "https://aseanfoundation.org/"
+    },
+    {
+      "id": "mwg",
+      "home": "https://mwgthailand.org/en",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [],
+      "homeStatus": 200,
+      "homeFinal": "https://mwgthailand.org/en"
+    },
+    {
+      "id": "map",
+      "home": "https://www.mapfoundationcm.org/en/",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [
+        {
+          "url": "https://www.mapfoundationcm.org/en/?format=feed&type=rss",
+          "final": "https://www.mapfoundationcm.org/en/?format=feed&type=rss",
+          "status": 200,
+          "type": "application/rss+xml; charset=utf-8",
+          "items": 0,
+          "bytes": 739,
+          "decision": "not enabled: empty or unavailable"
+        },
+        {
+          "url": "https://www.mapfoundationcm.org/en/?format=feed&type=atom",
+          "final": "https://www.mapfoundationcm.org/en/?format=feed&type=atom",
+          "status": 200,
+          "type": "application/atom+xml; charset=utf-8",
+          "items": 0,
+          "bytes": 772,
+          "decision": "not enabled: empty or unavailable"
+        }
+      ],
+      "homeStatus": 200,
+      "homeFinal": "https://www.mapfoundationcm.org/en/"
+    },
+    {
+      "id": "thai-mol",
+      "home": "https://www.mol.go.th/en/",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [],
+      "homeStatus": 200,
+      "homeFinal": "https://www.mol.go.th/en/"
+    },
+    {
+      "id": "bni",
+      "home": "https://www.bnionline.net/en",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [],
+      "homeStatus": 200,
+      "homeFinal": "https://www.bnionline.net/en"
+    },
+    {
+      "id": "shan",
+      "home": "https://english.shannews.org/",
+      "robotsStatus": 200,
+      "homeAllowed": true,
+      "checkedAt": "2026-10-25",
+      "feeds": [],
+      "homeStatus": 403,
+      "homeFinal": "https://english.shannews.org/"
+    }
+  ],
+  "focusedProbes": [
+    {
+      "url": "https://hrdfoundation.org/?feed=rss2&lang=en",
+      "status": 200,
+      "items": 10,
+      "language": "en-US",
+      "latestPublished": "2026-10-07",
+      "decision": "enable headline-only institutional news"
+    },
+    {
+      "url": "https://prachataienglish.com/rss.xml",
+      "status": 200,
+      "items": 10,
+      "language": "en",
+      "latestPublished": "2026-10-22",
+      "decision": "enable headline-only, migrant/Myanmar relevance filter; first request timed out, same-URL retry succeeded"
+    },
+    {
+      "url": "https://aseanfoundation.org/wp-json/wp/v2/types",
+      "status": 403,
+      "decision": "do not automate; no bypass"
+    },
+    {
+      "url": "https://www.mol.go.th/en/feed",
+      "status": 200,
+      "decision": "not XML RSS; do not enable"
+    }
+  ],
+  "payloadEvidence": {
+    "thai-mol-feed.raw": {
+      "bytes": 962,
+      "sha256": "5b0d8428b1c0be5c7c4e45627a7405872e7e23e6836410273c10526c9d9e9cce"
+    },
+    "prachatai-retry.raw": {
+      "bytes": 85718,
+      "sha256": "95a4749cc947a8be93a039da89097540e80690965479182b60bdcd6b11dc54f5"
+    },
+    "hrdf-english.raw": {
+      "bytes": 150165,
+      "sha256": "0a3dd9e870254957d0119787d038e64ba1d5831d61c34d48d504662e0190b6c3"
+    }
+  },
+  "limitations": [
+    "Initial discovery failed to decode numeric HTML ampersands in HRDF alternate URLs; focused probe used the correctly decoded published URL.",
+    "Mae Tao returned 403; initial home probe also returned 403; no further automation.",
+    "robots.txt transport success does not establish copyright or republication permission.",
+    "Public feed access is not a referral partnership, independent verification, or permission to republish full articles."
+  ]
+}

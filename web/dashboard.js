@@ -629,6 +629,7 @@ window.__pirchCities = CITIES;
 const state = {
   identity: null,
   news: [],
+  communityBriefs: [],
   newsFilterRegion: 'all',
   newsSourceFilter: null,
   newsLayerOn: true,
@@ -1281,7 +1282,7 @@ function renderNewsMarkers(items) {
 
 function refreshMarkers() {
   let items = state.news;
-  if (state.newsFilterRegion !== 'all') items = items.filter((x) => x.region === state.newsFilterRegion);
+  items = items.filter((item) => matchesNewsFilter(item, state.newsFilterRegion));
   if (state.newsSourceFilter) items = items.filter((x) => (x.sourceShort || x.source) === state.newsSourceFilter);
   if (state.newsLayerOn) renderNewsMarkers(items.concat(state.userPins));
   else clearNewsMarkers();
@@ -1318,7 +1319,7 @@ function toggleSupport() { state.supportLayerOn = !state.supportLayerOn; $$('.to
 
 function fitAllMarkers() {
   if (!map) return;
-  const items = state.news.filter((x) => x.location && (state.newsFilterRegion === 'all' || x.region === state.newsFilterRegion));
+  const items = state.news.filter((x) => x.location && matchesNewsFilter(x, state.newsFilterRegion));
   const bounds = new maplibregl.LngLatBounds();
   items.forEach((it) => bounds.extend([it.location.lng, it.location.lat]));
   if (bounds.isEmpty()) return;
@@ -1355,6 +1356,16 @@ async function loadNews() {
     if (requestId !== newsRequest) return;
     state.sourceChipsBuilt = false;
     state.news = (data.items || []).map((it) => ({ ...it, kind: 'news' }));
+    state.communityBriefs = Array.isArray(data.communityBriefs) ? data.communityBriefs : [];
+    renderActionDesk();
+    const sourceStatus = $('#newsSourceStatus');
+    if (sourceStatus) sourceStatus.textContent = (data.feedsOk || 0) + ' / ' + (data.sourceCount || '?') + ' RSS';
+    const sourceList = $('#newsSourceList');
+    const sourceLabels = { available: ['Available', 'ရရှိသည်'], unavailable: ['Unavailable', 'မရရှိပါ'], no_matching_items: ['No relevant items', 'သက်ဆိုင်သည့်သတင်း မတွေ့ပါ'] };
+    if (sourceList) sourceList.innerHTML = (data.sources || []).map((source) => {
+      const label = sourceLabels[source.status] || sourceLabels.unavailable;
+      return '<li>' + escapeHtml(source.name) + ' · <span data-en="' + label[0] + '" data-my="' + label[1] + '">' + (window.__pirchLang === 'en' ? label[0] : label[1]) + '</span> · ' + escapeHtml(source.newestPublishedAt ? source.newestPublishedAt.slice(0, 10) : '—') + '</li>';
+    }).join('');
     buildSourceChips();
     renderNews();
     refreshMarkers();
@@ -1436,11 +1447,17 @@ function buildSourceChips() {
   });
 }
 
+function matchesNewsFilter(item, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'visa-jobs') return (item.topics || []).some((topic) => /job|visa|work|employment|migration|rights|learning/.test(topic));
+  return item.region === filter;
+}
+
 function renderNews() {
   const listEl = $('#newsList');
   if (!listEl) return;
   let items = state.news;
-  if (state.newsFilterRegion !== 'all') items = items.filter((x) => x.region === state.newsFilterRegion);
+  items = items.filter((item) => matchesNewsFilter(item, state.newsFilterRegion));
   if (state.newsSourceFilter) items = items.filter((x) => (x.sourceShort || x.source) === state.newsSourceFilter);
   if (!items.length) {
     listEl.innerHTML = '<div class="news-item"><em>No items in this filter.</em></div>';
@@ -1463,8 +1480,8 @@ function renderNews() {
     return (
       '<article class="news-item' + (it.tier === 'live-wire' ? ' news-item--live' : '') + '" data-id="' + escapeHtml(it.id) + '">' +
         '<div class="news-item__head">' +
-          '<span class="news-item__ts">' + escapeHtml(ago(it.ts)) + '</span>' +
-          (it.tier === 'live-wire' ? '<span class="news-item__wire">LIVE RSS</span>' : '') +
+          '<span class="news-item__ts">' + escapeHtml(it.publishedAt === null ? 'ရက်စွဲ မသိ · date unknown' : ago(it.ts)) + '</span>' +
+          (it.tier === 'live-wire' ? '<span class="news-item__wire">RSS</span>' : '') +
           '<span class="news-item__src">' + escapeHtml(it.sourceLabel || it.source || '') + '</span>' +
           '<span class="news-item__loc">' + escapeHtml((it.location && it.location.place) || '') + '</span>' +
         '</div>' +
@@ -1499,8 +1516,19 @@ const ACTION_DESK = [
 
 function renderActionDesk() {
   const wrap = $('#actionDeskList'); if (!wrap) return;
-  const items = ACTION_DESK.filter((item) => state.deskFilter === 'all' || item.kind === state.deskFilter);
-  wrap.innerHTML = items.map((item) => '<article class="desk-card"><div class="desk-card__meta"><span class="desk-badge" title="' + (item.verification || item.badge) + '">' + escapeHtml(item.badge) + '</span><span>' + escapeHtml(item.kind) + '</span><span>reviewed ' + escapeHtml(item.reviewed) + '</span></div><strong>' + escapeHtml(item.title) + '</strong><div>' + escapeHtml(item.text) + '</div><div class="desk-card__meta--small"><span class="desk-source">' + escapeHtml(item.source || '') + '</span><span class="desk-verification">' + (item.verification ? '(' + item.verification + ')' : '') + '</span></div><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">Open source ↗</a></article>').join('') || '<div class="desk-card">No entries in this view.</div>';
+  const statuses = {
+    source_checked: ['Source checked · check eligibility', 'ရင်းမြစ် စစ်ပြီး · အရည်အချင်း စစ်ပါ'],
+    needs_confirmation: ['Needs provider confirmation', 'စီစဉ်သူထံ အတည်ပြုရန်'],
+    programme_reference: ['Programme reference', 'အစီအစဉ် ရင်းမြစ်'],
+    project_record: ['Project record · not an application call', 'အစီအစဉ် မှတ်တမ်း · လျှောက်လွှာခေါ်စာ မဟုတ်'],
+    announcement: ['Announcement · not permission', 'ကြေညာချက် · ခွင့်ပြုချက် မဟုတ်'],
+    closed: ['Deadline passed', 'နောက်ဆုံးရက် ကျော်ပြီ'],
+    review_due: ['Source recheck due', 'ရင်းမြစ် ပြန်စစ်ရန်'],
+  };
+  const checked = state.communityBriefs.map((item) => ({ ...item, badge: statuses[item.status]?.[0] || 'Reference', badge_my: statuses[item.status]?.[1] || 'ရင်းမြစ်' }));
+  const items = checked.concat(ACTION_DESK).filter((item) => state.deskFilter === 'all' || item.kind === state.deskFilter);
+  const bilingual = (en, my, tag = 'span') => '<' + tag + (my ? ' data-en="' + escapeHtml(en) + '" data-my="' + escapeHtml(my) + '"' : '') + '>' + escapeHtml(my && window.__pirchLang !== 'en' ? my : en) + '</' + tag + '>';
+  wrap.innerHTML = items.map((item) => '<article class="desk-card"><div class="desk-card__meta">' + bilingual(item.badge, item.badge_my) + bilingual(item.kind, item.kind === 'opportunity' ? 'အခွင့်အလမ်း' : item.kind === 'signal' ? 'အချက်ပြ' : 'ရင်းမြစ်') + '<span>' + bilingual('Checked', 'စစ်ဆေးရက်') + ' ' + escapeHtml(item.reviewed) + '</span></div>' + bilingual(item.title, item.title_my, 'strong') + bilingual(item.text, item.text_my, 'div') + '<div class="desk-card__meta--small"><span class="desk-source">' + escapeHtml(item.source || '') + '</span><span class="desk-verification">' + (item.copyReview ? bilingual(item.copyReview, 'မြန်မာစာ မူကြမ်း · မိခင်ဘာသာစကားသုံးသူ စစ်ဆေးရန် ကျန်သည်') : escapeHtml(item.verification || '')) + '</span></div><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">မူရင်း · Open source ↗</a></article>').join('') || '<div class="desk-card">No entries in this view.</div>';
 }
 
 function focusOnItem(item) {

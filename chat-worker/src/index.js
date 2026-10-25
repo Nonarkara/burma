@@ -354,7 +354,7 @@ function buildDigestBody(data) {
   const picks = [...my, ...en];
   if (!picks.length) return null;
   const lines = picks.map((i) => {
-    const src = i.lang === 'my' ? 'ဧရာဝတ' : (i.sourceShort || i.source || '');
+    const src = i.sourceShort || i.source || '';
     const title = String(i.title_my || i.title_en || '').slice(0, 110);
     const place = (i.location && i.location.place && i.location.place !== 'Myanmar — region')
       ? ' — ' + i.location.place : '';
@@ -365,7 +365,7 @@ function buildDigestBody(data) {
     'နေ့စဉ် သတင်းစဉ် · Daily digest — ' + dateStr + ' ICT',
     lines.join('\n'),
     'Full list: https://burma.nonarkara.org/dashboard',
-    'Live RSS (' + (data.mode || '') + ', ' + (data.feedsOk || 0) + '/3 feeds). Titles verbatim — no AI summary. Not for travel, health, work or legal decisions.',
+    'Live RSS (' + (data.mode || '') + ', ' + (data.feedsOk || 0) + '/' + (data.sourceCount || '?') + ' feeds). Titles verbatim — no AI summary. Not for travel, health, work or legal decisions.',
   ].join('\n');
 }
 
