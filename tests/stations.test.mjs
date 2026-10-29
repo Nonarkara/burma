@@ -249,6 +249,18 @@ test('the radio player lives inside the media panel', () => {
   assert.match(dashboardHtml, /id="audioEl"/, 'no audio element');
 });
 
+test('no note is a doubled string', () => {
+  // An edit that appended a new note onto an old one produced text that
+  // read twice. A note is a sentence, not a sentence plus itself.
+  for (const e of MEDIA_CATALOG) {
+    const v = e.note || '';
+    if (!v) continue;
+    const n = v.length;
+    assert.ok(!(n % 2 === 0 && v.slice(0, n / 2) === v.slice(n / 2)),
+      'note on ' + e.id + ' is the same sentence twice: ' + v);
+  }
+});
+
 test('the media panel offers both TV and radio in one place', () => {
   assert.match(dashboardHtml, /data-media-tab="tv"/);
   assert.match(dashboardHtml, /data-media-tab="radio"/);

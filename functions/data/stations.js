@@ -148,7 +148,8 @@ export const MEDIA_CATALOG = [
     status: 'live',
     checked: '2026-10-29',
     source: 'iptv-org · DVB broadcaster CDN',
-    note: 'Independent news. Plays here over HLS.',},
+    note: 'Independent news. Plays here over HLS.',
+  },
   {
     id: 'thaipbs',
     kind: 'tv',
@@ -168,7 +169,8 @@ export const MEDIA_CATALOG = [
     status: 'live',
     checked: '2026-10-29',
     source: 'Thai PBS · direct ByteArk CDN',
-    note: 'Thai broadcast with Burmese and border coverage.',},
+    note: 'Thai broadcast with Burmese and border coverage.',
+  },
 
   // ===== TELEVISION — portal only =====
   {
@@ -190,7 +192,7 @@ export const MEDIA_CATALOG = [
     status: 'portal',
     checked: '2026-10-29',
     source: 'iptv-org · MM Streams',
-    note: 'Stream host origin is down — watch on the broadcaster page instead.Stream host origin is down — watch on the broadcaster page instead.',
+    note: 'Stream host origin is down — watch on the broadcaster page instead.',
   },
   {
     id: '5plus',
@@ -211,7 +213,7 @@ export const MEDIA_CATALOG = [
     status: 'portal',
     checked: '2026-10-29',
     source: 'iptv-org · MM Streams',
-    note: 'Stream host origin is down — watch on the broadcaster page instead.Stream host origin is down — watch on the broadcaster page instead.',
+    note: 'Stream host origin is down — watch on the broadcaster page instead.',
   },
   {
     id: 'channel9',
@@ -232,7 +234,7 @@ export const MEDIA_CATALOG = [
     status: 'portal',
     checked: '2026-10-29',
     source: 'iptv-org · MM Streams',
-    note: 'Stream host origin is down — watch on the broadcaster page instead.Stream host origin is down — watch on the broadcaster page instead.',
+    note: 'Stream host origin is down — watch on the broadcaster page instead.',
   },
   {
     id: 'irrawaddy',
@@ -253,7 +255,7 @@ export const MEDIA_CATALOG = [
     status: 'portal',
     checked: '2026-10-29',
     source: 'The Irrawaddy',
-    note: 'Publisher page carries the live broadcast; no public stream URL.Publisher page carries the live broadcast; no public stream URL.',
+    note: 'Publisher page carries the live broadcast; no public stream URL.',
   },
   {
     id: 'khitthit',
@@ -274,7 +276,7 @@ export const MEDIA_CATALOG = [
     status: 'portal',
     checked: '2026-10-29',
     source: 'Khit Thit Media',
-    note: 'Field-report streams are hosted on the broadcaster page.Field-report streams are hosted on the broadcaster page.',
+    note: 'Field-report streams are hosted on the broadcaster page.',
   },
   {
     id: 'rtmasean',
@@ -295,7 +297,7 @@ export const MEDIA_CATALOG = [
     status: 'portal',
     checked: '2026-10-29',
     source: 'RTM portal',
-    note: 'Stream host refused our probe; the portal serves the broadcast.Stream host refused our probe; the portal serves the broadcast.',
+    note: 'Stream host refused our probe; the portal serves the broadcast.',
   },
 ];
 
