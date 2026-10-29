@@ -900,7 +900,7 @@ function initMap() {
     if (state.bordersLayerOn) loadBordersData();
     // Register PMTiles protocol for vector tile layers (diaspora, corridors)
     if (window.pmtilesProtocol) {
-      maplibregl.addProtocol('pmtiles:', window.pmtilesProtocol(window.pmtiles));
+      maplibregl.addProtocol('pmtiles:', window.pmtilesProtocol('https://burma.nonarkara.org/atlas/diaspora.pmtiles'));
       try {
         map.addSource('diaspora-pmtiles', {
           type: 'vector',

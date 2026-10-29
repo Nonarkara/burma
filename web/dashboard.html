@@ -11,7 +11,16 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="https://unpkg.com/@maptiler/pmtiles@3.0.0/dist/pmtiles-browser.min.js"></script>
+<script src="https://unpkg.com/pmtiles@3.0.0/dist/index.js"></script>
+<script type="module">
+  import { PMTiles, FetchSource, Protocol } from 'https://unpkg.com/pmtiles@3.0.0/dist/index.mjs';
+  // Expose a factory the plain script can call: window.pmtilesProtocol(url) -> MapLibre protocol
+  window.pmtilesProtocol = (url) => {
+    const source = new PMTiles(new FetchSource(url));
+    const protocol = new Protocol(source);
+    return (params, callback) => protocol(params, callback);
+  };
+</script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 </head>
 <body class="win95 full-bleed" data-tab="map">
@@ -378,7 +387,7 @@
 
 <script src="survival.js?v=53d434d9f1"></script>
 <script src="data/opportunity-safety.js?v=c866f89274"></script>
-<script src="dashboard.js?v=fbdae409ce"></script>
+<script src="dashboard.js?v=5ff327a371"></script>
 <script src="chat-client.js?v=60ee031ffd"></script>
 <script src="chrome.js?v=fce03b1546"></script>
 <script src="data/quest-scenario.js?v=6e61a02af0"></script>
