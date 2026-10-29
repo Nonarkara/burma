@@ -55,14 +55,14 @@ async function onRequestGetInner() {
       // Cloudflare Pages Functions bound execution time; keep the upstream
       // timeout well under it so a slow GDELT still yields a JSON hold,
       // never a raw edge 502.
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(4000),
       headers: { 'user-agent': 'Pirchchat/0.1 (+burma.nonarkara.org)' },
     });
   } catch (e) {
     return new Response(JSON.stringify({
       ok: false,
       error: 'upstream_timeout',
-      hint: 'GDELT did not respond within 8 s. Sparkline is hidden.',
+      hint: 'GDELT did not respond within 4 s. Sparkline is hidden.',
     }), {
       status: 502, headers: baseHeaders('public, max-age=300, s-maxage=1800'),
     });
