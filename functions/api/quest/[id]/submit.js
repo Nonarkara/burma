@@ -2,7 +2,7 @@
 // Receives a quest submission, scores it server-side, returns the result.
 // No PII stored. No model calls. Pure scoring from the scenario data.
 
-import { scenarioById, scoreQuest, dominantOutcome } from '../../data/quest-scenarios.js';
+import { scenarioById, scoreQuest, dominantOutcome } from '../../../data/quest-scenarios.js';
 
 const SubmissionSchema = (body) => {
   if (!body || typeof body !== 'object') return null;
