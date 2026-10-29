@@ -183,3 +183,9 @@ Reviewer name (optional) · date · sections reviewed:
 # Community news addendum — 25 October 2026
 
 Native review is pending for the new provider-reference copy in `functions/data/community-briefs.js` and source-status labels in `web/dashboard.js` / `web/dashboard.html`. Review the Tak place name, education terminology, dates/timezone, eligibility and the distinction between a project record and an application call. The fifth connector total includes two new English-language sources (HRDF and Prachatai); their original headlines are not presented as Burmese translations. The source checks do not establish referral partnerships or independent fact verification. See `docs/NEWS-COMMUNITY-SOURCES-2026-10-25.md` for primary sources and caveats.
+
+## Crisis matcher follow-up — 29 October 2026
+
+Commerce false positives have been narrowed: the active term is now `လူ\s*ကုန်\s*ကူး`, not bare `ကုန်ကူး`. English rape matching now uses whole words with inflections, preventing grape/scraped/drapes matches while retaining rape/raped/rapist. The table above records the earlier audit; A5's bare-commerce pattern is no longer active.
+
+A3/A12 remain unresolved: the broad `မိမိကိုယ်` fallback has not been removed without replacement coverage. Native reviewers must supply real self-harm expressions and benign counterexamples, including negation and spelling variants. No agent-authored Burmese suicide vocabulary has been promoted as validated. The banner remains directly accessible from Hotlines even without a keyword match.

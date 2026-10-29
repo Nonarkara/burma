@@ -149,7 +149,10 @@ const HOTLINES = [
 
 // Crisis keywords → in-session banner with real humans (AGENTS.md §10).
 // NOT model refusal. Real referral numbers.
-const CRISIS_RE = /(suicide|kill myself|self[- ]?harm|ฆ่าตัวตาย|မိမိကိုယ်|traffick|exploit|ကုန်ကူး|ล่อลวง|deport|เนรเทศ|နေရပ်ပြန်.*အတင်း|rape|ข่มขืน|မုဒိမ်း|abuse|ทำร้าย|အနိုင်ကျင့်)/i;
+// Human-trafficking term: IOM safe-migration booklet (see crisis audit).
+// The broad self-pronoun remains a provisional fallback until native review;
+// this matcher is a support prompt, not a diagnosis or validated classifier.
+const CRISIS_RE = /(suicide|kill myself|self[- ]?harm|ฆ่าตัวตาย|မိမိကိုယ်|traffick|exploit|လူ\s*ကုန်\s*ကူး|ล่อลวง|deport|เนรเทศ|နေရပ်ပြန်.*အတင်း|\b(?:rape[ds]?|raping|rapists?)\b|ข่มขืน|မုဒိမ်း|abuse|ทำร้าย|အနိုင်ကျင့်)/i;
 
 function checkCrisis(text) {
   return CRISIS_RE.test(String(text || ''));
