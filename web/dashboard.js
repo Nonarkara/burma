@@ -113,7 +113,15 @@ async function loadMediaCatalogue() {
   try {
     const r = await fetch(STATIONS_API, { headers: { accept: 'application/json' } });
     if (!r.ok) throw new Error('http ' + r.status);
+    // Pages answers an unknown /api/* path with the app shell: HTTP 200 and
+    // an HTML body. Checking the status alone would swallow that, so the
+    // content type is checked too.
+    const ctype = (r.headers.get('content-type') || '').toLowerCase();
+    if (!ctype.includes('application/json')) throw new Error('not json: ' + (ctype || 'no content-type'));
     const data = await r.json();
+    if (!data || !Array.isArray(data.radio) || !Array.isArray(data.tv)) {
+      throw new Error('unexpected payload shape');
+    }
     mediaCatalogue = data;
     buildTvPanel();
     renderRadioList(data.radio || []);
