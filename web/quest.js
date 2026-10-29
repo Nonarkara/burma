@@ -101,7 +101,37 @@ function showResult(choiceId) {
   btn.addEventListener('click', function () { renderQuest(); });
   questPanel.appendChild(btn);
 
+  var submitBtn = el('button', 'micro-panel__choice', 'Submit result');
+  submitBtn.addEventListener('click', function () { submitResult(choiceId, scoring); });
+  questPanel.appendChild(submitBtn);
+
   questToggle.setAttribute('aria-pressed', 'false');
+}
+
+function submitResult(choiceId, scoring) {
+  var payload = {
+    questId: scenario.id,
+    questVersion: scenario.version,
+    selectionPath: [choiceId],
+    startedAt: new Date().toISOString(),
+    completedAt: new Date().toISOString(),
+  };
+  fetch('/api/quest/' + encodeURIComponent(scenario.id) + '/submit', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+    body: JSON.stringify(payload),
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      var msg = el('div', 'micro-panel__meta');
+      msg.textContent = data.ok ? 'Result submitted to server.' : 'Submit failed: ' + (data.error || 'unknown');
+      questPanel.appendChild(msg);
+    })
+    .catch(function () {
+      var msg = el('div', 'micro-panel__meta');
+      msg.textContent = 'Submit failed — server unreachable.';
+      questPanel.appendChild(msg);
+    });
 }
 
 function choose(choiceId) {
