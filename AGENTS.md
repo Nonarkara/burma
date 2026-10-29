@@ -258,7 +258,7 @@ Profile inference: British-accent English consistent with SIM Singapore + Harbou
 
 ---
 
-## 14. Status (2026-10-23)
+## 14. Status (2026-10-29)
 
 ### Shipped and verified live
 - [x] Boundaries set
@@ -279,7 +279,8 @@ Profile inference: British-accent English consistent with SIM Singapore + Harbou
 - [x] **Listening (map evidence)** — NASA GIBS, USGS quakes, Open-Meteo click-wx, Himawari-9, GPM IMERG, VIIRS flood, RainViewer, FIRMS link-outs. GDELT 14-day media-volume spark with honest backoff.
 - [x] **Watch-together** — room-wide watch state in DO + D1 (`watch_state`), WebSocket broadcast, video stage in chat, TV-card buttons. Full lifecycle verified on production 2026-10-23.
 - [x] **Research brief** — `web/research.html` (institutional register, Thai/Eng): open-data verdict, source table, coverage matrix, cost bars, human-gap cards.
-- [x] **Honest health probes** — Pages `/api/health` + worker `/api/health`; every failure path returns a JSON envelope (no raw edge 502s, no SPA-fallback lies).
+- [x] **Honest health probes** — Pages `/api/health` + worker `/api/health`; every failure path returns a JSON envelope (no raw edge 502s, no SPA-fallback lies). **`/api/trends` raw-502 regression fixed** — all error paths now return HTTP 200 with `{ok:false, error, hint}` so Cloudflare never replaces origin responses on the custom domain; GDELT fetch timeout shortened to 4s; client hides the sparkline on `ok:false` (honest absence). Verified live on `burma.nonarkara.org`.
+- [x] **Media panel MSH pass** — unreachable broadcasters regrouped out of a 58px note paragraph into scrollable gap rows with broadcaster-page links; radio note is one summary line (10% of panel on phone); radio play button 26×24px (WCAG 2.4 floor); static assets carry content-hash cache stamps (`scripts/stamp-assets.mjs`, `npm run deploy:pages`) so deploys can't serve stale JS under Pages' forced `max-age=14400`. 70/70 tests pass.
 - [x] **Security hardening verified live** — entity-bypass XSS killed at source (server + client sanitizer), 5 security headers on Pages (`_headers`), rate limits, upload type/size caps, `invalid_watch_url` guard.
 
 ### Still open
