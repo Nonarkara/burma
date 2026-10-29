@@ -124,8 +124,7 @@ async function loadMediaCatalogue() {
     }
     mediaCatalogue = data;
     buildTvPanel();
-    renderRadioList(data.radio || []);
-    renderRadioNote(data);
+    renderRadio(data);
     radioStations = (data.radio || [])
       .filter((s) => s.url)
       .map((s) => ({
@@ -202,6 +201,40 @@ function renderRadioList(stations) {
   });
 }
 
+function renderRadio(data) {
+  renderRadioList(data.radio || []);
+  renderRadioGap(data);
+  renderRadioNote(data);
+}
+
+// The eight broadcasters that did not answer are named, but not in a
+// paragraph below the panel: prose there cost 58 px of a 202 px dock at
+// desktop width and more than a third of it on a phone, and it pushed the
+// stations the reader came to play out of view. They scroll with the list
+// instead. The reading order stays: what plays, then what did not.
+function renderRadioGap(data) {
+  const list = document.getElementById('radioList');
+  if (!list) return;
+  const missing = (data && data.unreachable) || [];
+  if (!missing.length) return;
+  const checked = ((data && data.checkedAt) || '').slice(0, 10) || '—';
+  const group = document.createElement('div');
+  group.className = 'radio__gap';
+  group.innerHTML =
+    '<p class="radio__gaphead">Not reachable from our edge probe · ' + escapeHtml(checked) +
+      ' — try the link before concluding it is gone.</p>' +
+    missing.map((m) => {
+      const host = m.home
+        ? '<a href="' + escapeHtml(m.home) + '" target="_blank" rel="noopener">' + escapeHtml(m.host || m.name) + ' ↗</a>'
+        : escapeHtml(m.host || '');
+      return '<div class="radio__gaprow">' +
+        '<span class="radio__gapname">' + escapeHtml(m.name) + '</span>' +
+        '<span class="radio__gaphost">' + host + '</span>' +
+      '</div>';
+    }).join('');
+  list.appendChild(group);
+}
+
 function renderRadioNote(data) {
   const note = document.getElementById('radioNote');
   if (!note) return;
@@ -211,9 +244,7 @@ function renderRadioNote(data) {
     note.textContent = 'Every station above answered a live probe on ' + (checked || '—') + '.';
     return;
   }
-  const names = missing.map((m) => m.name).join(', ');
-  note.textContent = missing.length + ' Myanmar-origin broadcasters did not answer our probe on ' +
-    (checked || '—') + ' (' + names + '). Their hosts sit inside Myanmar and reachability varies by network — try the link before concluding it is gone.';
+  note.textContent = missing.length + ' hosts inside Myanmar did not answer on ' + (checked || '—') + ' — named below.';
 }
 
 function playStation(s, btn) {
@@ -1735,7 +1766,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // switch so the panel does not keep the language it was built in.
   document.addEventListener('pirch:lang', () => {
     if (mediaCatalogue) {
-      renderRadioList(mediaCatalogue.radio || []);
+      renderRadio(mediaCatalogue);
       buildTvPanel();
     }
   });

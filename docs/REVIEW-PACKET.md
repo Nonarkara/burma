@@ -41,6 +41,8 @@ This is the actual trigger list, currently in the code (`web/survival.js:152`):
 
 **Also needed:** exploitation/forced-labour terms people use in Thai-Burmese worker communities (`အလုပ်ကျွန်`? `အခမဲ့အလုပ်`?), and deportation-fear terms (`ပြန်ပို့`? `နိုင်ငံစွန့်ခွာ`?). We would rather over-trigger than miss.
 
+**New in 2026-10-29 (media panel):** the radio "now playing" label `ယခု ပြသောစားရင်း` (intended: *now playing*) is visible UI. `စားရင်း` reads as "while eating", so the phrase looks machine-built. Please supply the natural wording. Related: the status words `LIVE` / `PORTAL` / `ယခု` and the row label `EDGE …` are English on purpose (machine measurements), but tell us if a Burmese reader would rather see them paired with a Burmese word.
+
 **New in 2026-10-24 (daily digest auto-post):** the digest header string `နေ့စဉ် သတင်းစဉ်` ("daily digest") was authored by the AI agent — please confirm it reads naturally, or supply the phrase people would actually use for a daily news round-up.
 
 ---

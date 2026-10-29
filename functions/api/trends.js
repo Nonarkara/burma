@@ -24,6 +24,23 @@ const baseHeaders = (cacheControl) => ({
 
 export async function onRequestGet() {
   const now = Date.now();
+  // Every error path below returns a JSON envelope — nothing here may throw
+  // raw, because a raw edge 502 (text/plain) is exactly what we guard against.
+  try {
+    return await onRequestGetInner();
+  } catch (e) {
+    return new Response(JSON.stringify({
+      ok: false,
+      error: 'unexpected',
+      hint: String(e && e.message ? e.message : e),
+    }), {
+      status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60'),
+    });
+  }
+}
+
+async function onRequestGetInner() {
+  const now = Date.now();
   if (now < holdUntil) {
     return new Response(JSON.stringify({
       ok: false,
@@ -35,14 +52,17 @@ export async function onRequestGet() {
   let res;
   try {
     res = await fetch(GDELT, {
-      signal: AbortSignal.timeout(20000),
+      // Cloudflare Pages Functions bound execution time; keep the upstream
+      // timeout well under it so a slow GDELT still yields a JSON hold,
+      // never a raw edge 502.
+      signal: AbortSignal.timeout(8000),
       headers: { 'user-agent': 'Pirchchat/0.1 (+burma.nonarkara.org)' },
     });
   } catch (e) {
     return new Response(JSON.stringify({
       ok: false,
       error: 'upstream_timeout',
-      hint: 'GDELT did not respond within 20 s. Sparkline is hidden.',
+      hint: 'GDELT did not respond within 8 s. Sparkline is hidden.',
     }), {
       status: 502, headers: baseHeaders('public, max-age=300, s-maxage=1800'),
     });
