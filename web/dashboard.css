@@ -422,6 +422,7 @@ html, body {
 .legend__dot--radio { background: var(--server); }
 .legend__dot--tv    { background: var(--positive); }
 .legend__dot--you   { background: var(--positive); }
+.legend__dot--diaspora { background: var(--accent); border: 1px solid var(--ink); }
 .legend__dot--quake { background: var(--negative); }
 
 .pirch-marker--gate {

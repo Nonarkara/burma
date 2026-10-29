@@ -743,6 +743,7 @@ const state = {
   nasaLayerOn: false,
   quakeLayerOn: false,
   bordersLayerOn: true,
+  diasporaLayerOn: false,
   himawariLayerOn: false,
   gpmRainLayerOn: false,
   viirsFloodLayerOn: false,
@@ -897,6 +898,32 @@ function initMap() {
 
   map.on('load', () => {
     if (state.bordersLayerOn) loadBordersData();
+    // Register PMTiles protocol for vector tile layers (diaspora, corridors)
+    if (window.pmtilesProtocol) {
+      maplibregl.addProtocol('pmtiles:', window.pmtilesProtocol(window.pmtiles));
+      try {
+        map.addSource('diaspora-pmtiles', {
+          type: 'vector',
+          tiles: ['pmtiles://https://burma.nonarkara.org/atlas/diaspora.pmtiles'],
+          maxzoom: 14,
+        });
+        map.addLayer({
+          id: 'diaspora-pmtiles-layer',
+          type: 'circle',
+          source: 'diaspora-pmtiles',
+          'source-layer': 'diaspora',
+          layout: { visibility: state.diasporaLayerOn ? 'visible' : 'none' },
+          paint: {
+            'circle-radius': 4,
+            'circle-color': '#d4a017',
+            'circle-opacity': 0.7,
+          },
+        }, 'basemap');
+      } catch (e) {
+        // PMTiles source not yet published — silent, no fake data
+        console.log('[atlas] PMTiles source not available:', String(e));
+      }
+    }
   });
 
   map.on('click', (e) => {
@@ -1215,6 +1242,14 @@ function toggleBorders() {
     (state.frontierGateMarkers || []).forEach((m) => { try { m.remove(); } catch (e) {} });
     state.frontierGateMarkers = [];
   }
+}
+
+function toggleDiaspora() {
+  state.diasporaLayerOn = !state.diasporaLayerOn;
+  $$('.toolbar__btn[data-layer-toggle="diaspora"]').forEach((b) => b.classList.toggle('is-pressed', state.diasporaLayerOn));
+  if (!map) return;
+  const vis = state.diasporaLayerOn ? 'visible' : 'none';
+  if (map.getLayer('diaspora-pmtiles-layer')) map.setLayoutProperty('diaspora-pmtiles-layer', 'visibility', vis);
 }
 
 // ---------- USGS earthquakes M4.5+, last 30 days ----------
@@ -1736,6 +1771,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (a === 'wx') toggleWx();
   }));
   $$('.toolbar__btn[data-layer-toggle="borders"]').forEach((b) => b.addEventListener('click', toggleBorders));
+  $$('.toolbar__btn[data-layer-toggle="diaspora"]').forEach((b) => b.addEventListener('click', toggleDiaspora));
   $$('.toolbar__btn[data-layer-toggle="himawari"]').forEach((b) => b.addEventListener('click', toggleHimawari));
   $$('.toolbar__btn[data-layer-toggle="gpmrain"]').forEach((b) => b.addEventListener('click', toggleGpmRain));
   $$('.toolbar__btn[data-layer-toggle="viirsflood"]').forEach((b) => b.addEventListener('click', toggleViirsFlood));
