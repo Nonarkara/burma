@@ -151,9 +151,9 @@ async function probePage(url) {
 }
 
 const EDGE_NOTE = {
-  blocked: 'our edge probe was refused by the host (it blocks datacentre ranges) — this is what a home connection hears',
-  unreachable: 'our edge probe could not reach the host — reachability varies by network',
-  down: 'our edge probe did not get a stream from the host',
+  blocked: 'Our edge probe was refused by the host (it blocks datacentre ranges) — this is what a home connection hears.',
+  unreachable: 'Our edge probe could not reach the host — reachability varies by network.',
+  down: 'Our edge probe did not get a stream from the host.',
 };
 
 async function measure(entry) {
@@ -172,10 +172,10 @@ async function measure(entry) {
       // The recorded verdict stands: the stream was heard from a home
       // connection. The edge result is reported, not substituted.
       out.status = 'live';
-      out.note = 'Verified from a home connection on ' + entry.checked + '. ' + (EDGE_NOTE[p.status] || p.detail) + '.';
+      out.note = 'Verified from a home connection on ' + entry.checked + '. ' + (EDGE_NOTE[p.status] || (p.detail + '.'));
     } else {
       out.status = p.status;
-      out.note = (EDGE_NOTE[p.status] || p.detail) + '.';
+      out.note = EDGE_NOTE[p.status] || (p.detail + '.');
     }
   } else if (entry.watch) {
     const p = await probePage(entry.watch);
@@ -186,7 +186,7 @@ async function measure(entry) {
       out.note = entry.note || ('Open the broadcaster page to watch — ' + p.detail + '.');
     } else {
       out.status = p.status;
-      out.note = (EDGE_NOTE[p.status] || p.detail) + '.';
+      out.note = EDGE_NOTE[p.status] || (p.detail + '.');
     }
   } else {
     out.status = 'unreachable';

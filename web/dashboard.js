@@ -269,9 +269,11 @@ function setMediaTab(tab) {
   if (tvPane) tvPane.hidden = name !== 'tv';
   if (radioPane) radioPane.hidden = name !== 'radio';
   const filters = document.getElementById('tvpanelFilters');
-  const hint = document.getElementById('tvpanelHint');
+  const muteAll = document.getElementById('tvpanelMuteAll');
+  const unmuteAll = document.getElementById('tvpanelUnmuteAll');
   if (filters) filters.hidden = name !== 'tv';
-  if (hint) hint.hidden = name !== 'tv';
+  if (muteAll) muteAll.hidden = name !== 'tv';
+  if (unmuteAll) unmuteAll.hidden = name !== 'tv';
 }
 
 function toggleRadio() {
@@ -434,7 +436,7 @@ function buildTvPanel() {
           '<button type="button" class="tv-card__mute" data-mute-for="' + escapeHtml(ch.id) + '">Unmute</button>' +
         '</header>' +
         '<div class="tv-card__frame">' +
-          '<video controls preload="metadata" playsinline style="position:absolute;inset:0;width:100%;height:100%;background:#000"></video>' +
+          '<video controls preload="metadata" playsinline style="position:absolute;inset:0;width:100%;height:100%;background:#000;object-fit:contain"></video>' +
           '<div class="tv-card__fallback" style="display:none">Connecting stream…</div>' +
         '</div>';
       row.appendChild(card);
@@ -528,8 +530,6 @@ function buildTvPanel() {
   });
 
   const muteAll = document.getElementById('tvpanelMuteAll');
-  const hint = document.getElementById('tvpanelHint');
-  if (hint) hint.textContent = 'IPTV live feeds · Click Unmute on any card for audio';
   if (muteAll) {
     muteAll.onclick = () => {
       tvPlayers.forEach((p) => {

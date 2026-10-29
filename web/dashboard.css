@@ -515,29 +515,54 @@ html, body {
   border-right: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
   z-index: 4;
-  max-height: 220px;
+  /* A definite height, not a maximum: the bar, the pane and the cards have
+     to resolve against a known box, or the video cards size to their
+     content and push the panel over the map. */
+  height: 200px;
+  max-height: 200px;
+  overflow: hidden;
 }
 
 .mediapanel__bar {
   display: flex;
   align-items: center;
+  flex: 0 0 22px;
   height: 22px;
   padding: 0 4px 0 6px;
   background: var(--chrome-dark);
   border-bottom: 1px solid var(--ink-muted);
   font-family: var(--font-system);
+  overflow: hidden;
 }
 
+/* The title is the first thing to give way when the column is narrow. */
 .mediapanel__title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 700;
   margin: 0 8px 0 0;
+}
+
+/* [hidden] loses to any display rule, so the hidden state is stated. */
+.mediapanel__filters[hidden],
+.mediapanel__hint[hidden],
+.mediapanel__mute-all[hidden],
+.mediapanel__unmute-all[hidden] {
+  display: none;
 }
 
 .mediapanel__hint {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--ink-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mediapanel__spacer { flex: 1; }
@@ -568,6 +593,9 @@ html, body {
 
 .mediapanel__filters {
   display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   gap: 2px;
   margin-left: 6px;
 }
@@ -596,6 +624,7 @@ html, body {
 .tvpanel__row {
   display: flex;
   flex: 1;
+  min-height: 0;
   gap: 1px;
   background: var(--rule);
   overflow-x: auto;
@@ -691,9 +720,12 @@ html, body {
 
 .tv-card__frame {
   position: relative;
-  padding-bottom: 56.25%;
+  /* The frame fills the card and the video letterboxes inside it. Sizing the
+     frame by percentage padding fought the flex chain and let the cards grow
+     past the panel. */
+  flex: 1 1 auto;
+  min-height: 0;
   background: #000;
-  flex: 1;
 }
 
 .tv-card__frame iframe {
@@ -772,7 +804,7 @@ html, body {
 }
 
 @media (max-width: 920px) {
-  .mediapanel { left: 4px; right: 4px; bottom: 4px; max-height: 320px; }
+  .mediapanel { left: 4px; right: 4px; bottom: 4px; height: 240px; max-height: 240px; }
   .tv-card { flex-basis: 180px; }
 }
 
