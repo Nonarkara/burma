@@ -89,30 +89,175 @@ let radioStations = [];
 let radioMarkers = [];
 let tvMarkers = [];
 
-const RADIO_API = 'https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/MM';
+// ===== MEDIA — TV and radio =====
+//
+// Both lists come from /api/stations: a Pages Function that probes every
+// stream and reports what actually answered, with the date it ran. The
+// browser never calls a third-party radio index — that host is flaky, and it
+// would leak the visitor's IP on every page load. Nothing here claims a
+// stream works without a measurement behind it.
 
-async function loadRadioStations() {
+const STATIONS_API = '/api/stations';
+let mediaCatalogue = null;
+
+function mediaLabel(s, field) {
+  const myKey = field + 'My';
+  const en = s[field] || '';
+  const my = s[myKey] || '';
+  return (window.__pirchLang === 'en' ? (en || my) : (my || en));
+}
+
+async function loadMediaCatalogue() {
+  const row = document.getElementById('tvpanelRow');
+  const list = document.getElementById('radioList');
   try {
-    const r = await fetch(RADIO_API, { headers: { 'user-agent': 'Pirchchat/0.1 (+burma.nonarkara.org)' } });
-    if (!r.ok) throw new Error('radio http ' + r.status);
+    const r = await fetch(STATIONS_API, { headers: { accept: 'application/json' } });
+    if (!r.ok) throw new Error('http ' + r.status);
     const data = await r.json();
-    radioStations = (data || []).filter((s) => s.url_resolved || s.url).map((s) => ({
-      id: s.stationuuid || s.id || ('radio-' + Math.random().toString(36).slice(2, 8)),
-      name: s.name || 'Unknown',
-      url: s.url_resolved || s.url,
-      codec: s.codec || '',
-      bitrate: s.bitrate || 0,
-      geo: (s.geo_lat && s.geo_long) ? { lat: s.geo_lat, lng: s.geo_long } : null,
-      country: s.countrycode || 'MM',
-      tags: s.tags || '',
-      homepage: s.homepage || '',
-    }));
+    mediaCatalogue = data;
+    buildTvPanel();
+    renderRadioList(data.radio || []);
+    renderRadioNote(data);
+    radioStations = (data.radio || [])
+      .filter((s) => s.url)
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        url: s.url,
+        codec: s.codec || '',
+        bitrate: s.bitrate || 0,
+        geo: s.geo || null,
+        country: 'MM',
+        homepage: s.watch || '',
+      }));
     if (state.radioLayerOn) renderRadioMarkers();
   } catch (e) {
-    // surface in statusbar
+    const msg = 'Media list unavailable — /api/stations did not answer.';
+    if (row) {
+      row.innerHTML = '<p class="mediapanel__empty">' + escapeHtml(msg) +
+        ' <a href="/api/stations" target="_blank" rel="noopener">Retry the probe ↗</a></p>';
+    }
+    if (list) list.innerHTML = '<p class="mediapanel__empty">' + escapeHtml(msg) + '</p>';
     const sb = $('.dash__left .statusbar .statusbar__item');
-    if (sb) sb.textContent = 'Radio fetch failed: ' + (e && e.message || e);
+    if (sb) sb.textContent = msg;
   }
+}
+
+function renderRadioList(stations) {
+  const list = document.getElementById('radioList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!stations.length) {
+    list.innerHTML = '<p class="mediapanel__empty">No radio stations measured yet.</p>';
+    return;
+  }
+  stations.forEach((s) => {
+    const row = document.createElement('div');
+    row.className = 'radio__row';
+    row.setAttribute('data-radio-id', s.id);
+
+    const live = s.status === 'live' && s.url;
+    const statusClass = s.status === 'live' ? 'radio__status--live'
+      : (s.status === 'portal' ? 'radio__status--portal' : 'radio__status--down');
+    const statusText = s.status === 'live' ? 'LIVE'
+      : (s.status === 'portal' ? 'PORTAL' : (s.status || 'UNKNOWN').toUpperCase());
+
+    const nameHtml = s.watch
+      ? '<a href="' + escapeHtml(s.watch) + '" target="_blank" rel="noopener">' + escapeHtml(mediaLabel(s, 'name')) + '</a>'
+      : escapeHtml(mediaLabel(s, 'name'));
+
+    row.innerHTML =
+      '<button type="button" class="radio__play" data-radio-play="' + escapeHtml(s.id) + '"' +
+      (live ? '' : ' disabled title="No public stream — open the broadcaster page instead"') + '>' +
+      (live ? '▶' : '↗') + '</button>' +
+      '<span class="radio__name">' + nameHtml + '</span>' +
+      '<span class="radio__place">' + escapeHtml(mediaLabel(s, 'place')) + '</span>' +
+      '<span class="radio__genre">' + escapeHtml(mediaLabel(s, 'genre')) + '</span>' +
+      '<span class="radio__spacer"></span>' +
+      '<span class="radio__status ' + statusClass + '">' + escapeHtml(statusText) + ' · ' + escapeHtml(s.checked || '') + '</span>';
+
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('[data-radio-play]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-radio-play');
+      const s = stations.find((x) => x.id === id);
+      if (s) playStation(s, btn);
+    });
+  });
+}
+
+function renderRadioNote(data) {
+  const note = document.getElementById('radioNote');
+  if (!note) return;
+  const missing = data.unreachable || [];
+  const checked = (data.checkedAt || '').slice(0, 10);
+  if (!missing.length) {
+    note.textContent = 'Every station above answered a live probe on ' + (checked || '—') + '.';
+    return;
+  }
+  const names = missing.map((m) => m.name).join(', ');
+  note.textContent = missing.length + ' Myanmar-origin broadcasters did not answer our probe on ' +
+    (checked || '—') + ' (' + names + '). Their hosts sit inside Myanmar and reachability varies by network — try the link before concluding it is gone.';
+}
+
+function playStation(s, btn) {
+  const audio = document.getElementById('audioEl');
+  const now = document.getElementById('radioNow');
+  const name = document.getElementById('radioNowName');
+  const meta = document.getElementById('radioNowMeta');
+  if (!audio || !now || !name || !meta) return;
+  if (!s.url) return;
+
+  const wasSame = audio.src && audio.src.indexOf(s.url) !== -1;
+  if (wasSame && !audio.paused) {
+    stopRadio();
+    return;
+  }
+
+  now.hidden = false;
+  name.textContent = mediaLabel(s, 'name');
+  meta.textContent = [
+    mediaLabel(s, 'place'),
+    mediaLabel(s, 'genre'),
+    s.codec,
+    s.bitrate ? s.bitrate + 'kbps' : '',
+    s.status === 'live' ? 'live ' + (s.checked || '') : '',
+  ].filter(Boolean).join(' · ');
+
+  audio.src = s.url;
+  audio.play().catch(() => {
+    meta.textContent = 'Browser blocked playback — press play on the controls below.';
+  });
+
+  document.querySelectorAll('.radio__play').forEach((b) => b.classList.remove('is-playing'));
+  if (btn) btn.classList.add('is-playing');
+}
+
+function stopRadio() {
+  const audio = document.getElementById('audioEl');
+  const now = document.getElementById('radioNow');
+  if (audio) { try { audio.pause(); audio.src = ''; } catch (e) {} }
+  if (now) now.hidden = true;
+  document.querySelectorAll('.radio__play').forEach((b) => b.classList.remove('is-playing'));
+}
+
+function setMediaTab(tab) {
+  const name = tab === 'radio' ? 'radio' : 'tv';
+  $$('.mediapanel__tab').forEach((b) => {
+    const on = b.getAttribute('data-media-tab') === name;
+    b.classList.toggle('is-active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const tvPane = document.getElementById('tvPane');
+  const radioPane = document.getElementById('radioPane');
+  if (tvPane) tvPane.hidden = name !== 'tv';
+  if (radioPane) radioPane.hidden = name !== 'radio';
+  const filters = document.getElementById('tvpanelFilters');
+  const hint = document.getElementById('tvpanelHint');
+  if (filters) filters.hidden = name !== 'tv';
+  if (hint) hint.hidden = name !== 'tv';
 }
 
 function toggleRadio() {
@@ -139,7 +284,7 @@ function renderRadioMarkers() {
     el.title = s.name + (s.codec ? ' · ' + s.codec : '') + (s.bitrate ? ' · ' + s.bitrate + 'kbps' : '') + (s.geo ? '' : ' · position approximate');
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      openRadioModal(s);
+      playStation(s, null);
     });
     const m = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
     radioMarkers.push(m);
@@ -154,26 +299,6 @@ function pickCityCoordFromName(name) {
   if (n.includes('myitkyina')) return CITIES.find((c) => c.name === 'Myitkyina');
   if (n.includes('taunggyi')) return CITIES.find((c) => c.name === 'Taunggyi');
   return null;
-}
-
-function openRadioModal(s) {
-  const audio = document.getElementById('audioEl');
-  const player = document.getElementById('audioplayer');
-  const name = document.getElementById('audioName');
-  const meta = document.getElementById('audioMeta');
-  if (!audio || !player || !name || !meta) return;
-  player.hidden = false;
-  name.textContent = s.name;
-  meta.textContent = [s.codec, s.bitrate ? s.bitrate + 'kbps' : '', s.country, s.homepage].filter(Boolean).join(' · ');
-  audio.src = s.url;
-  audio.play().catch(() => {});
-}
-
-function closeAudio() {
-  const player = document.getElementById('audioplayer');
-  const audio = document.getElementById('audioEl');
-  if (audio) { try { audio.pause(); audio.src = ''; } catch (e) {} }
-  if (player) player.hidden = true;
 }
 
 function toggleTv() {
@@ -221,105 +346,17 @@ function openTvModal(tv) {
 
 // ===== Live TV panel — one real inline stream + honest watch-links =====
 //
+// The channel list lives in the measured catalogue (functions/data/stations.js)
+// and arrives with /api/stations, so every card knows whether its stream
+// answered a probe and on what date. A channel whose host is unreachable is
+// shown as a portal link with the reason, never as a player that will fail.
+//
 // What we learned Sept 2026: YouTube's /embed/live_stream endpoint needs a
 // numeric channel ID (not an @handle) AND the owner must allow embedding —
 // most Burmese news channels disallow it, so iframes render dead. Instead:
-//   - DVB TV plays INLINE via its own public HLS (verified 200, live
-//     segments: https://live-stream.dvb.no/hls/stream_src/index.m3u8).
+//   - DVB TV and Thai PBS ASEAN play INLINE via their own public HLS.
 //   - Every other channel gets a Watch card that opens its live page in a
-//     new tab. YouTube search URLs always resolve; invented @handles do not.
-const BURMESE_TV_LIVE = [
-  {
-    id: 'dvb',
-    name: 'DVB TV',
-    category: 'News',
-    hls: 'https://live-stream.dvb.no/hls/stream_src/index.m3u8',
-    note: 'Democratic Voice of Burma · Independent news',
-    fallback: 'https://burmese.dvb.no/live',
-    source: 'IPTV-ORG / Broadcaster CDN',
-  },
-  {
-    id: 'channelk',
-    name: 'Channel K',
-    category: 'Entertainment',
-    watch: 'https://www.facebook.com/channelkmyanmar',
-    note: 'Stream host down (checked Sept 2026) — watch via portal',
-    fallback: 'https://www.facebook.com/channelkmyanmar',
-    source: 'IPTV-ORG / MM Streams',
-  },
-  {
-    id: '5plus',
-    name: '5 Plus',
-    category: 'Variety',
-    watch: 'https://www.facebook.com/5pluschannel',
-    note: 'Stream host down (checked Sept 2026) — watch via portal',
-    fallback: 'https://www.facebook.com/5pluschannel',
-    source: 'IPTV-ORG / MM Streams',
-  },
-  {
-    id: 'channel9',
-    name: 'Channel 9',
-    category: 'General',
-    watch: 'https://www.facebook.com/channel9myanmar',
-    note: 'Stream host down (checked Sept 2026) — watch via portal',
-    fallback: 'https://www.facebook.com/channel9myanmar',
-    source: 'IPTV-ORG / MM Streams',
-  },
-  {
-    id: 'thaipbs',
-    name: 'Thai PBS ASEAN',
-    category: 'ASEAN',
-    hls: 'https://thaipbs-live.cdn.byteark.com/live/playlist.m3u8',
-    note: 'Thai Public Broadcasting · Myanmar border & ASEAN watch',
-    fallback: 'https://www.thaipbs.or.th/live',
-    source: 'Direct ByteArk CDN',
-  },
-  {
-    id: 'rtmasean',
-    name: 'RTM ASEAN',
-    category: 'ASEAN',
-    watch: 'https://rtmklik.rtm.gov.my/',
-    note: 'Stream blocked (checked Sept 2026) — watch via portal',
-    fallback: 'https://rtmklik.rtm.gov.my/',
-    source: 'RTM portal',
-  },
-  {
-    id: 'fortunetv',
-    name: 'Fortune TV',
-    category: 'Entertainment',
-    hls: 'http://103.215.194.93:8282/hls/fortunetv/vmix.m3u8',
-    note: 'Myanmar entertainment & cultural programming',
-    fallback: 'https://fortunetv.com.mm/',
-    source: 'IPTV-ORG / Direct HLS',
-  },
-  {
-    id: 'mizzima',
-    name: 'Mizzima TV',
-    category: 'News',
-    watch: 'https://mizzimaburmese.com/live-tv',
-    note: 'Mizzima TV Live Portal & Broadcasts',
-    fallback: 'https://mizzimaburmese.com/',
-    source: 'Live portal',
-  },
-  {
-    id: 'irrawaddy',
-    name: 'The Irrawaddy',
-    category: 'News',
-    watch: 'https://www.irrawaddy.com/',
-    note: 'Independent investigative reporting',
-    fallback: 'https://burmese.irrawaddy.com/',
-    source: 'Live portal',
-  },
-  {
-    id: 'khitthit',
-    name: 'Khit Thit Media',
-    category: 'News',
-    watch: 'https://www.facebook.com/khitthitmedia',
-    note: 'Khit Thit Live Stream & Field Reports',
-    fallback: 'https://www.facebook.com/khitthitmedia',
-    source: 'Live portal',
-  },
-];
+//     new tab. Invented @handles do not resolve; these were measured.
 
 let tvPlayers = [];
 
@@ -340,10 +377,19 @@ function buildTvPanel() {
   tvPlayers = [];
   row.innerHTML = '';
 
-  let list = BURMESE_TV_LIVE;
+  if (!mediaCatalogue) {
+    row.innerHTML = '<p class="mediapanel__empty">Checking the streams…</p>';
+    return;
+  }
+
+  let list = mediaCatalogue.tv || [];
   const cat = (state.tvCategoryFilter || 'all').toLowerCase();
   if (cat !== 'all') {
-    list = list.filter((ch) => ch.category.toLowerCase() === cat);
+    list = list.filter((ch) => (ch.category || '').toLowerCase() === cat);
+  }
+  if (!list.length) {
+    row.innerHTML = '<p class="mediapanel__empty">No channel in this filter.</p>';
+    return;
   }
 
   // Low-end phones: 10 simultaneous HLS buffers blow the data budget.
@@ -359,7 +405,7 @@ function buildTvPanel() {
 
     // Mixed content: an http:// stream never plays on an https page. Render
     // it as a watch card instead of a dead player.
-    const playable = ch.hls && !(httpsPage && ch.hls.startsWith('http:'));
+    const playable = ch.url && !(httpsPage && ch.url.startsWith('http:'));
 
     if (playable) {
       const lazy = isSmall && attached >= 3;
@@ -367,7 +413,10 @@ function buildTvPanel() {
       card.innerHTML =
         '<header class="tv-card__bar">' +
           '<span class="dot dot--muted" aria-hidden="true"></span>' +
-          '<span class="tv-card__name" title="' + escapeHtml(ch.name + ' · ' + ch.note) + '">' + escapeHtml(ch.name) + '</span>' +
+          '<span class="tv-card__name" title="' + escapeHtml(ch.name + ' · ' + (ch.note || '')) + '">' + escapeHtml(mediaLabel(ch, 'name')) + '</span>' +
+          '<span class="tv-card__probe" title="' + escapeHtml('Probe result: ' + (ch.statusDetail || ch.status || 'unknown') + ' · checked ' + (ch.checked || '—')) + '">' +
+            escapeHtml((ch.status === 'live' ? 'LIVE ' : (ch.status || '').toUpperCase() + ' ') + (ch.checked || '')) +
+          '</span>' +
           '<button type="button" class="tv-card__mute" data-mute-for="' + escapeHtml(ch.id) + '">Unmute</button>' +
         '</header>' +
         '<div class="tv-card__frame">' +
@@ -386,7 +435,7 @@ function buildTvPanel() {
         if (dotEl) dotEl.className = 'dot dot--muted';
         let hlsInstance = null;
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = ch.hls;
+          video.src = ch.url;
           video.addEventListener('playing', () => {
             const dotEl2 = card.querySelector('.tv-card__bar .dot');
             if (dotEl2) dotEl2.className = 'dot dot--live';
@@ -394,7 +443,7 @@ function buildTvPanel() {
           video.play().catch(() => {});
         } else if (window.Hls && window.Hls.isSupported()) {
         hlsInstance = new window.Hls({ maxBufferLength: 15, enableWorker: true });
-        hlsInstance.loadSource(ch.hls);
+        hlsInstance.loadSource(ch.url);
         hlsInstance.attachMedia(video);
         hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
           if (dotEl) dotEl.className = 'dot dot--live';
@@ -405,7 +454,7 @@ function buildTvPanel() {
             if (dotEl) dotEl.className = 'dot dot--muted';
             if (fb) {
               fb.style.display = 'block';
-              fb.innerHTML = 'Stream standby · <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">portal ↗</a>';
+              fb.innerHTML = 'Stream standby · <a href="' + escapeHtml(ch.watch) + '" target="_blank" rel="noopener">portal ↗</a>';
             }
             switch (data.type) {
               case window.Hls.ErrorTypes.NETWORK_ERROR:
@@ -422,7 +471,7 @@ function buildTvPanel() {
         });
         } else if (fb) {
           fb.style.display = 'block';
-          fb.innerHTML = 'HLS unsupported · <a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">portal ↗</a>';
+          fb.innerHTML = 'HLS unsupported · <a href="' + escapeHtml(ch.watch) + '" target="_blank" rel="noopener">portal ↗</a>';
         }
         const existing = tvPlayers.find((p) => p.id === ch.id);
         if (existing) existing.hls = hlsInstance;
@@ -431,7 +480,7 @@ function buildTvPanel() {
 
       if (lazy) {
         fb.style.display = 'flex';
-        fb.innerHTML = 'Tap to load — saves data<br><a href="' + escapeHtml(ch.fallback) + '" target="_blank" rel="noopener">portal ↗</a>';
+        fb.innerHTML = 'Tap to load — saves data<br><a href="' + escapeHtml(ch.watch) + '" target="_blank" rel="noopener">portal ↗</a>';
         card.addEventListener('click', () => {
           fb.style.display = 'none';
           attach();
@@ -452,7 +501,7 @@ function buildTvPanel() {
       card.innerHTML =
         '<header class="tv-card__bar">' +
           '<span class="dot dot--live" aria-hidden="true"></span>' +
-          '<span class="tv-card__name">' + escapeHtml(ch.name) + '</span>' +
+          '<span class="tv-card__name">' + escapeHtml(mediaLabel(ch, 'name')) + '</span>' +
           '<span class="tv-card__tag" style="font-size:9px;color:var(--ink-muted)">PORTAL</span>' +
         '</header>' +
         '<div class="tv-card__watch">' +
@@ -1657,19 +1706,31 @@ document.addEventListener('DOMContentLoaded', function () {
   // TV panel category filter buttons
   $$('.tvpanel__filter-btn').forEach((b) => b.addEventListener('click', () => filterTvCategory(b.dataset.tvFilter)));
 
-  // Audio player close
-  const audioClose = document.getElementById('audioClose');
-  if (audioClose) audioClose.addEventListener('click', closeAudio);
+  // Media panel tabs (TV / radio)
+  $$('.mediapanel__tab').forEach((b) => b.addEventListener('click', () => setMediaTab(b.getAttribute('data-media-tab'))));
 
-  // Initial radio + TV render
-  loadRadioStations();
+  // Radio: stop the station that is playing
+  const radioStop = document.getElementById('radioStop');
+  if (radioStop) radioStop.addEventListener('click', stopRadio);
+
+  // Media catalogue — measured once, then cached at the edge for 30 minutes.
+  loadMediaCatalogue();
   renderTvMarkers();
+
+  // The media rows carry Burmese and English names; re-render on a language
+  // switch so the panel does not keep the language it was built in.
+  document.addEventListener('pirch:lang', () => {
+    if (mediaCatalogue) {
+      renderRadioList(mediaCatalogue.radio || []);
+      buildTvPanel();
+    }
+  });
 
   // Research briefing
   const researchButton = document.querySelector('[data-action="research"]');
   if (researchButton) researchButton.addEventListener('click', () => { window.location.href = 'research.html'; });
 
-  // Live TV panel — always-visible Burmese IPTV feeds at the bottom of the map.
+  // TV cards render from the measured catalogue; until it lands, say so.
   buildTvPanel();
 
   // Chat status indicator

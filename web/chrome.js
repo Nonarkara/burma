@@ -68,6 +68,9 @@ function applyLang(lang) {
   $$('[data-ph-en]').forEach((el) => {
     el.placeholder = use === 'my' ? (el.dataset.phMy || el.dataset.phEn) : el.dataset.phEn;
   });
+  // Panels that build their own rows (media list, news desk) need to know the
+  // language changed, otherwise they keep rendering in the previous one.
+  try { document.dispatchEvent(new CustomEvent('pirch:lang', { detail: { lang: use } })); } catch (e) {}
 }
 window.__pirchApplyLang = applyLang;
 

@@ -95,37 +95,51 @@
         <span><span class="legend__dot legend__dot--quake" aria-hidden="true"></span>Quake</span>
       </div>
 
-      <aside class="audioplayer" id="audioplayer" hidden>
-        <header class="audioplayer__bar">
+      <!-- ===== MEDIA PANEL — TV and radio in one floating panel over the map.
+           One panel, two tabs. The radio player lives inside the radio tab,
+           so nothing floats on top of anything else. -->
+      <section class="mediapanel" aria-labelledby="mediapanel-h" id="mediapanel">
+        <header class="mediapanel__bar">
           <span class="titlebar__dot" aria-hidden="true"></span>
-          <span class="audioplayer__title">Live audio</span>
-          <button type="button" class="titlebar__btn" id="audioClose" title="Stop">×</button>
-        </header>
-        <div class="audioplayer__body">
-          <div class="audioplayer__name" id="audioName">—</div>
-          <div class="audioplayer__meta" id="audioMeta">—</div>
-          <audio id="audioEl" controls preload="none" src=""></audio>
-        </div>
-      </aside>
-
-      <!-- ===== LIVE TV PANEL — always floating at the bottom of the map ===== -->
-      <section class="tvpanel" aria-labelledby="tvpanel-h" id="tvpanel">
-        <header class="tvpanel__bar">
-          <span class="titlebar__dot" aria-hidden="true"></span>
-          <h3 id="tvpanel-h" class="tvpanel__title">Burmese TV — live</h3>
-          <span class="tvpanel__filters" id="tvpanelFilters">
+          <h3 id="mediapanel-h" class="mediapanel__title" data-en="Burmese media" data-my="မြန်မာ့မီဒီယာ">မြန်မာ့မီဒီယာ</h3>
+          <span class="mediapanel__tabs" role="tablist" aria-label="Media type">
+            <button type="button" class="mediapanel__tab is-active" role="tab" aria-selected="true" aria-controls="tvPane" data-media-tab="tv" data-en="TV" data-my="ရုပ်သံ">ရုပ်သံ</button>
+            <button type="button" class="mediapanel__tab" role="tab" aria-selected="false" aria-controls="radioPane" data-media-tab="radio" data-en="Radio" data-my="ရေဒီယို">ရေဒီယို</button>
+          </span>
+          <span class="mediapanel__filters" id="tvpanelFilters">
             <button type="button" class="tvpanel__filter-btn is-active" data-tv-filter="all" data-en="All" data-my="အားလုံး">All</button>
             <button type="button" class="tvpanel__filter-btn" data-tv-filter="news" data-en="News" data-my="သတင်း">News</button>
             <button type="button" class="tvpanel__filter-btn" data-tv-filter="entertainment" data-en="Variety" data-my="အပန်း">Variety</button>
             <button type="button" class="tvpanel__filter-btn" data-tv-filter="asean" data-en="ASEAN" data-my="အာဆီယံ">ASEAN</button>
           </span>
-          <span class="tvpanel__hint" id="tvpanelHint">IPTV feeds · Click Unmute on any card for audio</span>
-          <span class="tvpanel__spacer"></span>
-          <button type="button" class="tvpanel__mute-all" id="tvpanelMuteAll" title="Mute all">Mute all</button>
-          <button type="button" class="tvpanel__unmute-all" id="tvpanelUnmuteAll" title="Unmute all">Unmute all</button>
+          <span class="mediapanel__hint" id="tvpanelHint">IPTV feeds · Click Unmute on any card for audio</span>
+          <span class="mediapanel__spacer"></span>
+          <button type="button" class="mediapanel__mute-all" id="tvpanelMuteAll" title="Mute all">Mute all</button>
+          <button type="button" class="mediapanel__unmute-all" id="tvpanelUnmuteAll" title="Unmute all">Unmute all</button>
         </header>
-        <div class="tvpanel__row" id="tvpanelRow">
-          <!-- cards injected by JS -->
+
+        <div class="mediapanel__pane" id="tvPane" role="tabpanel">
+          <div class="tvpanel__row" id="tvpanelRow">
+            <!-- cards injected by JS -->
+          </div>
+        </div>
+
+        <div class="mediapanel__pane" id="radioPane" role="tabpanel" hidden>
+          <div class="radio__now" id="radioNow" hidden>
+            <div class="radio__nowhead">
+              <span class="radio__nowtitle" data-en="Now playing" data-my="ယခု ပြသောစားရင်း">ယခု ပြသောစားရင်း</span>
+              <button type="button" class="mediapanel__close" id="radioStop" title="Stop">■</button>
+            </div>
+            <div class="radio__nowbody">
+              <span class="radio__nowname" id="radioNowName">—</span>
+              <span class="radio__nowmeta" id="radioNowMeta">—</span>
+            </div>
+            <audio id="audioEl" controls preload="none" src=""></audio>
+          </div>
+          <div class="radio__list" id="radioList">
+            <!-- rows injected by JS -->
+          </div>
+          <p class="radio__note" id="radioNote"></p>
         </div>
       </section>
     </div>
