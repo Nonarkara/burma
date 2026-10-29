@@ -164,25 +164,31 @@ function renderRadioList(stations) {
     row.className = 'radio__row';
     row.setAttribute('data-radio-id', s.id);
 
-    const live = s.status === 'live' && s.url;
+    // Playability follows the recorded verdict and the presence of a stream,
+    // never the edge probe alone: some hosts refuse datacentre ranges and
+    // still play fine from a home connection (Cherry FM is the known case).
+    const playable = Boolean(s.playable && s.url);
     const statusClass = s.status === 'live' ? 'radio__status--live'
       : (s.status === 'portal' ? 'radio__status--portal' : 'radio__status--down');
     const statusText = s.status === 'live' ? 'LIVE'
       : (s.status === 'portal' ? 'PORTAL' : (s.status || 'UNKNOWN').toUpperCase());
+    const edgeTag = (s.status === 'live' && s.edgeProbe && s.edgeProbe !== 'live')
+      ? ' · EDGE ' + s.edgeProbe.toUpperCase() : '';
 
     const nameHtml = s.watch
       ? '<a href="' + escapeHtml(s.watch) + '" target="_blank" rel="noopener">' + escapeHtml(mediaLabel(s, 'name')) + '</a>'
       : escapeHtml(mediaLabel(s, 'name'));
 
+    row.title = s.note || '';
     row.innerHTML =
       '<button type="button" class="radio__play" data-radio-play="' + escapeHtml(s.id) + '"' +
-      (live ? '' : ' disabled title="No public stream — open the broadcaster page instead"') + '>' +
-      (live ? '▶' : '↗') + '</button>' +
+      (playable ? '' : ' disabled title="No public stream — open the broadcaster page instead"') + '>' +
+      (playable ? '▶' : '↗') + '</button>' +
       '<span class="radio__name">' + nameHtml + '</span>' +
       '<span class="radio__place">' + escapeHtml(mediaLabel(s, 'place')) + '</span>' +
       '<span class="radio__genre">' + escapeHtml(mediaLabel(s, 'genre')) + '</span>' +
       '<span class="radio__spacer"></span>' +
-      '<span class="radio__status ' + statusClass + '">' + escapeHtml(statusText) + ' · ' + escapeHtml(s.checked || '') + '</span>';
+      '<span class="radio__status ' + statusClass + '">' + escapeHtml(statusText + edgeTag + ' · ' + (s.checked || '')) + '</span>';
 
     list.appendChild(row);
   });

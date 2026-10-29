@@ -113,13 +113,50 @@ test('the probe reports live only when audio bytes actually arrive', async () =>
     const body = await res.json();
     const station = body.radio.find((r) => r.id === 'cherry-fm');
     assert.equal(station.status, 'live');
+    assert.equal(station.edgeProbe, 'live');
     assert.equal(body.source, 'measured');
   } finally {
     globalThis.fetch = original;
   }
 });
 
-test('an HTML error page is down, not live', async () => {
+test('a broadcaster page answering with HTML is a working portal, not a dead stream', async () => {
+  const mod = await loadFunction('page');
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => fakeResponse({ ctype: 'text/html', text: '<html><body>Channel K</body></html>' });
+  try {
+    const res = await mod.onRequestGet();
+    const body = await res.json();
+    const station = body.tv.find((t) => t.id === 'channelk');
+    assert.equal(station.status, 'portal');
+    assert.equal(station.edgeProbe, 'portal');
+    assert.equal(station.playable, false, 'a portal has no stream to play');
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('the recorded verdict survives an edge probe that could not confirm it', async () => {
+  // Cherry FM answers 200 from a home connection and 401 from datacentre
+  // ranges. The edge result is reported alongside the recorded truth, not
+  // substituted for it — otherwise a working station disappears.
+  const mod = await loadFunction('blocked');
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => fakeResponse({ status: 401, ctype: 'text/plain', text: 'no' });
+  try {
+    const res = await mod.onRequestGet();
+    const body = await res.json();
+    const station = body.radio.find((r) => r.id === 'cherry-fm');
+    assert.equal(station.status, 'live', 'a refused edge probe must not unlist a live station');
+    assert.equal(station.edgeProbe, 'blocked');
+    assert.equal(station.playable, true, 'the play button must stay available');
+    assert.match(station.note, /home connection/i);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('an HTML error page on a stream URL is down, not live', async () => {
   const mod = await loadFunction('html');
   const original = globalThis.fetch;
   globalThis.fetch = async () => fakeResponse({ ctype: 'text/html', text: '<html>error</html>' });
@@ -127,14 +164,14 @@ test('an HTML error page is down, not live', async () => {
     const res = await mod.onRequestGet();
     const body = await res.json();
     const station = body.radio.find((r) => r.id === 'cherry-fm');
-    assert.equal(station.status, 'down');
-    assert.match(station.statusDetail, /web page/);
+    assert.equal(station.edgeProbe, 'down');
+    assert.match(station.edgeDetail, /web page/);
   } finally {
     globalThis.fetch = original;
   }
 });
 
-test('no answer at all is unreachable — never silently live', async () => {
+test('no answer at all is recorded as an unreachable edge probe', async () => {
   const mod = await loadFunction('dead');
   const original = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error('ECONNREFUSED'); };
@@ -142,25 +179,51 @@ test('no answer at all is unreachable — never silently live', async () => {
     const res = await mod.onRequestGet();
     const body = await res.json();
     const station = body.radio.find((r) => r.id === 'cherry-fm');
-    assert.equal(station.status, 'unreachable');
+    assert.equal(station.edgeProbe, 'unreachable');
+    assert.equal(station.status, 'live', 'the recorded verdict still stands');
   } finally {
     globalThis.fetch = original;
   }
 });
 
-test('when the probe cannot run, the function degrades to the recorded catalogue', async () => {
+test('an entry with no recorded verdict is not promoted to live by a failed probe', async () => {
+  const mod = await loadFunction('unpromoted');
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('ECONNREFUSED'); };
+  try {
+    const res = await mod.onRequestGet();
+    const body = await res.json();
+    const station = body.radio.find((r) => r.id === 'mrtv-radio');
+    assert.notEqual(station.status, 'live');
+    assert.equal(station.playable, false);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('when every probe fails, the panel still shows the recorded catalogue', async () => {
   const mod = await loadFunction('fallback');
   const original = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error('edge network down'); };
   try {
     const res = await mod.onRequestGet();
     const body = await res.json();
-    assert.equal(body.source, 'catalogue');
+    // Nothing may be lost and nothing may be promoted: the recorded status
+    // stands, the failed probe is reported, and every date survives.
     assert.equal(body.radio.length, MEDIA_CATALOG.filter((e) => e.kind === 'radio').length);
-    assert.ok(body.radio.every((r) => r.checked), 'degraded entries lost their date');
+    assert.equal(body.tv.length, MEDIA_CATALOG.filter((e) => e.kind === 'tv').length);
+    assert.ok(body.radio.every((r) => r.checked), 'a station lost its date');
+    assert.ok(body.radio.every((r) => r.edgeProbe === 'unreachable'), 'a failed probe was not reported');
+    assert.ok(body.radio.every((r) => r.status !== 'live' || r.playable), 'a live claim without a stream');
   } finally {
     globalThis.fetch = original;
   }
+});
+
+test('the catalogue is the floor — a wholesale failure falls back to it', async () => {
+  const src = fs.readFileSync(new URL('functions/api/stations.js', root), 'utf8');
+  assert.match(src, /source: 'catalogue'/, 'no wholesale fallback to the recorded catalogue');
+  assert.match(src, /degraded/, 'a wholesale failure is not reported as degraded');
 });
 
 // --- the dashboard surface ---

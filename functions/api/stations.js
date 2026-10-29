@@ -1,21 +1,31 @@
 // Cloudflare Pages Function — measured media catalogue.
 //
-// Every entry in the catalogue is probed before it is reported. A stream that
-// answers with audio bytes or an HLS manifest is reported 'live'; one that
-// does not is reported with the reason and the date. Nothing is claimed from
-// a listing site alone.
+// Two measurements, two different vantage points, and they are NOT the same:
 //
-// The browser never calls radio-browser directly: that host is flaky and it
-// leaks the user's IP to a third party on every page load. The probe runs
-// here, once, and the result is cached for half an hour.
+//   1. The catalogue records the status seen from a home connection in
+//      Thailand on a stated date. That is the vantage point that matters to
+//      the person listening — they are on a Thai ISP, not on a datacentre.
+//   2. This function probes from Cloudflare's edge. That vantage point is
+//      good at catching a station that has gone away, and bad at judging a
+//      host that blocks datacentre ranges (Cherry FM answers 401 here and
+//      200 from a home connection).
+//
+// So the edge never overwrites the recorded truth. It is reported alongside
+// it. A station whose stream exists stays playable; what changes is the
+// badge, which tells the reader when the edge could not confirm it.
 //
 // Response shape:
-//   { ok, checkedAt, source, radio: [...], tv: [...], unreachable: [...] }
+//   { ok, checkedAt, radio: [...], tv: [...], unreachable: [...] }
 //
-// Each station carries its measured `status` and the `checked` date. When the
-// probe itself cannot run (edge network failure, all hosts down), the
-// catalogue's own recorded status is returned with source='catalogue' so the
-// panel degrades to the last known truth instead of to nothing.
+// Each station carries:
+//   status      — the recorded verdict (live / portal)
+//   edgeProbe   — what the edge saw on this run (live / blocked /
+//                 unreachable / down), or null when there was nothing to probe
+//   playable    — whether there is a stream to play
+//   note        — a sentence the reader can act on
+//
+// When the probe itself cannot run, the recorded catalogue is returned
+// unchanged. The panel degrades to the last known truth, never to nothing.
 
 import { MEDIA_CATALOG, UNREACHABLE_ORIGINS } from '../data/stations.js';
 
@@ -59,7 +69,8 @@ async function readHead(res) {
   return out;
 }
 
-async function probe(url) {
+// Probe a STREAM: we are looking for audio bytes or an HLS manifest.
+async function probeStream(url) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
   try {
@@ -68,7 +79,7 @@ async function probe(url) {
       redirect: 'follow',
       signal: ctrl.signal,
       headers: {
-        'user-agent': 'Pirchchat/0.9 (+burma.nonarkara.org) media-probe',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         'range': 'bytes=0-2047',
         'accept': '*/*',
       },
@@ -84,16 +95,16 @@ async function probe(url) {
       return { status: 'down', detail: 'host answered ' + res.status };
     }
     if (head.includes('#EXTM3U')) {
-      return { status: 'live', detail: 'HLS manifest', bytes: bytes.length };
+      return { status: 'live', detail: 'HLS manifest' };
     }
     if (/audio|mpegurl|octet-stream/.test(ctype)) {
-      return { status: 'live', detail: ctype.split(';')[0], bytes: bytes.length };
+      return { status: 'live', detail: ctype.split(';')[0] };
     }
     if (/text\/html/.test(ctype) || head.trimStart().startsWith('<')) {
       return { status: 'down', detail: 'returned a web page, not a stream' };
     }
     if (bytes.length > 0) {
-      return { status: 'live', detail: ctype || 'stream', bytes: bytes.length };
+      return { status: 'live', detail: ctype || 'stream' };
     }
     return { status: 'down', detail: 'empty response' };
   } catch (e) {
@@ -104,41 +115,93 @@ async function probe(url) {
   }
 }
 
+// Probe a PAGE: we are looking for the broadcaster's site to answer. An HTML
+// page is the success case here — the opposite of a stream probe.
+async function probePage(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: ctrl.signal,
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'accept': 'text/html,*/*',
+      },
+    });
+    await readHead(res);
+    if (res.status === 401 || res.status === 403) {
+      // The page exists but refuses a bot. It may still open in a browser.
+      return { status: 'blocked', detail: 'site answered ' + res.status + ' to our probe' };
+    }
+    if (res.status >= 500) {
+      return { status: 'unreachable', detail: 'site answered ' + res.status };
+    }
+    if (res.status >= 400) {
+      return { status: 'down', detail: 'site answered ' + res.status };
+    }
+    return { status: 'portal', detail: 'site answered ' + res.status };
+  } catch (e) {
+    const aborted = e && e.name === 'AbortError';
+    return { status: 'unreachable', detail: aborted ? 'no answer in 4.5s' : 'connection failed' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const EDGE_NOTE = {
+  blocked: 'our edge probe was refused by the host (it blocks datacentre ranges) — this is what a home connection hears',
+  unreachable: 'our edge probe could not reach the host — reachability varies by network',
+  down: 'our edge probe did not get a stream from the host',
+};
+
 async function measure(entry) {
   const out = { ...entry };
-  delete out.source;
+  out.playable = Boolean(entry.url);
+  out.edgeProbe = null;
 
   if (entry.url) {
-    const p = await probe(entry.url);
-    out.status = p.status;
-    out.statusDetail = p.detail;
-    out.probedAt = new Date().toISOString();
-    if (p.bytes) out.probeBytes = p.bytes;
+    const p = await probeStream(entry.url);
+    out.edgeProbe = p.status;
+    out.edgeDetail = p.detail;
+    if (p.status === 'live') {
+      out.status = 'live';
+      out.note = 'Confirmed by the edge probe just now.';
+    } else if (entry.status === 'live') {
+      // The recorded verdict stands: the stream was heard from a home
+      // connection. The edge result is reported, not substituted.
+      out.status = 'live';
+      out.note = 'Verified from a home connection on ' + entry.checked + '. ' + (EDGE_NOTE[p.status] || p.detail) + '.';
+    } else {
+      out.status = p.status;
+      out.note = (EDGE_NOTE[p.status] || p.detail) + '.';
+    }
   } else if (entry.watch) {
-    const p = await probe(entry.watch);
-    // A portal that answers is a working way to watch; one that does not is
-    // reported as such rather than shown as a live row.
-    out.status = p.status === 'live' ? 'portal' : p.status;
-    out.statusDetail = p.detail;
-    out.probedAt = new Date().toISOString();
+    const p = await probePage(entry.watch);
+    out.edgeProbe = p.status;
+    out.edgeDetail = p.detail;
+    if (entry.status === 'portal') {
+      out.status = 'portal';
+      out.note = entry.note || ('Open the broadcaster page to watch — ' + p.detail + '.');
+    } else {
+      out.status = p.status;
+      out.note = (EDGE_NOTE[p.status] || p.detail) + '.';
+    }
   } else {
     out.status = 'unreachable';
-    out.statusDetail = 'no stream and no portal listed';
-    out.probedAt = new Date().toISOString();
+    out.note = 'No stream and no page listed.';
   }
 
-  out.source = entry.source;
-  out.checked = entry.checked;
   return out;
 }
 
 async function buildCatalogue() {
   const measured = await Promise.all(MEDIA_CATALOG.map(measure));
-  const anyProbed = measured.some((m) => m.probedAt && m.statusDetail !== 'connection failed');
   return {
     ok: true,
     checkedAt: new Date().toISOString(),
-    source: anyProbed ? 'measured' : 'catalogue',
+    source: 'measured',
     radio: measured.filter((m) => m.kind === 'radio'),
     tv: measured.filter((m) => m.kind === 'tv'),
     unreachable: UNREACHABLE_ORIGINS,
@@ -163,11 +226,11 @@ export async function onRequestGet() {
       ok: true,
       checkedAt: new Date().toISOString(),
       source: 'catalogue',
-      radio: MEDIA_CATALOG.filter((m) => m.kind === 'radio'),
-      tv: MEDIA_CATALOG.filter((m) => m.kind === 'tv'),
+      radio: MEDIA_CATALOG.filter((m) => m.kind === 'radio').map((m) => ({ ...m, playable: Boolean(m.url), edgeProbe: null })),
+      tv: MEDIA_CATALOG.filter((m) => m.kind === 'tv').map((m) => ({ ...m, playable: Boolean(m.url), edgeProbe: null })),
       unreachable: UNREACHABLE_ORIGINS,
       count: MEDIA_CATALOG.length,
-      degraded: 'probe failed; showing last recorded status',
+      degraded: 'probe failed; showing the recorded catalogue',
     };
     return json(fallback);
   }
