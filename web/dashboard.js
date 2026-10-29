@@ -49,6 +49,9 @@ const debounce = (fn, ms) => {
 // =====================================================
 
 const IDENTITY_KEY = 'pirchchat.identity';
+// "Browse without a name" is a decision, not a transient dismissal. It is
+// remembered on this browser so the gate does not ask again on every reload.
+const IDENTITY_SKIP_KEY = 'pirchchat.identitySkipped';
 
 const CITIES = [
   { name: 'Yangon',     lat: 16.8409, lng: 96.1735, country: 'MM', pop: '5.3M', note: 'Commercial capital' },
@@ -743,7 +746,6 @@ const state = {
   nasaLayerOn: false,
   quakeLayerOn: false,
   bordersLayerOn: true,
-  diasporaLayerOn: false,
   himawariLayerOn: false,
   gpmRainLayerOn: false,
   viirsFloodLayerOn: false,
@@ -782,6 +784,19 @@ function showIdentityModal() {
   if (modal) modal.hidden = false;
   const nameInput = $('#identityName');
   if (nameInput) setTimeout(() => nameInput.focus(), 50);
+}
+
+function identitySkipped() {
+  try { return localStorage.getItem(IDENTITY_SKIP_KEY) === '1'; }
+  catch (e) { return false; }
+}
+
+function rememberIdentitySkip() {
+  try { localStorage.setItem(IDENTITY_SKIP_KEY, '1'); } catch (e) {}
+}
+
+function forgetIdentitySkip() {
+  try { localStorage.removeItem(IDENTITY_SKIP_KEY); } catch (e) {}
 }
 
 function hideIdentityModal() {
@@ -896,35 +911,6 @@ function initMap() {
   map.on('move', syncMapStatus);
   map.on('zoom', syncMapStatus);
 
-  map.on('load', () => {
-    if (state.bordersLayerOn) loadBordersData();
-    // Register PMTiles protocol for vector tile layers (diaspora, corridors)
-    if (window.pmtilesProtocol) {
-      maplibregl.addProtocol('pmtiles:', window.pmtilesProtocol('https://burma.nonarkara.org/atlas/diaspora.pmtiles'));
-      try {
-        map.addSource('diaspora-pmtiles', {
-          type: 'vector',
-          tiles: ['pmtiles://https://burma.nonarkara.org/atlas/diaspora.pmtiles'],
-          maxzoom: 14,
-        });
-        map.addLayer({
-          id: 'diaspora-pmtiles-layer',
-          type: 'circle',
-          source: 'diaspora-pmtiles',
-          'source-layer': 'diaspora',
-          layout: { visibility: state.diasporaLayerOn ? 'visible' : 'none' },
-          paint: {
-            'circle-radius': 4,
-            'circle-color': '#d4a017',
-            'circle-opacity': 0.7,
-          },
-        }, 'basemap');
-      } catch (e) {
-        // PMTiles source not yet published — silent, no fake data
-        console.log('[atlas] PMTiles source not available:', String(e));
-      }
-    }
-  });
 
   map.on('click', (e) => {
     if (state.wxPick) {
@@ -1242,14 +1228,6 @@ function toggleBorders() {
     (state.frontierGateMarkers || []).forEach((m) => { try { m.remove(); } catch (e) {} });
     state.frontierGateMarkers = [];
   }
-}
-
-function toggleDiaspora() {
-  state.diasporaLayerOn = !state.diasporaLayerOn;
-  $$('.toolbar__btn[data-layer-toggle="diaspora"]').forEach((b) => b.classList.toggle('is-pressed', state.diasporaLayerOn));
-  if (!map) return;
-  const vis = state.diasporaLayerOn ? 'visible' : 'none';
-  if (map.getLayer('diaspora-pmtiles-layer')) map.setLayoutProperty('diaspora-pmtiles-layer', 'visibility', vis);
 }
 
 // ---------- USGS earthquakes M4.5+, last 30 days ----------
@@ -1720,10 +1698,13 @@ function tickClock() {
 document.addEventListener('DOMContentLoaded', function () {
   // Identity
   state.identity = window.__pirchchatClient.identity;
-  if (!state.identity || !state.identity.name) {
-    showIdentityModal();
-  } else {
+  if (state.identity && state.identity.name) {
     applyIdentity(state.identity);
+  } else if (identitySkipped()) {
+    // The visitor already chose to browse without a name on this browser.
+    applyIdentity({ name: 'guest', network: state.identity && state.identity.network });
+  } else {
+    showIdentityModal();
   }
   $('#identitySubmit').addEventListener('click', () => {
     const nameEl = $('#identityName');
@@ -1731,6 +1712,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const name = (nameEl && nameEl.value || '').trim() || 'guest';
     const id = window.__pirchchatClient.setIdentity(name);
     state.identity = id;
+    forgetIdentitySkip();
     applyIdentity(id);
     // Language choice applies live and persists (Burmese-first default).
     if (langEl && window.__pirchApplyLang) window.__pirchApplyLang(langEl.value);
@@ -1742,7 +1724,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (langEl && window.__pirchApplyLang) window.__pirchApplyLang(langEl.value);
   });
 
-  $('#identitySkip').addEventListener('click', hideIdentityModal);
+  $('#identitySkip').addEventListener('click', () => {
+    rememberIdentitySkip();
+    hideIdentityModal();
+  });
 
   // Desktop reading mode keeps chat connected and restores the original split.
   const newsExpand = $('#newsExpand');
@@ -1771,7 +1756,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (a === 'wx') toggleWx();
   }));
   $$('.toolbar__btn[data-layer-toggle="borders"]').forEach((b) => b.addEventListener('click', toggleBorders));
-  $$('.toolbar__btn[data-layer-toggle="diaspora"]').forEach((b) => b.addEventListener('click', toggleDiaspora));
   $$('.toolbar__btn[data-layer-toggle="himawari"]').forEach((b) => b.addEventListener('click', toggleHimawari));
   $$('.toolbar__btn[data-layer-toggle="gpmrain"]').forEach((b) => b.addEventListener('click', toggleGpmRain));
   $$('.toolbar__btn[data-layer-toggle="viirsflood"]').forEach((b) => b.addEventListener('click', toggleViirsFlood));

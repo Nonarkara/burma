@@ -10,12 +10,6 @@ const API_BASE = location.hostname === 'localhost' || location.hostname === '127
 const KNOWN_ROOMS = ['monastic-youth', 'bkk-burmese', 'cm-burmese', 'digest-today', 'listening-club'];
 const ROOM_BUTTON_SELECTOR = '.chat nav[aria-label="Rooms"] button[data-room]';
 
-const MICRO_QUEST = [
-  {prompt:'ဆေးခန်းတစ်ခုတွင် စာရင်းပစ္စည်း မကိုက်ညီပါ။ သင် ပထမဆုံး ဘာလုပ်မလဲ။', choices:[['လက်ရှိစာရင်းကို စစ်ပြီး အမှားပုံစံကို မှတ်တမ်းတင်မည်','systems'],['အဖွဲ့ဝင်များကို ခေါ်ပြီး လက်ရှိအလုပ်စဉ်ကို နားထောင်မည်','collaboration'],['ပစ္စည်းကို အမျိုးအစားခွဲပြီး အရေအတွက် ပြန်တွက်မည်','analysis']]},
-  {prompt:'ရပ်ရွာသင်တန်းတစ်ခုတွင် ဖုန်းအသုံးပြုမှု အခက်အခဲရှိသည်။', choices:[['လူတိုင်းလိုက်လုပ်နိုင်သော အဆင့်လိုက်စာရွက် ပြုလုပ်မည်','systems'],['တစ်ဦးချင်း မေးခွန်းကို နားထောင်ပြီး တွဲလုပ်မည်','collaboration'],['ဘယ်အဆင့်မှာ ပိုရပ်တန့်သလဲ စစ်မည်','analysis']]},
-  {prompt:'အလုပ်သင်အခွင့်အရေး စာရင်းကို အဖွဲ့တစ်ဖွဲ့နှင့် မျှဝေရမည်။', choices:[['အရင်းအမြစ်၊ နေ့စွဲ၊ လိုအပ်ချက်ပါသော စာရင်းတစ်ခု ပြုလုပ်မည်','systems'],['ဘာသာပြန်နှင့် မျှဝေမည့် အဖွဲ့ကို စုစည်းမည်','collaboration'],['အချက်တစ်ခုစီကို မူရင်းအရင်းအမြစ်နှင့် တိုက်စစ်မည်','analysis']]}
-];
-let questAnswers = [];
 
 function escapeHtml(s) {
   return String(s == null ? '' : s)
@@ -688,19 +682,6 @@ function flashNet(text) {
   }, 2400);
 }
 
-function renderQuest() {
-  const panel = document.getElementById('questPanel'); if (!panel) return;
-  if (questAnswers.length < MICRO_QUEST.length) {
-    const q = MICRO_QUEST[questAnswers.length];
-    panel.innerHTML = '<h3>TKCX-Youth · ၃ မိနစ် Quest</h3><p>' + escapeHtml(q.prompt) + '</p><div class="micro-panel__choices">' + q.choices.map((choice, i) => '<button type="button" class="micro-panel__choice" data-quest-choice="' + i + '">' + escapeHtml(choice[0]) + '</button>').join('') + '</div><p class="micro-panel__meta">' + (questAnswers.length + 1) + ' / 3 · session-only reflection, not a diagnosis or stored profile.</p>';
-    panel.querySelectorAll('[data-quest-choice]').forEach((button) => button.addEventListener('click', () => { questAnswers.push(q.choices[Number(button.dataset.questChoice)][1]); renderQuest(); }));
-    return;
-  }
-  const scores = {systems:0, collaboration:0, analysis:0}; questAnswers.forEach((key) => scores[key]++);
-  const lead = Object.entries(scores).sort((a,b) => b[1] - a[1]).slice(0,2).map(([key]) => ({systems:'အလုပ်စဉ် စီမံခြင်း', collaboration:'အဖွဲ့နှင့် ညှိနှိုင်းခြင်း', analysis:'အချက်အလက် စစ်ဆေးခြင်း'}[key]));
-  panel.innerHTML = '<h3>လုပ်ဆောင်နိုင်စွမ်း အကြမ်းဖျဉ်း</h3><p>ဒီအဖြေသုံးခုက <strong>' + escapeHtml(lead.join(' · ')) + '</strong> ကို လေ့ကျင့်လိုကြောင်း ပြသည်။ အမည်တပ်ခြင်း မဟုတ်ပါ။</p><p><strong>လမ်းကြောင်း ၃ ခု</strong></p><ol><li>ဒစ်ဂျစ်တယ် စာရင်းနှင့် အုပ်ချုပ်ရေး လေ့ကျင့်မှု</li><li>ဘာသာပြန် / ရပ်ရွာ ညှိနှိုင်း လေ့ကျင့်မှု</li><li>အရင်းအမြစ် စစ်ဆေးပြီး အခွင့်အရေးစာရင်း ပြုစုခြင်း</li></ol><p class="micro-panel__meta">Reference paths only. Verify any programme directly with its provider.</p><button type="button" id="questRestart">ပြန်စမည်</button>';
-  panel.querySelector('#questRestart').addEventListener('click', () => { questAnswers = []; renderQuest(); });
-}
 
 function buildCommunityDraft(intent, detail, source, lang) {
   const labels = {
@@ -796,9 +777,10 @@ function wire() {
   if (form) form.addEventListener('submit', handleSubmit);
   const fi = document.getElementById('fileInput');
   if (fi) fi.addEventListener('change', handleFile);
-  const quest = document.getElementById('questToggle'); const exchange = document.getElementById('exchangeToggle');
-  if (quest) quest.addEventListener('click', () => { const panel = document.getElementById('questPanel'); const other = document.getElementById('exchangePanel'); if (!panel) return; panel.hidden = !panel.hidden; if (!panel.hidden) { if (other) other.hidden = true; if (exchange) exchange.setAttribute('aria-expanded', 'false'); renderQuest(); } });
-  if (exchange) exchange.addEventListener('click', () => { const panel = document.getElementById('exchangePanel'); const other = document.getElementById('questPanel'); if (!panel) return; panel.hidden = !panel.hidden; exchange.setAttribute('aria-expanded', String(!panel.hidden)); if (!panel.hidden) { if (other) other.hidden = true; if (!panel.querySelector('#communityDraftForm')) renderExchange(); } });
+  // The Career Navigator quest panel is owned by web/quest.js. chat-client.js
+  // must not also toggle it — two handlers on one button cancel each other out.
+  const exchange = document.getElementById('exchangeToggle');
+  if (exchange) exchange.addEventListener('click', () => { const panel = document.getElementById('exchangePanel'); const other = document.getElementById('questPanel'); if (!panel) return; panel.hidden = !panel.hidden; exchange.setAttribute('aria-expanded', String(!panel.hidden)); if (!panel.hidden) { if (other) other.hidden = true; const qt = document.getElementById('questToggle'); if (qt) qt.setAttribute('aria-expanded', 'false'); if (!panel.querySelector('#communityDraftForm')) renderExchange(); } });
 
   // Topic chips
   document.querySelectorAll('#topicChips .chip').forEach((b) => {

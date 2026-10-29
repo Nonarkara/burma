@@ -11,16 +11,6 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Myanmar:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="https://unpkg.com/pmtiles@3.0.0/dist/index.js"></script>
-<script type="module">
-  import { PMTiles, FetchSource, Protocol } from 'https://unpkg.com/pmtiles@3.0.0/dist/index.mjs';
-  // Expose a factory the plain script can call: window.pmtilesProtocol(url) -> MapLibre protocol
-  window.pmtilesProtocol = (url) => {
-    const source = new PMTiles(new FetchSource(url));
-    const protocol = new Protocol(source);
-    return (params, callback) => protocol(params, callback);
-  };
-</script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 </head>
 <body class="win95 full-bleed" data-tab="map">
@@ -77,7 +67,6 @@
       <button type="button" class="toolbar__btn" data-layer-toggle="quakes" title="USGS earthquakes M4.5+, last 30 days" data-en="▲ Quakes" data-my="▲ ငလျင်">▲ Quakes</button>
       <button type="button" class="toolbar__btn" data-action="add" title="Drop a manual pin" data-en="＋ Pin" data-my="＋ အမှတ်">＋ Pin</button>
       <button type="button" class="toolbar__btn" data-action="wx" title="Pick any point for live temperature / rain / wind" data-en="◍ Wx" data-my="◍ ရာသီဥတု">◍ Wx</button>
-      <button type="button" class="toolbar__btn" data-layer-toggle="diaspora" title="Burmese diaspora density (PMTiles vector tiles)" data-en="● Diaspora" data-my="● နိုင်ငံခြား">● Diaspora</button>
       <span class="toolbar__sep"></span>
       <button type="button" class="toolbar__btn" data-action="guide" title="Survival guide — visa, clinics, housing, rates" data-en="✎ Guide" data-my="✎ လမ်းညွှန်">✎ Guide</button>
       <button type="button" class="toolbar__btn" data-action="hotlines" title="Human hotlines — 1300, clinics" data-en="＋ Hotlines" data-my="＋ ဟိုတ်လိုင်း">＋ Hotlines</button>
@@ -102,7 +91,6 @@
         <span><span class="legend__dot legend__dot--city" aria-hidden="true"></span>City</span>
         <span><span class="legend__dot legend__dot--radio" aria-hidden="true"></span>Radio</span>
         <span><span class="legend__dot legend__dot--tv" aria-hidden="true"></span>TV</span>
-        <span><span class="legend__dot legend__dot--diaspora" aria-hidden="true"></span>Diaspora</span>
         <span><span class="legend__dot legend__dot--you" aria-hidden="true"></span>You pinned</span>
         <span><span class="legend__dot legend__dot--quake" aria-hidden="true"></span>Quake</span>
       </div>
@@ -234,7 +222,7 @@
         <button type="button" class="menubar__item" data-room="cm-burmese">Cm-burm<u>e</u>se</button>
         <button type="button" class="menubar__item" data-room="digest-today">Diges<u>t</u>-today</button>
         <button type="button" class="menubar__item" data-room="listening-club">L<u>i</u>stening-club</button>
-        <button type="button" class="menubar__item" id="questToggle">၃ မိနစ် Quest</button>
+        <button type="button" class="menubar__item" id="questToggle" aria-expanded="false" aria-controls="questPanel" data-en="Career Navigator" data-my="အလုပ်သိကြား">အလုပ်သိကြား</button>
         <button type="button" class="menubar__item" id="chatHelp" title="Chat commands and ground rules">?</button>
       </nav>
 
@@ -272,7 +260,7 @@
           <ul class="members__list" id="memberList"></ul>
         </aside>
       </div>
-      <section class="micro-panel" id="questPanel" hidden aria-label="Three-minute skill discovery"></section>
+      <section class="micro-panel" id="questPanel" hidden aria-label="Career Navigator scenarios"></section>
       <section class="micro-panel" id="exchangePanel" hidden aria-label="Peer skill and resource exchange"></section>
 
       <div class="crisis" id="crisisBanner" hidden>
@@ -390,7 +378,6 @@
 <script src="dashboard.js?v=5ff327a371"></script>
 <script src="chat-client.js?v=60ee031ffd"></script>
 <script src="chrome.js?v=fce03b1546"></script>
-<script src="data/quest-scenario.js?v=6e61a02af0"></script>
 <script src="quest.js?v=aa42b8f870"></script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { SAMPLE_SCENARIOS } from '@/lib/quest/scenarios';
-import { scoreQuest } from '@/lib/quest/scoring';
+import { SAMPLE_SCENARIOS, scoreQuest, dominantOutcome } from '@/lib/quest/scenarios';
 
 const SubmissionSchema = z.object({
   questId: z.string(),
@@ -26,6 +25,17 @@ export async function POST(
     return NextResponse.json({ error: 'invalid_submission', detail: parsed.error }, { status: 400 });
   }
 
-  const result = scoreQuest(quest, parsed.data);
-  return NextResponse.json(result);
+  // Same scorer, same shape as the deployed Pages Function at
+  // /api/quest/<id>/submit — one catalogue, one scoring rule.
+  const result = scoreQuest(quest, parsed.data.selectionPath);
+  const outcome = dominantOutcome(quest, result.dominant);
+
+  return NextResponse.json({
+    ok: true,
+    submission: parsed.data,
+    weights: result.weights,
+    dominantTrait: result.dominant,
+    reflection: outcome.reflection,
+    choiceId: result.choice ? result.choice.id : null,
+  });
 }

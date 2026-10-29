@@ -422,7 +422,6 @@ html, body {
 .legend__dot--radio { background: var(--server); }
 .legend__dot--tv    { background: var(--positive); }
 .legend__dot--you   { background: var(--positive); }
-.legend__dot--diaspora { background: var(--accent); border: 1px solid var(--ink); }
 .legend__dot--quake { background: var(--negative); }
 
 .pirch-marker--gate {
@@ -1292,6 +1291,31 @@ html, body {
 .micro-panel__choice, .micro-panel button { border:1px solid var(--ink); border-radius:0; background:var(--paper); color:var(--ink); padding:4px 7px; text-align:left; font:inherit; }
 .micro-panel__choice:hover, .micro-panel button:hover { background:var(--accent-soft); }
 .micro-panel__meta { font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); }
+
+/* ---------- Career Navigator (quest panel) ----------
+   One panel, one owner: web/quest.js. Sharp edges, flat fills, no shadows. */
+.micro-panel__intro { margin:2px 0 6px; color:var(--ink-muted); }
+.micro-panel__role { margin:2px 0 6px; font-style:italic; color:var(--ink-muted); }
+.micro-panel__choice--ghost { background:var(--chrome); color:var(--ink-muted); }
+.micro-panel button[disabled] { color:var(--ink-muted); background:var(--chrome); cursor:progress; }
+
+.questlist { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:6px 0; }
+.questlist__item {
+  display:flex; flex-direction:column; gap:2px; align-items:flex-start;
+  border:1px solid var(--ink); border-radius:0; background:var(--paper); color:var(--ink);
+  padding:5px 7px; text-align:left; font:inherit; cursor:pointer;
+}
+.questlist__item:hover { background:var(--accent-soft); }
+.questlist__title { font-size:13px; line-height:1.35; }
+.questlist__meta { font-family:var(--font-mono); font-size:10px; color:var(--ink-muted); }
+.questlist__cons { margin:5px 0; padding-left:16px; font-size:12px; color:var(--ink-muted); }
+.questlist__cons li { margin:1px 0; }
+.questlist__reflection { border-left:3px solid var(--accent); padding-left:8px; }
+.questlist__failure { border-left:3px solid var(--negative); padding-left:8px; }
+
+@media (max-width:560px) {
+  .questlist { grid-template-columns:1fr; }
+}
 .community-guide { border-bottom:1px solid var(--rule); background:var(--paper); font-family:var(--font-burma); font-size:15px; line-height:1.8; }
 .community-guide summary { padding:8px 12px; min-height:44px; cursor:pointer; color:var(--ink); }
 .community-guide[open] { max-height:35vh; overflow:auto; }
