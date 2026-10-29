@@ -8,9 +8,9 @@
 //   1. Response Cache-Control `s-maxage=600` (10 min) — Cloudflare's edge
 //      cache absorbs the next ~120 page-loads after the first success.
 //   2. A module-level `holdUntil` timestamp — if GDELT just rate-limited us,
-//      short-circuit to a cached 502 for 5 minutes without making an upstream
-//      call. Module state is per-isolate, so a fresh isolate can re-try
-//      sooner; the edge cache covers that.
+//      short-circuit to a cached 200/ok:false for 5 minutes without making an
+//      upstream call. Module state is per-isolate, so a fresh isolate can
+//      re-try sooner; the edge cache covers that.
 // On persistent failure the client hides the spark (honest absence).
 
 const GDELT = 'https://api.gdeltproject.org/api/v2/doc/doc?query=Myanmar&mode=timelinevol&timespan=14d&format=json';
@@ -34,7 +34,7 @@ export async function onRequestGet() {
       error: 'unexpected',
       hint: String(e && e.message ? e.message : e),
     }), {
-      status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60'),
+      status: 200, headers: baseHeaders('public, max-age=60, s-maxage=60'),
     });
   }
 }
@@ -46,7 +46,7 @@ async function onRequestGetInner() {
       ok: false,
       error: 'gdelt_rate_limited_hold',
       hint: 'GDELT anonymous traffic is rate-limited at 1 req / 5 s. Sparkline is hidden until the backoff window clears.',
-    }), { status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60') });
+    }), { status: 200, headers: baseHeaders('public, max-age=60, s-maxage=60') });
   }
 
   let res;
@@ -54,7 +54,7 @@ async function onRequestGetInner() {
     res = await fetch(GDELT, {
       // Cloudflare Pages Functions bound execution time; keep the upstream
       // timeout well under it so a slow GDELT still yields a JSON hold,
-      // never a raw edge 502.
+      // never a raw edge error.
       signal: AbortSignal.timeout(4000),
       headers: { 'user-agent': 'Pirchchat/0.1 (+burma.nonarkara.org)' },
     });
@@ -64,14 +64,14 @@ async function onRequestGetInner() {
       error: 'upstream_timeout',
       hint: 'GDELT did not respond within 4 s. Sparkline is hidden.',
     }), {
-      status: 502, headers: baseHeaders('public, max-age=300, s-maxage=1800'),
+      status: 200, headers: baseHeaders('public, max-age=300, s-maxage=1800'),
     });
   }
 
   if (!res.ok) {
     holdUntil = now + 5 * 60 * 1000;
     return new Response(JSON.stringify({ ok: false, error: 'gdelt_http_' + res.status }), {
-      status: 502, headers: baseHeaders('public, max-age=120, s-maxage=300'),
+      status: 200, headers: baseHeaders('public, max-age=120, s-maxage=300'),
     });
   }
 
@@ -83,13 +83,13 @@ async function onRequestGetInner() {
     // JSON envelope + hold, never a raw edge error.
     holdUntil = now + 60 * 1000;
     return new Response(JSON.stringify({ ok: false, error: 'gdelt_body_error' }), {
-      status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60'),
+      status: 200, headers: baseHeaders('public, max-age=60, s-maxage=60'),
     });
   }
   if (text.trim().toLowerCase().startsWith('please limit requests')) {
     holdUntil = now + 5 * 60 * 1000;
     return new Response(JSON.stringify({ ok: false, error: 'gdelt_rate_limited' }), {
-      status: 502, headers: baseHeaders('public, max-age=120, s-maxage=300'),
+      status: 200, headers: baseHeaders('public, max-age=120, s-maxage=300'),
     });
   }
 
@@ -97,14 +97,14 @@ async function onRequestGetInner() {
   try { j = JSON.parse(text); } catch (e) {
     holdUntil = now + 60 * 1000;
     return new Response(JSON.stringify({ ok: false, error: 'gdelt_non_json' }), {
-      status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60'),
+      status: 200, headers: baseHeaders('public, max-age=60, s-maxage=60'),
     });
   }
 
   const raw = j && j.timeline && j.timeline[0] && j.timeline[0].data;
   if (!Array.isArray(raw) || !raw.length) {
     return new Response(JSON.stringify({ ok: false, error: 'no_timeline' }), {
-      status: 502, headers: baseHeaders('public, max-age=60, s-maxage=60'),
+      status: 200, headers: baseHeaders('public, max-age=60, s-maxage=60'),
     });
   }
 
