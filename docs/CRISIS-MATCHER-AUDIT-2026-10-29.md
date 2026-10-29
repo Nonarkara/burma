@@ -9,3 +9,7 @@ The existing broad self-pronoun fallback is retained temporarily: removing it be
 `tests/crisis.test.mjs` exercises five benign examples and fourteen harm-related examples. The negative test and rapist case failed before the fix; both tests pass after. Native reviewers still need to assess dialect, spacing, negation and actual community language.
 
 Uncommitted dashboard and station-test changes existed at start and are excluded from the release snapshot.
+
+## Release evidence
+
+Source fix `953d65f`, content stamp `c63733b`; Pages deployment `534b5501.burma-a3k.pages.dev`. The clean release snapshot passes 72 tests (the working tree has one additional unrelated uncommitted media test). Canonical `/dashboard` references `survival.js?v=53d434d9f1`; the fetched asset matches committed source bytes and all seven live-asset positive/negative checks pass. No public crisis message was posted. Pre-existing `web/dashboard.js` and `tests/stations.test.mjs` changes remain untouched and unshipped in this release.
