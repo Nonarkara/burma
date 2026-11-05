@@ -258,7 +258,7 @@ Profile inference: British-accent English consistent with SIM Singapore + Harbou
 
 ---
 
-## 14. Status (2026-10-29)
+## 14. Status (2026-11-05)
 
 ### Shipped and verified live
 - [x] Boundaries set
@@ -283,7 +283,10 @@ Profile inference: British-accent English consistent with SIM Singapore + Harbou
 - [x] **Media panel MSH pass** — unreachable broadcasters regrouped out of a 58px note paragraph into scrollable gap rows with broadcaster-page links; radio note is one summary line (10% of panel on phone); radio play button 26×24px (WCAG 2.4 floor); static assets carry content-hash cache stamps (`scripts/stamp-assets.mjs`, `npm run deploy:pages`) so deploys can't serve stale JS under Pages' forced `max-age=14400`. 70/70 tests pass.
 - [x] **Security hardening verified live** — entity-bypass XSS killed at source (server + client sanitizer), 5 security headers on Pages (`_headers`), rate limits, upload type/size caps, `invalid_watch_url` guard.
 - [x] **Crisis matcher bounded** (`953d65f`) — `rape` narrowed to whole words (`\b(?:rape[ds]?|raping|rapists?)\b`) so "grape juice"/"scraped"/"drapes" no longer trigger; Burmese `ကုန်ကူးန` now requires the `လူ` (person) prefix so ordinary commerce (`ကုန်ကူးလုပ်ငန်း`) no longer triggers; human trafficking `လူကုန်ကူး`, explicit harm terms, and Thai/English equivalents still fire. `tests/crisis.test.mjs` — 5 benign + 14 harm cases. **Critical gap remains:** broad self-pronoun `မိမိကိုယ်` kept as provisional fallback until native-reviewed replacement vocabulary; no real Burmese suicide term yet (see `docs/REVIEW-PACKET.md` A12).
-- [x] **Career Navigator quest player shipped on live dashboard** (`4226a03`) — 10 complete quest scenarios (was 1 + 9 stubs), server-side quest scoring API at `/api/quest/[id]/submit`, client-side submission with server feedback. Vanilla JS, no PII, everything runs in-browser with server verification. **Still needs:** native Burmese review of all scenario strings, mentor escalation integration.
+- [x] **Career Navigator rebuilt — one catalogue, server-scored, complete Burmese** (`8ae3b25`) — the earlier "shipped" claim was true of files and false of the deployed surface. `web/quest.js` read a property the data file did not export, so the panel rendered nothing; `chat-client.js` bound a second handler on the same button and rendered its own 3-minute micro quest into the same panel, so the two cancelled each other out; the browser held 10 scenarios while the Pages Function served 1, so 9 of 10 quests would have 404'd on submit; and 80 of 100 Burmese fields were empty across 9 of the 10 quests. Now: `functions/data/quest-scenarios.js` is the single catalogue (all 10 scenarios, complete Burmese + English), served by `GET /api/quest/scenarios` and scored by `POST /api/quest/<id>/submit`. The client fetches it and never scores on its own — a trait verdict appears only when the server returned it, and trait labels name a practice, never a person. The duplicate client data file and the duplicate Next.js catalogue are gone. `tests/quest.test.mjs` (11 tests) fails the build on catalogue drift, empty Burmese, a second catalogue, or a second panel owner. All 10 quests verified submitting live 2026-11-05. **Still needs:** native Burmese review of every scenario string, mentor escalation integration.
+- [x] **Atlas no longer advertises a layer it cannot draw** — the diaspora PMTiles source, its toolbar toggle and its legend dot are removed. There is no archive behind them: `/atlas/diaspora.pmtiles` answered with the app shell, and the source was added inside `map.on('load')` where the `try/catch` could never catch an async tile failure. A toggle and a legend dot for a layer that can never render are dead cards. The PMTiles CDN dependency is gone with it.
+- [x] **Identity gate remembers its choice** — "browse without a name" is stored on this browser (`pirchchat.identitySkipped`) and the gate no longer re-asks on every reload. Choosing a real nickname supersedes it.
+- [x] **MSH pass, measured** (`scripts/msh-audit.mjs` — headless Chrome over CDP, 390 / 1024 / 1440) — the Rooms menubar is a room switcher and the Career Navigator and help button sat in it as two more rooms; at 1024 the bar overflowed and the Career Navigator was entirely off-screen. Both moved to the community-actions row. Window control buttons (22×18), the TV "watch together" button (21px), the news expand button (18px) and the statusbar language toggle (16px) were all under the 24px house floor; all are now ≥24. On a phone the 16 layer toggles wrapped into four rows and pushed the map down by a sixth of the screen; the toolbar is now one scrollable strip and phone chrome cost fell from 41.6% to 23.6% of the viewport. Zero measured failures at all three widths on the deployed site. The instrument itself had two false-positive sources and one blind spot, both fixed: it measured through the identity gate instead of the dashboard, it flagged controls inside the horizontal TV-card scroller, and it did not exempt inline text links.
 
 ### Still open
 - [ ] Counter-proposal to Si Thu Maung (drafted but not sent)
@@ -291,7 +294,7 @@ Profile inference: British-accent English consistent with SIM Singapore + Harbou
 - [ ] Atlas data source agreements (ILO, depa, UNESCO Bangkok, ASEAN Skills)
 - [ ] Digest: Burmese-language NLP pipeline (current feeds are English-language)
 - [ ] Listening: Thai-side diaspora + diaspora social ingestion sources
-- [ ] Atlas: PMTiles archive build
+- [ ] Atlas: PMTiles archive build (the toggle, legend dot and client integration are removed until an archive exists — see §14)
 - [ ] Career Navigator: quest authoring template imported from TKCX
 - [ ] AI mentor pipeline safety review
 - [ ] Burmese-native cultural check (1-2 reviewers) on all surfaces

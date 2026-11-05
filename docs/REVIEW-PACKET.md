@@ -189,3 +189,40 @@ Native review is pending for the new provider-reference copy in `functions/data/
 Commerce false positives have been narrowed: the active term is now `လူ\s*ကုန်\s*ကူး`, not bare `ကုန်ကူး`. English rape matching now uses whole words with inflections, preventing grape/scraped/drapes matches while retaining rape/raped/rapist. The table above records the earlier audit; A5's bare-commerce pattern is no longer active.
 
 A3/A12 remain unresolved: the broad `မိမိကိုယ်` fallback has not been removed without replacement coverage. Native reviewers must supply real self-harm expressions and benign counterexamples, including negation and spelling variants. No agent-authored Burmese suicide vocabulary has been promoted as validated. The banner remains directly accessible from Hotlines even without a keyword match.
+
+---
+
+## PRIORITY G — Career Navigator scenarios (new, 5 November 2026)
+
+Ten quest scenarios now ship with complete Burmese. All of it was machine-drafted
+by an agent and none of it has been read by a native speaker. It is the largest
+unreviewed block of Burmese in the product.
+
+**Where:** `functions/data/quest-scenarios.js` — the single catalogue, served by
+`/api/quest/scenarios` and scored by `/api/quest/<id>/submit`. Every string in
+it is a candidate for correction.
+
+**What to read:**
+
+| Scenario | id | Weight of the review |
+|---|---|---|
+| Power at the Monastery | `mm-power-at-the-monastery` | was already Burmese; check tone in a religious setting |
+| The Rice Mill Decision | `mm-rice-mill-decision` | **machine-drafted** — family business, migrating for factory work |
+| The Monastery Tech Bridge | `mm-monastic-tech-bridge` | **machine-drafted** — novice monks, one donated laptop |
+| The Border Route | `mm-border-route` | **machine-drafted** — broker recruitment, legal vs unsafe routes. Handle with care; this is the highest-stakes scenario |
+| The Cooperative Split | `mm-cooperative-split` | **machine-drafted** — weaving cooperative, elder vs younger members |
+| The Digital Artisan | `mm-digital-artisan` | **machine-drafted** — lacquerware, selling online |
+| The Flood Response | `mm-flood-response` | **machine-drafted** — township evacuation, livestock, school as shelter |
+| The Apprentice Negotiation | `mm-apprentice-negotiation` | **machine-drafted** — unpaid apprenticeship, six months |
+| The Language Barrier | `mm-language-barrier` | **machine-drafted** — Burmese youth in Chiang Mai, Thai workplace |
+| The Scholarship Trade-off | `mm-scholarship-trade-off` | **machine-drafted** — studying abroad vs staying with family |
+
+**Also check, in the same pass:**
+
+1. **Interface labels** — `အလုပ်သိကြား` (the Career Navigator button). Is it the word a 16–28 year old would use for this, or does it read as "job"? If it reads as "job", we need a better word.
+2. **Trait labels** — `အလုပ်စဉ် စီမံခြင်း` (organising a plan), `လူတွေ့နားမြင်ခြင်း` (reading people), `အခက်အခဲကို မလျော့ခြင်း` (staying with a hard problem), `အဖွဲ့နှင့် ညှိနှိုင်းခြင်း` (negotiating with others). These deliberately name a **practice, not a person** — "discovery, not diagnosis" (AGENTS.md §1). Please say whether they read naturally to a young Burmese speaker.
+3. **One constraint list still contains an English fragment**: the first scenario's constraint `or follow-up maintenance advice` / `or ထိန်းသိမ်းမှုအတွက် ထပ်ဆောင်းအကြံပြုချက်` — the stray `or` was left in the source. The Burmese half reads correctly; the English half needs a rewrite.
+
+**How to review:** open `burma.nonarkara.org/dashboard`, press **အလုပ်သိကြား**, pick any situation, and read it as a user. The server sends the same strings you see, so a correction here is a correction everywhere.
+
+**Guardrail already in place:** `tests/quest.test.mjs` fails the build if any Burmese field is empty, if a Burmese field contains Latin words, or if a second copy of the catalogue appears. It cannot check whether the Burmese is *right* — that is what this review is for.
