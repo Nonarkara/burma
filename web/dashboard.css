@@ -168,7 +168,7 @@ html, body {
 .titlebar {
   display: flex;
   align-items: center;
-  height: 22px;
+  height: 26px;
   padding: 0 2px 0 4px;
   background: var(--chrome-dark);
   font-family: var(--font-system);
@@ -207,8 +207,8 @@ html, body {
 }
 
 .titlebar__btn {
-  width: 22px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   margin: 0 2px;
   background: var(--chrome);
   border-top: 1px solid var(--chrome-edge);
@@ -477,7 +477,7 @@ html, body {
 .statusbar {
   display: flex;
   align-items: center;
-  height: 20px;
+  height: 24px;
   padding: 0 6px;
   background: var(--chrome);
   border-top: 1px solid var(--chrome-edge);
@@ -795,6 +795,8 @@ html, body {
   border-right: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
 }
+
+.tv-card__watch-together { min-height:24px; padding:3px 10px; }
 
 .tv-card__go:active {
   border-top-color: var(--ink);
@@ -1328,8 +1330,15 @@ html, body {
 .community-draft p { font-size:14px; }
 .community-guide summary:focus-visible, .community-draft :focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
 #exchangePanel { max-height:45vh; padding:10px 12px; }
-.community-actions { padding:5px 12px; background:var(--chrome); border-bottom:1px solid var(--rule); }
-#exchangeToggle { min-height:44px; width:100%; white-space:normal; padding:5px 8px; border:1px solid var(--rule); background:var(--accent-soft); color:var(--ink); font:16px/1.7 var(--font-burma); cursor:pointer; }
+.community-actions { display:flex; gap:6px; align-items:stretch; padding:5px 12px; background:var(--chrome); border-bottom:1px solid var(--rule); }
+#exchangeToggle { flex:1 1 auto; min-height:44px; white-space:normal; padding:5px 8px; border:1px solid var(--rule); background:var(--accent-soft); color:var(--ink); font:16px/1.7 var(--font-burma); cursor:pointer; }
+.community-actions__btn { flex:0 0 auto; min-height:44px; padding:5px 10px; border:1px solid var(--rule); background:var(--paper); color:var(--ink); font:16px/1.7 var(--font-burma); cursor:pointer; }
+.community-actions__btn:hover { background:var(--accent-soft); }
+.community-actions__btn:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+@media (max-width:720px) {
+  .community-actions { flex-wrap:wrap; }
+  #exchangeToggle { flex:1 1 100%; }
+}
 #exchangeToggle:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
 .pirch-marker--support { width:14px; height:14px; box-sizing:border-box; background:var(--positive); border:2px solid var(--ink); }
 
@@ -2041,6 +2050,7 @@ html, body {
   appearance: none;
   border: none;
   background: transparent;
+  min-height: 24px;
   font: inherit;
   color: var(--ink);
   cursor: pointer;
@@ -2157,7 +2167,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
 }
 
 /* Long opportunity references need a reading surface, not a smaller type size. */
-.news__expand { width:auto; min-width:24px; padding:2px 6px; white-space:normal; }
+.news__expand { width:auto; min-width:24px; min-height:24px; padding:2px 6px; white-space:normal; }
 .news__restore-label { display:none; }
 @media (min-width:921px) {
   .dash__right.is-reading-news .news { flex:1 1 0; min-height:0; }
