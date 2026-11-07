@@ -41,6 +41,10 @@ function el(tag, cls, content) {
 
 function clear() {
   panel.innerHTML = '';
+  // Burmese script rendering is renderer-sensitive (AGENTS.md §4): the lang
+  // attribute is what tells a phone to reach for Noto Sans Myanmar instead of
+  // a system fallback that breaks vowel stacking.
+  panel.setAttribute('lang', lang() === 'en' ? 'en' : 'my');
 }
 
 function metaLine(textContent) {

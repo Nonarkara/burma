@@ -47,7 +47,7 @@ export const SCENARIOS = [
       ],
       en: [
         'Budget: ~800,000 MMK — inverter + battery + solar panels',
-        'or follow-up maintenance advice',
+        'Alternatively — the same budget can fund follow-up maintenance advice',
         'Timeline: 3 months — monsoon season overlap (solar yield drops ~40%)',
         'Users: ~15 monks, ~40 students, ~200 villagers (phone charging)',
       ],
