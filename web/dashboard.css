@@ -2185,3 +2185,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outli
   .is-reading-news .news__restore-label { display:inline; }
 }
 @media (max-width:920px) { .news__expand { display:none; } }
+
+/* Tap targets on phone — dense control groups sit at the 32px house floor
+   (workspace MSH law; Book commandment 21 via the dense-group exception).
+   Desktop pointer keeps the Win95 chrome sizes: boxes fit content there. */
+@media (max-width: 920px) {
+  .titlebar__btn { width: 32px; height: 32px; }
+  .menubar__item { min-height: 32px; }
+  .radio__play { width: 32px; height: 32px; }
+}
+
+/* Motion guard — the product carries almost no motion by design; this keeps
+   it that way for readers whose OS asks for stillness. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

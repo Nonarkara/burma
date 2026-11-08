@@ -35,6 +35,8 @@ These are pre-committed. Do not cross them without an explicit decision from Dr 
 
 ## 3. Anti-slop (binding)
 
+**Supreme canon: `docs/THE-BOOK-Design-Scripture.md`** (installed 2026-11-09). Every agent loads it before any layout, map, or review work; it supersedes scattered design sources for obedience. Its conflict rule applies here: hardest clear rule wins; the 16-bit aesthetic below is this project's `STYLE.md` style-protect and is never stripped by a reviewer — but it never waives ship basics (contrast, tap size, focus, `lang`, pin honesty, builder ≠ auditor).
+
 The 27 tells from `slop-detect` apply. Specifically for this project, plus the 16-bit / Chicago-era discipline:
 
 - **No rounded corners.** House radius = 0. The 1990s era had sharp edges and so do we.

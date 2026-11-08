@@ -220,7 +220,14 @@ a:hover { color: var(--accent); }
 .enter:hover, .enter:focus-visible {
   border-bottom-color: var(--accent);
   color: var(--accent);
-  outline: none;
+  /* Ship basics (Book 6.4): focus must be visible — the colour change alone
+     is not enough for a keyboard user. */
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter { transition: none; }
 }
 
 .enter__my {
