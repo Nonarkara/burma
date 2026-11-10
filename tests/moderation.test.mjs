@@ -11,13 +11,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
+const limitsUrl = 'data:text/javascript;base64,' + Buffer.from(fs.readFileSync('chat-worker/src/limits.js', 'utf8')).toString('base64');
 const roomUrl = 'data:text/javascript;base64,' + Buffer.from(fs.readFileSync('chat-worker/src/chat-room-do.js', 'utf8')).toString('base64');
-const limiterUrl = 'data:text/javascript;base64,' + Buffer.from(fs.readFileSync('chat-worker/src/rate-limiter-do.js', 'utf8')).toString('base64');
+const limiterSrc = fs.readFileSync('chat-worker/src/rate-limiter-do.js', 'utf8').replaceAll("'./limits.js'", JSON.stringify(limitsUrl));
+const limiterUrl = 'data:text/javascript;base64,' + Buffer.from(limiterSrc).toString('base64');
 const { ChatRoomDO } = await import(roomUrl);
 const { RateLimiterDO } = await import(limiterUrl);
 const workerSource = fs.readFileSync('chat-worker/src/index.js', 'utf8')
-  .replace("'./chat-room-do.js'", JSON.stringify(roomUrl))
-  .replace("'./rate-limiter-do.js'", JSON.stringify(limiterUrl));
+  .replaceAll("'./chat-room-do.js'", JSON.stringify(roomUrl))
+  .replaceAll("'./rate-limiter-do.js'", JSON.stringify(limiterUrl))
+  .replaceAll("'./limits.js'", JSON.stringify(limitsUrl));
 const { default: worker } = await import('data:text/javascript;base64,' + Buffer.from(workerSource).toString('base64'));
 
 const envMods = (mods) => ({ MODS: mods, ALLOWED_ORIGINS: 'https://test.local', DB: workingDB() });
