@@ -1,62 +1,126 @@
 /**
- * RateLimiterDO — persistent per-key sliding-window rate limiter.
+ * RateLimiterDO — one SQLite object for every upload counter.
  *
  * Module-level Maps reset per Workers isolate, so an upload flood spread
  * across isolates defeats them. All upload requests route through ONE
- * instance of this DO (idFromName('uploads')), which keeps its counters in
- * durable per-DO storage — they survive isolate restarts and hibernation.
+ * instance (idFromName('uploads')). The worker sends a hash of the
+ * network address; this object does not need the address itself.
+ *
+ * Requests are serialized so two callers cannot both take the last slot.
+ * The worker maps the decision onto HTTP. This object always returns JSON.
  */
 
+import { bangkokDay, consumeLimit, normalizeIp } from './limits.js';
+
 export class RateLimiterDO {
-  constructor(state, env) {
+  constructor(state) {
     this.state = state;
-    this.env = env;
+    this.storage = state.storage;
   }
 
   async fetch(request) {
-    const url = new URL(request.url);
-    const key = (url.searchParams.get('key') || 'anon').slice(0, 140);
-    const windowMs = Math.max(1, Math.min(Number(url.searchParams.get('window')) || 3600000, 3600000));
-    const max = Math.max(1, Math.min(Math.floor(Number(url.searchParams.get('max')) || 10), 1000));
-    const now = Date.now();
-
-    const storageKey = 't:' + key;
-    return this.state.storage.transaction(async (storage) => {
-    let times = (await storage.get(storageKey)) || [];
-    times = times.filter((t) => now - t < windowMs);
-    if (times.length >= max) {
-      return jsonResponse({ ok: false, remaining: 0 }, 429);
+    let body = null;
+    try {
+      body = await request.json();
+    } catch {
+      body = null;
     }
-    times.push(now);
-    await storage.put(storageKey, times);
-    if (await storage.getAlarm() === null) await storage.setAlarm(now + 3600000);
-    return jsonResponse({ ok: true, remaining: max - times.length }, 200);
+    if (!body || typeof body !== 'object') {
+      return jsonResponse({ ok: false, reason: 'limiter_unavailable', retryAfter: 30 });
+    }
+
+    const consume = () => this.consume(body);
+    let decision;
+    try {
+      decision = this.state.blockConcurrencyWhile
+        ? await this.state.blockConcurrencyWhile(consume)
+        : await consume();
+    } catch {
+      return jsonResponse({ ok: false, reason: 'limiter_unavailable', retryAfter: 30 });
+    }
+
+    return jsonResponse({
+      ok: Boolean(decision.ok),
+      reason: decision.reason || null,
+      retryAfter: decision.retryAfter || 0,
     });
+  }
+
+  async consume(body) {
+    const ip = normalizeIp(body.ip);
+    const now = Number.isFinite(body.now) ? body.now : Date.now();
+    const [storedGlobal, storedMeta, storedIp] = await Promise.all([
+      this.storage.get('global'),
+      this.storage.get('meta'),
+      this.storage.get('ip:' + ip),
+    ]);
+
+    const state = {
+      globalDay: (storedGlobal && storedGlobal.day) || '',
+      globalCount: Number(storedGlobal && storedGlobal.count) || 0,
+      trackedDay: (storedMeta && storedMeta.day) || '',
+      tracked: Number(storedMeta && storedMeta.tracked) || 0,
+      ips: storedIp ? { [ip]: storedIp } : {},
+    };
+
+    const result = consumeLimit(state, {
+      ip,
+      now,
+      limits: body.limits,
+      phase: body.phase,
+      maxTrackedIps: body.maxTrackedIps,
+    });
+
+    if (result.writes) {
+      const jobs = [];
+      if (result.writes.ip) jobs.push(this.storage.put('ip:' + ip, result.writes.ip));
+      if (result.writes.global) jobs.push(this.storage.put('global', result.writes.global));
+      if (result.writes.meta) jobs.push(this.storage.put('meta', result.writes.meta));
+      await Promise.all(jobs);
+    }
+    await this.ensureAlarm(now);
+    return result;
+  }
+
+  async ensureAlarm(now) {
+    if (!this.storage.getAlarm || !this.storage.setAlarm) return;
+    if (await this.storage.getAlarm() == null) {
+      await this.storage.setAlarm(now + 24 * 60 * 60 * 1000);
+    }
   }
 
   async alarm() {
-    // Bound retention of network counters; no indefinite per-IP archive.
     const now = Date.now();
-    await this.state.storage.transaction(async (storage) => {
-      let startAfter;
-      let retained = false;
-      while (true) {
-        const rows = await storage.list({ prefix: 't:', limit: 128, ...(startAfter ? { startAfter } : {}) });
-        if (!rows.size) break;
-        for (const [key, times] of rows) {
-          startAfter = key;
-          if (!times.some((t) => now - t < 3600000)) await storage.delete(key);
-          else retained = true;
-        }
+    const day = bangkokDay(now);
+    const retained = await this.expirePrefix('ip:', (rec) => rec && rec.day === day);
+    await this.expirePrefix('t:', () => false);
+    if (retained) await this.ensureAlarm(now);
+  }
+
+  async expirePrefix(prefix, keep) {
+    let startAfter;
+    let retained = false;
+    while (true) {
+      const rows = await this.storage.list({
+        prefix,
+        limit: 128,
+        ...(startAfter ? { startAfter } : {}),
+      });
+      if (!rows || !rows.size) break;
+      for (const [key, value] of rows) {
+        startAfter = key;
+        if (keep(value)) retained = true;
+        else await this.storage.delete(key);
       }
-      if (retained) await storage.setAlarm(now + 3600000);
-    });
+      if (rows.size < 128) break;
+    }
+    return retained;
   }
 }
 
-function jsonResponse(obj, status) {
+function jsonResponse(obj) {
   return new Response(JSON.stringify(obj), {
-    status,
+    status: 200,
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   });
 }

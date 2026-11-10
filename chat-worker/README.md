@@ -24,9 +24,23 @@ The dashboard at `burma.nonarkara.org` (or `burma-a3k.pages.dev`) calls this Wor
 | POST | `/api/rooms/<id>/message` | Post message (rate-limited 12/min) |
 | POST | `/api/rooms/<id>/pin` | Drop a manual pin (geocoded marker) |
 | GET  | `/api/rooms/<id>/pins` | List pins |
-| POST | `/api/upload` (multipart) | Image upload to R2 |
+| POST | `/api/upload` (multipart) | Image upload to R2, after the spend guards below |
 | GET  | `/cdn/<r2-key>` | Public image fetcher |
 | WS   | `/api/rooms/<id>` | Real-time fan-out |
+
+## Upload guards
+
+`POST /api/upload` checks three things before it writes to R2. A normal image from the site still returns `{ ok, id, key, url }`.
+
+1. **Site check.** `Origin`, or `Referer` when Origin is missing, must be this site. A client can set the header, so this only cuts casual use from other pages. `GET /api/health` and the room reads stay open when Origin is absent.
+2. **Per connection.** Token bucket of **6 images a minute** and **20 a day**, keyed by a hash of `CF-Connecting-IP` (not `X-Forwarded-For`, and not the address itself). The day resets at midnight in Asia/Bangkok.
+3. **Whole site.** **100 stored images a day.** Past that the worker returns HTTP 429 and does not write to R2. At the 700 KB file cap, a day that hits this is about 70 MB of new objects. The cap does not delete objects already stored.
+
+Tune them in `wrangler.toml` under `[vars]`: `RATE_LIMIT_PER_MINUTE`, `RATE_LIMIT_PER_DAY`, `GLOBAL_DAILY_CAP`, `MAX_UPLOAD_BYTES`, `ALLOWED_ORIGINS` (comma-separated). Set `GLOBAL_DAILY_CAP` to `0` to refuse new uploads without removing the bucket. `MAX_UPLOAD_BYTES` defaults to 716800 (700 KB) and ignores a value above 2 MiB.
+
+Counts live in the existing `RateLimiterDO` (`idFromName('uploads')`). If that binding is missing or the object errors, `/api/upload` returns 503 and does not write to R2. When the daily cap is hit, the worker logs `{ "event": "upload_daily_cap" }` through the Workers logs that are already enabled. No paid notification product is attached.
+
+Other routes are unchanged. Room posts keep their own in-memory limit.
 
 ## Data model
 

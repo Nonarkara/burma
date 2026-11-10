@@ -8,6 +8,17 @@
 
 import { ChatRoomDO, readLimitedBody } from './chat-room-do.js';
 import { RateLimiterDO } from './rate-limiter-do.js';
+import {
+  MESSAGES,
+  allowedOrigins,
+  clientIp,
+  isAllowedSiteRequest,
+  normalizeOrigin,
+  readLimits,
+  readMaxUploadBytes,
+  uploadBodyLimit,
+  uploadTooLargeMessage,
+} from './limits.js';
 
 export { ChatRoomDO, RateLimiterDO };
 
@@ -19,22 +30,66 @@ const ROOMS = [
   'listening-club',
 ];
 
-// Best-effort per-isolate rate limit is NOT reliable — uploads route through
-// the RateLimiterDO (persistent per-DO storage) below.
-const UPLOAD_LIMIT_PER_HOUR = 10;
+async function hashIp(ip) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(ip)));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
-async function uploadAllowed(env, ip) {
-  try {
-    const doId = env.RATE_LIMITER.idFromName('uploads');
-    const stub = env.RATE_LIMITER.get(doId);
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ip));
-    const key = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
-    const res = await stub.fetch(new URL('https://limiter/?key=' + key + '&window=3600000&max=' + UPLOAD_LIMIT_PER_HOUR));
-    if (res.status !== 200 && res.status !== 429) throw new Error('limiter_failed');
-    return res.status === 200;
-  } catch (e) {
-    throw Object.assign(new Error('rate_limiter_unavailable'), { status: 503 });
+// Fail closed: a missing or broken counter store must not reach R2.
+async function reserveUpload(env, request, opts) {
+  const ns = env && env.RATE_LIMITER;
+  if (!ns || typeof ns.idFromName !== 'function' || typeof ns.get !== 'function') {
+    return { ok: false, reason: 'limiter_unavailable', retryAfter: 30 };
   }
+  try {
+    const stub = ns.get(ns.idFromName('uploads'));
+    const res = await stub.fetch('https://limiter.internal/consume', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ip: await hashIp(clientIp(request)),
+        now: opts.now,
+        limits: readLimits(env),
+        phase: opts.phase,
+      }),
+    });
+    if (!res.ok) return { ok: false, reason: 'limiter_unavailable', retryAfter: 30 };
+    const decision = await res.json();
+    if (!decision || typeof decision.ok !== 'boolean') {
+      return { ok: false, reason: 'limiter_unavailable', retryAfter: 30 };
+    }
+    return {
+      ok: decision.ok,
+      reason: decision.reason || null,
+      retryAfter: decision.retryAfter || 0,
+    };
+  } catch {
+    return { ok: false, reason: 'limiter_unavailable', retryAfter: 30 };
+  }
+}
+
+function limitResponse(decision, cors) {
+  const reason = decision.reason || 'limiter_unavailable';
+  const status = reason === 'limiter_unavailable' ? 503 : 429;
+  const error = reason === 'global_day'
+    ? 'daily_cap'
+    : reason === 'limiter_unavailable'
+      ? 'rate_limiter_unavailable'
+      : 'rate_limited';
+  const retryAfter = Math.max(1, Number(decision.retryAfter) || 1);
+  if (reason === 'global_day') {
+    console.warn(JSON.stringify({ event: 'upload_daily_cap' }));
+  }
+  return json({
+    ok: false,
+    error,
+    message: MESSAGES[reason] || MESSAGES.limiter_unavailable,
+    retry_after: retryAfter,
+  }, status, Object.assign({}, cors, { 'Retry-After': String(retryAfter) }));
+}
+
+async function discardBody(request) {
+  try { await request.body?.cancel(); } catch { /* already closed */ }
 }
 
 function corsHeaders(request) {
@@ -50,13 +105,10 @@ function corsHeaders(request) {
 }
 
 function originAllowed(request, env) {
-  const origin = request.headers.get('Origin');
-  if (!origin) return true; // Public alpha API; origin checks are not authentication.
-  const allowed = new Set([
-    'https://burma-a3k.pages.dev', 'https://burma.nonarkara.org',
-    ...String(env.ALLOWED_ORIGINS || '').split(',').map((v) => v.trim()).filter(Boolean),
-  ]);
-  return allowed.has(origin);
+  const origin = (request.headers.get('Origin') || '').trim();
+  if (!origin) return true; // Public alpha reads; uploads require Origin or Referer.
+  if (origin === 'null') return false;
+  return new Set(allowedOrigins(env)).has(normalizeOrigin(origin));
 }
 
 function matchesImageType(bytes, type) {
@@ -66,6 +118,79 @@ function matchesImageType(bytes, type) {
   if (type === 'image/gif') return ['GIF87a', 'GIF89a'].includes(new TextDecoder().decode(bytes.slice(0, 6)));
   if (type === 'image/webp') return new TextDecoder().decode(bytes.slice(0, 4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8, 12)) === 'WEBP';
   return false;
+}
+
+async function handleUpload(request, env, cors) {
+  const maxFile = readMaxUploadBytes(env);
+  const tooLarge = uploadTooLargeMessage(maxFile);
+
+  if (!isAllowedSiteRequest(request, env)) {
+    await discardBody(request);
+    return json({ ok: false, error: 'origin_not_allowed', message: MESSAGES.origin }, 403, cors);
+  }
+
+  const declared = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > uploadBodyLimit(maxFile)) {
+    await discardBody(request);
+    return json({ ok: false, error: 'image_too_large', message: tooLarge }, 413, cors);
+  }
+
+  const now = Date.now();
+  const admitted = await reserveUpload(env, request, { phase: 'admit', now });
+  if (!admitted.ok) {
+    await discardBody(request);
+    return limitResponse(admitted, cors);
+  }
+
+  let file;
+  let imageBytes;
+  let pubkey;
+  try {
+    const bytes = await readLimitedBody(request, uploadBodyLimit(maxFile));
+    const form = await new Response(bytes, {
+      headers: { 'content-type': request.headers.get('content-type') || '' },
+    }).formData();
+    file = form.get('file');
+    pubkey = String(form.get('pubkey') || 'anon').slice(0, 128);
+    if (!file || typeof file.stream !== 'function') {
+      return json({ ok: false, error: 'missing_file' }, 400, cors);
+    }
+    if (file.size > maxFile) {
+      return json({ ok: false, error: 'image_too_large', message: tooLarge }, 413, cors);
+    }
+    if (!/^image\/(png|jpeg|gif|webp)$/.test(file.type)) {
+      return json({ ok: false, error: 'unsupported_image_type' }, 415, cors);
+    }
+    imageBytes = new Uint8Array(await file.arrayBuffer());
+    if (!matchesImageType(imageBytes, file.type)) {
+      return json({ ok: false, error: 'invalid_image_content' }, 415, cors);
+    }
+  } catch (e) {
+    const status = e.status || 500;
+    if (status === 413) return json({ ok: false, error: 'image_too_large', message: tooLarge }, 413, cors);
+    return json({ ok: false, error: 'upload_failed' }, status, cors);
+  }
+
+  const committed = await reserveUpload(env, request, { phase: 'commit', now });
+  if (!committed.ok) return limitResponse(committed, cors);
+
+  try {
+    const id = crypto.randomUUID();
+    const safeName = (file.name || 'image.bin').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+    const key = `uploads/${id}/${safeName}`;
+    await env.UPLOADS.put(key, imageBytes, {
+      httpMetadata: { contentType: file.type || 'application/octet-stream' },
+      customMetadata: { pubkey: pubkey.slice(0, 120) },
+    });
+    const ts = Date.now();
+    await env.DB.prepare('INSERT INTO uploads (id, r2_key, uploaded_by_pubkey, uploaded_at, size_bytes, content_type, url) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(
+      id, key, pubkey, ts, file.size || 0, file.type || '', key,
+    ).run();
+    const origin = new URL(request.url).origin;
+    return json({ ok: true, id, key, url: origin + '/cdn/' + key }, 200, cors);
+  } catch {
+    return json({ ok: false, error: 'upload_failed' }, 500, cors);
+  }
 }
 
 function json(obj, status, extraHeaders) {
@@ -177,37 +302,9 @@ export default {
       return new Response(resp.body, { status: resp.status, headers: newHeaders, webSocket: resp.webSocket });
     }
 
-    // /api/upload (POST multipart) → R2 — durable per-network rate limit
+    // /api/upload (POST multipart) → R2, after origin and spend guards.
     if (path === '/api/upload' && request.method === 'POST') {
-      try {
-        const ip = request.headers.get('CF-Connecting-IP') || 'anonymous';
-        if (!(await uploadAllowed(env, ip))) return json({ ok: false, error: 'rate_limited' }, 429, ch);
-        const bytes = await readLimitedBody(request, 768 * 1024);
-        const form = await new Response(bytes, { headers: { 'content-type': request.headers.get('content-type') || '' } }).formData();
-        const file = form.get('file');
-        const pubkey = String(form.get('pubkey') || 'anon').slice(0, 128);
-        if (!file || typeof file.stream !== 'function') return json({ ok: false, error: 'missing_file' }, 400, ch);
-        if (file.size > 700 * 1024) return json({ ok: false, error: 'image_too_large' }, 413, ch);
-        if (!/^image\/(png|jpeg|gif|webp)$/.test(file.type)) return json({ ok: false, error: 'unsupported_image_type' }, 415, ch);
-        const imageBytes = new Uint8Array(await file.arrayBuffer());
-        if (!matchesImageType(imageBytes, file.type)) return json({ ok: false, error: 'invalid_image_content' }, 415, ch);
-        const id = crypto.randomUUID();
-        const safeName = (file.name || 'image.bin').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
-        const key = `uploads/${id}/${safeName}`;
-        await env.UPLOADS.put(key, imageBytes, {
-          httpMetadata: { contentType: file.type || 'application/octet-stream' },
-          customMetadata: { pubkey: pubkey.slice(0, 120) },
-        });
-        const ts = Date.now();
-        await env.DB.prepare('INSERT INTO uploads (id, r2_key, uploaded_by_pubkey, uploaded_at, size_bytes, content_type, url) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(
-          id, key, pubkey, ts, file.size || 0, file.type || '', key,
-        ).run();
-        const origin = new URL(request.url).origin;
-        const url = origin + '/cdn/' + key;
-        return json({ ok: true, id, key, url }, 200, ch);
-      } catch (e) {
-        return json({ ok: false, error: e.status ? e.message : 'upload_failed' }, e.status || 500, ch);
-      }
+      return handleUpload(request, env, ch);
     }
 
     // /cdn/* (GET) → serve R2 objects publicly
