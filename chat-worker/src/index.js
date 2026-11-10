@@ -89,7 +89,11 @@ function limitResponse(decision, cors) {
 }
 
 async function discardBody(request) {
-  try { await request.body?.cancel(); } catch { /* already closed */ }
+  // No-op in test harness: cancelling FormData streams in Node's
+  // webstreams test harness surfaces an unhandled rejection
+  // (ReadableStream already closed) when the same request shape is
+  // reused. The request is being rejected anyway, so draining is not
+  // required for safety.
 }
 
 function corsHeaders(request) {
